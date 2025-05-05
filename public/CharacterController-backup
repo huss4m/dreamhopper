@@ -1,0 +1,217 @@
+import {
+  Scene,
+  Mesh,
+  ArcRotateCamera,
+  SceneLoader,
+  AnimationGroup,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  Vector3,
+  CascadedShadowGenerator,
+  Ray,
+  PhysicsAggregate,
+  PhysicsShapeType,
+  TransformNode,
+  Quaternion,
+  Space
+} from "@babylonjs/core";
+import { Character } from "./types";
+
+export class CharacterController {
+  private characterMesh: Mesh | null = null;
+  private childMesh: Mesh | null = null;
+  private helmet: Mesh | null = null;
+  colliderBox: Mesh | null = null;
+  private animationGroups: AnimationGroup[] = [];
+  private currentAnimationIndex = -1;
+  private isJumping = false;
+  private shadowGenerator;
+  physicsAggregate: any;
+
+  forwardVector: Vector3 = Vector3.Forward(); // Initialize with default forward
+  camera: any;
+
+  constructor(
+    private scene: Scene,
+    private canvas: HTMLCanvasElement,
+    camera: ArcRotateCamera,
+    shadowGenerator: CascadedShadowGenerator
+  ) {
+    this.scene.collisionsEnabled = true;
+    this.shadowGenerator = shadowGenerator;
+    this.camera = camera;
+    this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    await this.loadCharacter();
+    this.setupCollider();
+    this.setupJumpDetection();
+  }
+
+  private async loadCharacter(): Promise<void> {
+    try {
+      const { meshes, animationGroups } = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "guy2.glb",
+        this.scene
+      );
+
+      this.characterMesh = meshes[0] as Mesh;
+      this.helmet = meshes[1] as Mesh;
+      this.childMesh = meshes[2] as Mesh;
+      this.characterMesh.rotate(Vector3.Up(), Math.PI);
+      this.animationGroups = animationGroups;
+
+      if (this.shadowGenerator) {
+        this.shadowGenerator.addShadowCaster(meshes[0]);
+      }
+
+      this.playAnimation(0); // Idle animation
+    } catch (error) {
+      console.error("Failed to load guy2.glb:", error);
+    }
+  }
+
+  private setupCollider(): void {
+    if (!this.characterMesh) return;
+
+    // Create a capsule mesh
+    this.colliderBox = MeshBuilder.CreateCapsule(
+      "collider",
+      { height: 1.65, radius: 0.4 },
+      this.scene
+    );
+    this.colliderBox.position = new Vector3(10, 3, 5);
+
+    // Set material for the collider (optional visualization)
+    const colliderMat = new StandardMaterial("colliderMat", this.scene);
+    colliderMat.alpha = 0.1;
+    colliderMat.diffuseColor = new Color3(0, 1, 0);
+    this.colliderBox.material = colliderMat;
+
+    // Parent the character mesh to the collider
+    this.characterMesh.parent = this.colliderBox;
+
+    // Adjust character mesh position
+    this.characterMesh.position.y -= 0.8;
+
+    // Set capsule ellipsoid for collision detection
+    this.colliderBox.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.colliderBox.ellipsoidOffset = new Vector3(0, 1, 0);
+
+    // Adjust camera target
+    this.camera.setTarget(this.colliderBox);
+
+    // Create PhysicsAggregate for the capsule collider
+    this.physicsAggregate = new PhysicsAggregate(
+      this.colliderBox,
+      PhysicsShapeType.CAPSULE,
+      {
+        mass: 1,
+        restitution: 0.1,
+        friction: 1.0,
+      },
+      this.scene
+    );
+
+    // Lock rotation on X and Z axes, allow Y (turning)
+    this.physicsAggregate.body.setMassProperties({
+      inertia: new Vector3(0, 1, 0), // Freeze rotation on X and Z
+    });
+
+    // Initialize forwardVector after setting up transform node
+    this.updateForwardVector();
+}
+
+  private setupJumpDetection(): void {
+    if (this.animationGroups[1]) {
+      this.animationGroups[1].onAnimationGroupEndObservable.add(() => {
+        this.isJumping = false;
+      });
+    }
+  }
+
+  public playAnimation(index: number): void {
+    if (index === this.currentAnimationIndex || !this.animationGroups[index]) return;
+
+    this.animationGroups.forEach(group => group.stop());
+    this.animationGroups[index].play(index !== 1); // Loop all except jump
+    this.currentAnimationIndex = index;
+
+    if (index === 1) this.isJumping = true;
+  }
+
+  public move(inputDirection: Vector3, speed: number): void {
+    if (!this.physicsAggregate) return;
+  
+    // No input: stop horizontal movement
+    if (inputDirection.lengthSquared() < 0.01) {
+      const currentVelocity = this.physicsAggregate.body.getLinearVelocity();
+      this.physicsAggregate.body.setLinearVelocity(new Vector3(0, currentVelocity.y, 0));
+      return;
+    }
+  
+    // Rotate local input direction by the character's rotation
+    const worldDirection = Vector3.TransformCoordinates(
+      inputDirection,
+      this.colliderBox!.getWorldMatrix().clone().setTranslation(Vector3.Zero())
+    ).normalize();
+  
+    // Scale and apply movement
+    const velocity = new Vector3(worldDirection.x * speed * 20, 0, worldDirection.z * speed * 20);
+    this.physicsAggregate.body.setLinearVelocity(velocity);
+  }
+
+  public rotate(yaw: number): void {
+    if (this.colliderBox) {
+      this.colliderBox!.rotate(Vector3.Up(), -yaw, Space.LOCAL);
+      this.updateForwardVector(); // Update forward vector after rotation
+    }
+
+    console.log("ROTATE");
+  }
+
+  public syncRotationWithCamera(): void {
+    if (!this.colliderBox! || !this.camera) return;
+  
+    this.colliderBox!.rotationQuaternion = null;
+
+    const forward = this.camera.getTarget().subtract(this.camera.position).normalize();
+    forward.y = 0;
+
+    const yaw = Math.atan2(-forward.x, -forward.z);
+    this.colliderBox!.rotation.y = yaw; // Sync with camera direction
+
+    this.updateForwardVector(); // Update forward vector after syncing rotation
+
+    this.debugDirections();
+  }
+
+  // Helper method to update forwardVector
+  private updateForwardVector(): void {
+    if (!this.colliderBox) return;
+
+    // Compute forward vector based on the transform node's world matrix
+    this.forwardVector = Vector3.TransformNormal(
+      Vector3.Forward(),
+      this.colliderBox.getWorldMatrix()
+    ).normalize();
+    this.forwardVector.y = 0; // Ensure forward vector is horizontal
+  }
+
+  public getCharacter(): Character {
+    return {
+      colliderBox: this.colliderBox,
+      isJumping: this.isJumping
+    };
+  }
+
+  public debugDirections(): void {
+ 
+    console.log("D");
+}
+
+}

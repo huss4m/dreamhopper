@@ -34,7 +34,7 @@
     "src/**/*.vue",
     "tests/**/*.ts",
     "tests/**/*.tsx"
-  ],
+, "public/models/CharacterAnimations.ts"  ],
   "exclude": [
     "node_modules"
   ]
