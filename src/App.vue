@@ -33,6 +33,6 @@ export default defineComponent({
   background-image: url("../public/images/Background_Dots.png");
   background-size: cover;
   background-position: center;
-  
+  cursor: url("../public/images/cursorDefault.png"), auto;
 }
 </style>

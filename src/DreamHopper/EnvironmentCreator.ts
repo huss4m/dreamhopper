@@ -15,9 +15,11 @@ import {
   Texture,
   MeshBuilder,
   Vector2,
-  Mesh
+  Mesh,
+  ShaderMaterial 
 } from "@babylonjs/core";
 import { PhysicsController, PhysicsConfig, ColliderType } from "./PhysicsController";
+
 
 export class EnvironmentCreator {
   private light: DirectionalLight | null = null;
@@ -29,6 +31,7 @@ export class EnvironmentCreator {
 
   public async createEnvironment(): Promise<void> {
     this.setupLighting();
+    //this.setupFog(); // Added fog setup
     await this.loadGroundMesh();
     this.createRock();
   }
@@ -49,6 +52,15 @@ export class EnvironmentCreator {
     this.shadowGenerator.cascadeBlendPercentage = 0.05;
     this.shadowGenerator.penumbraDarkness = 0.9;
     this.shadowGenerator.stabilizeCascades = true;
+  }
+
+  private setupFog(): void {
+    this.scene.fogMode = Scene.FOGMODE_EXP; // Exponential fog for smooth falloff
+    this.scene.fogDensity = 0.005; // Adjust density for desired visibility range
+    this.scene.fogStart = 200.0;
+    this.scene.fogEnd = 600.0;
+    this.scene.fogColor = new Color3(0.8, 0.8, 0.85); // Light grayish-blue to match natural outdoor lighting
+    this.scene.fogEnabled = true; // Enable fog
   }
 
   private async loadGroundMesh(): Promise<void> {
@@ -90,10 +102,8 @@ export class EnvironmentCreator {
             mat.metallic = 0.5;
             mat.usePhysicalLightFalloff = true;
 
-
-
-             // Apply physics to bark
-             try {
+            // Apply physics to bark
+            try {
               const barkPhysicsConfig: PhysicsConfig = {
                 colliderType: ColliderType.Mesh,
                 colliderParams: {}, // auto: true
@@ -155,8 +165,6 @@ export class EnvironmentCreator {
     }
   }
 
-
-  // Rock to test some physics properties
   private createRock(): void {
     // Create rock mesh (icosphere)
     const rock = MeshBuilder.CreateIcoSphere("rock", { radius: 1, subdivisions: 2 }, this.scene);

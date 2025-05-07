@@ -5,7 +5,7 @@ import {
     PointerEventTypes,
     Vector3
   } from "@babylonjs/core";
-  import { CharacterController } from "./CharacterController";
+  import { CharacterController } from "./player/CharacterController";
   import { AssetManager } from "./AssetManager";
   import { Character } from "./types";
   
@@ -23,7 +23,7 @@ import {
     ) {
       this.setupKeyboardControls();
       this.setupPointerControls();
-      this.setupPointerLock();
+      //this.setupPointerLock();
     }
   
     private setupKeyboardControls(): void {
@@ -39,12 +39,14 @@ import {
     }
   
     private setupPointerControls(): void {
+     
       this.scene.onPointerObservable.add((pointerInfo) => {
         switch (pointerInfo.type) {
           case PointerEventTypes.POINTERDOWN:
             if (pointerInfo.event.button === 2) {
               pointerInfo.event.preventDefault();
               this.isRightMouseDown = true;
+             
             }
             break;
           case PointerEventTypes.POINTERUP:
@@ -55,6 +57,7 @@ import {
             break;
         }
       });
+      this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     }
   
     private setupPointerLock(): void {
@@ -65,12 +68,17 @@ import {
       
     }
   
+    
+
+
+
     public update(): void {
       const character = this.characterController.getCharacter();
     
       // Jump
       if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
-        this.characterController.playAnimation(1);
+        this.characterController.playAnimation("Jump", 15, 20);
+        this.characterController.jump();
         console.log("Jump triggered");
       }
       this.wasSpacePressed = this.keyStates[" "];
@@ -83,32 +91,35 @@ import {
       // Diagonal Movement
       if (isZ && isE) {
         this.characterController.physicsController!.isDiagonal = true;
-        this.characterController.playAnimation(2);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
         this.characterController.moveDiagonallyRight(this.moveSpeed);
       } else if (isZ && isA) {
         this.characterController.physicsController!.isDiagonal = true;
-        this.characterController.playAnimation(2);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
         this.characterController.moveDiagonallyLeft(this.moveSpeed);
       }
       // Forward / Backward / Strafing Movement
       else if (isZ) {
         this.characterController.physicsController!.isDiagonal = false;
-        this.characterController.playAnimation(2);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
         this.characterController.moveForward(this.moveSpeed);
       } else if (isS) {
-        this.characterController.playAnimation(3);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNINGBACKWARDS");
         this.characterController.backPedal(this.moveSpeed);
       } else if (isA) {
-        this.characterController.playAnimation(4);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("StrafeLeft");
         this.characterController.strafeLeft(this.moveSpeed);
       } else if (isE) {
-        this.characterController.playAnimation(5);
+        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("StrafeRight");
         this.characterController.strafeRight(this.moveSpeed);
       }
       // Idle (no input)
       else if (!this.keyStates[" "] && !character.isJumping) {
-        this.characterController.playAnimation(0);
-        this.characterController.moveForward(0); // Stops motion
+        this.characterController.playAnimation("IDLE");
+        if(!this.characterController.physicsController?.isJumping){
+             this.characterController.moveForward(0); // Stops motion
+        }
+     
       }
     
       // Rotation

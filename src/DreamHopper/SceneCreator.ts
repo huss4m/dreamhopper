@@ -7,12 +7,15 @@ import {
   HavokPlugin
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
-import { CharacterCameraController } from "./CharacterCameraController";
+import { CharacterCameraController } from "./player/CharacterCameraController";
+//import "@babylonjs/core/Debug/debugLayer.js"; // Augments the scene with the debug methods
+import { HighlightLayer } from "@babylonjs/core";
 
 export class SceneCreator {
   private scene: Scene;
   private camera: ArcRotateCamera;
   physicsPlugin!: HavokPlugin;
+  highlightLayer: HighlightLayer;
 
   constructor(engine: Engine, private canvas: HTMLCanvasElement) {
     this.scene = new Scene(engine);
@@ -20,6 +23,9 @@ export class SceneCreator {
     this.camera = cameraController.getCamera();
     this.initializePhysics();
     this.setupEnvironment();
+
+    this.highlightLayer =  new HighlightLayer("highlightLayer", this.scene);
+    //this.scene.debugLayer.show();
   }
 
   public createScene(): Scene {

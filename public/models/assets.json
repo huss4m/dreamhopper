@@ -1,0 +1,23 @@
+[
+    {
+      "name": "guy",
+      "rootUrl": "./models/",
+      "filename": "guy2.glb"
+    },
+    {
+      "name": "sword",
+      "rootUrl": "./models/",
+      "filename": "steel_sword.glb"
+    },
+    {
+      "name": "sword_of_artorias",
+      "rootUrl": "./models/",
+      "filename": "sword_of_artorias.glb"
+    },
+    {
+      "name": "npc",
+      "rootUrl": "./models/",
+      "filename": "npc.glb"
+    }
+  ]
+  

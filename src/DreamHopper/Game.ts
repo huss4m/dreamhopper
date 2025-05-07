@@ -1,10 +1,13 @@
-import { ArcRotateCamera, AssetContainer, Engine, Scene } from "@babylonjs/core";
+import { ArcRotateCamera, AssetContainer, Engine, HighlightLayer, PointerEventTypes, Scene, Tags, Vector3 } from "@babylonjs/core";
 import { SceneCreator } from "./SceneCreator";
-import { CharacterController } from "./CharacterController";
+import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
 import { EnvironmentCreator } from "./EnvironmentCreator";
 import "@babylonjs/loaders";
 import { AssetManager } from "./AssetManager";
+import { NPC } from "./NPC";
+
+//import "@babylonjs/inspector";
 
 export class Game {
   private engine: Engine;
@@ -14,6 +17,11 @@ export class Game {
   private environmentCreator: EnvironmentCreator;
   assetManager!: AssetManager;
   guyAssetContainer!: AssetContainer;
+  highlightLayer: HighlightLayer;
+
+  npcs: NPC[] = [];
+  npcMap: Record<string, NPC> = {};
+
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true);
@@ -24,7 +32,9 @@ export class Game {
 
     this.assetManager = new AssetManager(this.scene);
     //this.guyAssetContainer = this.assetManager.guyAssetContainer;
+    //this.scene.debugLayer.show();
 
+    this.highlightLayer = sceneCreator.highlightLayer;
     this.initialize();
   }
 
@@ -33,7 +43,7 @@ export class Game {
 
 
     // Load all assets
-await this.assetManager.initialize();  // Wait until all assets are loaded
+await this.assetManager.initializeFromJson('./models/assets.json');  // Wait until all assets are loaded
 console.log("All assets loaded.");
 const shadowGenerator = this.environmentCreator.getShadowGenerator();
 if (!shadowGenerator) {
@@ -60,8 +70,19 @@ if (!guyAssetContainer) {
 
      //this.guyAssetContainer = this.assetManager.guyAssetContainer;
 
-   
+   if(this.scene) {
+    const npc1 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(5, 10, 5), this.highlightLayer);
+    const npc2 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10,10,5), this.highlightLayer);
+    const npc3 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10,10,10), this.highlightLayer);
 
+    this.npcs.push(npc1, npc2, npc3);
+
+    //console.log(npc1.getId(), npc2.getId(), npc3.getId());
+
+    this.npcMap[npc1.getId()] = npc1;
+    this.npcMap[npc2.getId()] = npc2;
+    this.npcMap[npc3.getId()] = npc3;
+   }
 
     this.inputHandler = new InputHandler(this.scene, this.characterController, this.canvas);
 
@@ -73,6 +94,11 @@ if (!guyAssetContainer) {
     window.addEventListener("resize", () => {
       this.engine.resize();
     });
+    
+
+
+  
+  
   }
 
   public dispose(): void {
