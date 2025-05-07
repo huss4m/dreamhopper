@@ -87,7 +87,7 @@ canvas {
   border-radius: 10px; /* Rounded corners for the slot */
   border: 2px solid #444; /* Darker border */
   position: relative;
-  cursor: pointer; /* Indicating the slot is clickable */
+  cursor: url("../../public/images/cursorTargetAlly.png"), auto;
 }
 
 /* Hover effect on spell slots */
