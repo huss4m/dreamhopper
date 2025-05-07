@@ -32,7 +32,7 @@ export class CharacterCameraController {
     camera.angularSensibilityY = 250;
     camera.inertia = 0.3;
     camera.minZ = 0.1;   
-    camera.maxZ = 200; 
+    camera.maxZ = 100; 
 
     const pointerInput = camera.inputs.attached["pointers"] as ArcRotateCameraPointersInput;
     pointerInput.buttons = [0, 2];
