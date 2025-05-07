@@ -10,12 +10,13 @@ export class Player {
     this.addItem(new Item(
       "sword1",
       scene,
-      assetManager.getAssetContainer("sword_of_artorias"),
+      assetManager.getAssetContainer("dragon_slayer"),
       shadowGenerator,
-      new Vector3(15, 7, 0), // Position offset for sword
-      new Vector3(Math.PI/2, 0, 0), // Rotation offset for sword
-      new Vector3(5, 5, 5) // Scaling for sword
+      new Vector3(80, 7, 0), // Position offset for sword
+      new Vector3(0, 0, 0), // Rotation offset for sword
+      new Vector3(120, 120, 120) // Scaling for sword
     ));
+    /*
     this.addItem(new Item(
       "sword2",
       scene,
@@ -25,6 +26,7 @@ export class Player {
       new Vector3(Math.PI/2, Math.PI, 0), // Rotation offset for sword_of_artorias
       new Vector3(5, 5, 5) // Scaling for sword_of_artorias
     ));
+    */
   }
 
   public getInventory(): Item[] {

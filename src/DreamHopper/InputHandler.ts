@@ -138,7 +138,7 @@ import {
       }
       // Idle (no input)
       else if (!this.keyStates[" "] && !character.isJumping) {
-        this.characterController.playAnimation("IDLE");
+        this.characterController.playAnimation("2HandIdle");
         if(!this.characterController.physicsController?.isJumping){
              this.characterController.moveForward(0); // Stops motion
         }

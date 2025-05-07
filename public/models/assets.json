@@ -29,6 +29,12 @@
       "name": "plank",
       "rootUrl": "./models/",
       "filename": "plank.glb"
+    },
+    {
+      "name": "dragon_slayer",
+      "rootUrl": "./models/",
+      "filename": "dragon_slayer_berserk.glb"
     }
+
   ]
   

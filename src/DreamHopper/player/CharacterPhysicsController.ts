@@ -49,7 +49,7 @@ export class CharacterPhysicsController {
 
     body.getCollisionObservable().add((event) => {
 
-      if(this.animationManager.hasAnimationEnded(1)) {
+      if(this.animationManager.hasAnimationEnded("Jump")) {
           // Collision event has occurred
           this.isJumping = false;
           console.log("Landed, collision detected");

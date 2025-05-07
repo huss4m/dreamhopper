@@ -17,8 +17,8 @@ export class CharacterAnimationManager {
     }
 
 
-    if (this.getAnimationByName("IDLE")) {
-      this.getAnimationByName("IDLE")!.play(true);
+    if (this.getAnimationByName("2HandIdle")) {
+      this.getAnimationByName("2HandIdle")!.play(true);
       console.log("Playing idle animation");
     } else {
       console.warn("Idle animation not found");
@@ -78,9 +78,9 @@ export class CharacterAnimationManager {
     return this.isJumping;
   }
 
-  hasAnimationEnded(index: number): boolean {
-    const anim = this.animationGroups[index];
-    return anim.isPlaying === false;
+  hasAnimationEnded(name: string): boolean {
+    const anim = this.getAnimationByName(name)
+    return anim!.isPlaying === false;
   }
 
   getAnimationByName(name: string): AnimationGroup | undefined {

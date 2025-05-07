@@ -5,6 +5,10 @@ import {
   CascadedShadowGenerator,
   TransformNode,
   PhysicsMotionType,
+  ParticleSystem,
+  Texture,
+  NoiseProceduralTexture,
+  MeshBuilder,
 } from "@babylonjs/core";
 import { AssetManager } from "../AssetManager";
 import { CharacterAnimationManager } from "./CharacterAnimationManager";
@@ -20,6 +24,7 @@ export class CharacterController {
   private itemAttachmentManager: ItemAttachmentManager;
   public characterMeshLoader: CharacterMeshLoader;
   private player: Player;
+  particleSystem: any;
 
   constructor(
     private scene: Scene,
@@ -84,16 +89,19 @@ export class CharacterController {
             characterMesh
           );
         } else if (itemName === "sword2") {
-         
-
+         console.log("ph");
+          /*
           await this.itemAttachmentManager.attachItemToHand(
             item,
             "mixamorig:LeftHand",
             skeleton,
             characterMesh
           );
+          */
         }
       }
+
+      this.setupParticleSystem();
     }
   }
 
@@ -152,6 +160,78 @@ export class CharacterController {
 
   public getPlayer(): Player {
     return this.player;
+  }
+
+
+  public setupParticleSystem(): void {
+    const skeleton = this.characterMeshLoader.getSkeleton();
+    const characterMesh = this.characterMeshLoader.getCharacterMesh();
+  
+    if (!skeleton || !characterMesh) {
+      console.error("Skeleton or character mesh not loaded.");
+      return;
+    }
+  
+    // Helper function to create a particle system for a given hand bone
+    const createHandParticleSystem = (boneName: string, systemName: string): ParticleSystem => {
+      const particleSystem = new ParticleSystem(systemName, 5, this.scene);
+  
+      // Set particle texture
+      particleSystem.particleTexture = new Texture("./Flare.png", this.scene);
+  
+      // Find the hand bone in the skeleton
+      const handBone = skeleton.bones.find(bone => bone.name === boneName);
+      if (!handBone) {
+        console.error(`Bone ${boneName} not found in skeleton.`);
+        return particleSystem;
+      }
+  
+      // dummy mesh to act as the emitter
+      const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.01 }, this.scene);
+      dummyMesh.isVisible = false; // Hide 
+      dummyMesh.parent = handBone.getTransformNode(); // Parent to the hand bone's transform node
+      dummyMesh.position = new Vector3(0, 10, 0);
+
+      // Set the dummy mesh as the emitter
+      particleSystem.emitter = dummyMesh;
+  
+      // Emission box for particles relative to the hand bone
+      particleSystem.minEmitBox = new Vector3(-0.1, -0.1, -0.1); // Smaller box for hand
+      particleSystem.maxEmitBox = new Vector3(0.1, 0.1, 0.1);
+  
+      // Angular speed in radians
+      particleSystem.minAngularSpeed = 0;
+      particleSystem.maxAngularSpeed = Math.PI;
+  
+      // Speed
+      particleSystem.minEmitPower = 10; 
+      particleSystem.maxEmitPower = 50;
+      particleSystem.updateSpeed = 0.005;
+  
+      // Size of each particle
+      particleSystem.minSize = 0.2; 
+      particleSystem.maxSize = 0.5;
+  
+      particleSystem.gravity = new Vector3(0, 0, 0)
+
+      
+      particleSystem.direction1 = new Vector3(0, 0, 0); 
+      particleSystem.direction2 = new Vector3(0, 0, 0); 
+
+
+      particleSystem.isLocal = true;
+  
+      // Start the particle system
+      particleSystem.start();
+  
+      return particleSystem;
+    };
+  
+    // Create particle systems for both hands
+    this.particleSystem = {
+      rightHand: createHandParticleSystem("mixamorig:RightHand", "rightHandParticles"),
+      leftHand: createHandParticleSystem("mixamorig:LeftHand", "leftHandParticles"),
+    };
   }
 
   public dispose(): void {
