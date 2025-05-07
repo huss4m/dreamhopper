@@ -1,4 +1,5 @@
-import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, StandardMaterial, Tags, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
 import { AssetManager } from "./AssetManager";
 import { PhysicsController, PhysicsConfig, ColliderType } from "./PhysicsController";
 import { Hoverable, HoverHandler, HoverConfig } from "./HoverableSystem";
@@ -14,12 +15,16 @@ export class NPC implements Hoverable, Targettable {
   private physicsController: PhysicsController | null = null;
   private hoverHandler: HoverHandler;
   private targetCircle: Mesh | null = null; // Mesh for the gradient disc
+  private questMarker: Sprite | null = null; // Sprite for the quest marker
+  private questMarkerObserver: any | null = null; // Store the render loop observer
 
   isTargetted = false;
 
   assetManager!: AssetManager;
   shadowGenerator!: CascadedShadowGenerator;
   highlightLayer: HighlightLayer;
+  static availableSpriteManager: SpriteManager | null = null; // SpriteManager for "available" marker
+  static completedSpriteManager: SpriteManager | null = null; // SpriteManager for "completed" marker
 
   constructor(
     private scene: Scene,
@@ -105,6 +110,8 @@ export class NPC implements Hoverable, Targettable {
     } catch (error) {
       console.error(`Failed to load character for NPC ID: ${this.id}`, error);
     }
+
+    this.setQuestMarker("available");
   }
 
   private setupPhysics(): void {
@@ -156,6 +163,95 @@ export class NPC implements Hoverable, Targettable {
     });
 
     return entries;
+  }
+
+  public setQuestMarker(markerType: "available" | "completed" | null): void {
+    // Dispose of any existing quest marker to avoid duplicates
+    if (this.questMarker) {
+      if (this.questMarkerObserver) {
+        this.scene.onBeforeRenderObservable.remove(this.questMarkerObserver);
+        this.questMarkerObserver = null;
+      }
+      this.questMarker.dispose();
+      this.questMarker = null;
+    }
+
+
+    if (!markerType || !this.npcMesh) {
+      return;
+    }
+
+    try {
+      // Select the appropriate SpriteManager based on markerType
+      let spriteManager: SpriteManager | null = null;
+      if (markerType === "available") {
+        if (!NPC.availableSpriteManager) {
+          NPC.availableSpriteManager = new SpriteManager(
+            `availableSpriteManager_${this.id}`,
+            "./images/exclamation.png",
+            10, // Max capacity for sprites
+            { width: 512, height: 512 },
+            this.scene
+          );
+        }
+        spriteManager = NPC.availableSpriteManager;
+      } else if (markerType === "completed") {
+        if (!NPC.completedSpriteManager) {
+          NPC.completedSpriteManager = new SpriteManager(
+            `completedSpriteManager_${this.id}`,
+            "./images/question.png",
+            10, // Max capacity for sprites
+            { width: 512, height: 512 },
+            this.scene
+          );
+        }
+        spriteManager = NPC.completedSpriteManager;
+      }
+
+      if (!spriteManager) {
+        console.error(`No SpriteManager created for markerType: ${markerType}`);
+        return;
+      }
+
+      // Create a new sprite for the quest marker
+      this.questMarker = new Sprite(`questMarker_${this.id}`, spriteManager);
+      this.questMarker.width = 1; // Adjust size in world units
+      this.questMarker.height = 1;
+      this.questMarker.isPickable = false;
+
+      // Compute the NPC's bounding box in world space
+      this.npcMesh.refreshBoundingInfo();
+      const boundingBox = this.npcMesh.getBoundingInfo().boundingBox;
+
+      // Calculate the head position in world space
+      const headPosition = new Vector3(
+        this.npcMesh.position.x,
+        boundingBox.maximumWorld.y + 3, // Offset above head
+        this.npcMesh.position.z
+      );
+
+      // Position the sprite
+      this.questMarker.position = headPosition;
+
+
+
+      // Update sprite position in render loop
+      this.questMarkerObserver = this.scene.onBeforeRenderObservable.add(() => {
+        if (this.questMarker && this.npcMesh) {
+          this.npcMesh.refreshBoundingInfo();
+          const updatedBoundingBox = this.npcMesh.getBoundingInfo().boundingBox;
+          const updatedHeadPosition = new Vector3(
+            this.npcMesh.position.x,
+            updatedBoundingBox.maximumWorld.y + 3,
+            this.npcMesh.position.z
+          );
+          this.questMarker.position = updatedHeadPosition;
+        }
+      });
+
+    } catch (error) {
+      console.error(`Failed to set quest marker sprite for NPC ID: ${this.id}`, error);
+    }
   }
 
   public setTargetted(isTargetted: boolean): void {
@@ -306,6 +402,25 @@ export class NPC implements Hoverable, Targettable {
       }
       this.targetCircle.dispose();
       this.targetCircle = null;
+    }
+
+    if (this.questMarker) {
+      if (this.questMarkerObserver) {
+        this.scene.onBeforeRenderObservable.remove(this.questMarkerObserver);
+        this.questMarkerObserver = null;
+      }
+      this.questMarker.dispose();
+      this.questMarker = null;
+    }
+
+    // Clean up SpriteManagers if no other NPCs are using them
+    if (NPC.availableSpriteManager && NPC.availableSpriteManager.sprites.length === 0) {
+      NPC.availableSpriteManager.dispose();
+      NPC.availableSpriteManager = null;
+    }
+    if (NPC.completedSpriteManager && NPC.completedSpriteManager.sprites.length === 0) {
+      NPC.completedSpriteManager.dispose();
+      NPC.completedSpriteManager = null;
     }
 
     if (this.npcMesh) {

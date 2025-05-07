@@ -40,11 +40,11 @@ export class TargetingSystem {
             if (this.currentTarget !== selectedTarget) {
               if (this.currentTarget) {
                 this.currentTarget.setTargetted(false);
-                console.log("Untargeting target ", this.currentTarget.getId());
+                //console.log("Untargeting target ", this.currentTarget.getId());
               }
               this.currentTarget = selectedTarget;
               this.currentTarget.setTargetted(true);
-              console.log("Targeting target ", this.currentTarget.getId());
+             // console.log("Targeting target ", this.currentTarget.getId());
             }
             return;
           }
@@ -52,7 +52,7 @@ export class TargetingSystem {
         // Clicked on empty space or non-target, deselect current target
         if (this.currentTarget) {
           this.currentTarget.setTargetted(false);
-          console.log("Untargeting target ", this.currentTarget.getId());
+          //console.log("Untargeting target ", this.currentTarget.getId());
           this.currentTarget = null;
         }
       }

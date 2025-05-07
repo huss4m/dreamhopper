@@ -42,7 +42,7 @@ export class SceneCreator {
       this.physicsPlugin = new HavokPlugin(undefined, havokInstance);
       this.scene.enablePhysics(new Vector3(0, -9.81, 0), this.physicsPlugin);
       this.scene.collisionsEnabled = false;
-      console.log("Havok initialized:", this.physicsPlugin);
+      //console.log("Havok initialized:", this.physicsPlugin);
     } catch (error) {
       console.error("Failed to initialize Havok physics:", error);
     }

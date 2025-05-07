@@ -79,7 +79,7 @@ import {
       if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
         this.characterController.playAnimation("Jump", 1, 8, 95);
         this.characterController.jump();
-        console.log("Jump triggered");
+        //console.log("Jump triggered");
       }
       this.wasSpacePressed = this.keyStates[" "];
     

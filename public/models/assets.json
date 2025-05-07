@@ -34,6 +34,16 @@
       "name": "dragon_slayer",
       "rootUrl": "./models/",
       "filename": "dragon_slayer_berserk.glb"
+    },
+    {
+      "name": "question_mark",
+      "rootUrl": "./models/",
+      "filename": "question_mark.glb"
+    },
+    {
+      "name": "exclamation_point",
+      "rootUrl": "./models/",
+      "filename": "exclamation_point.glb"
     }
 
   ]

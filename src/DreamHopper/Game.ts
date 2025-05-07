@@ -59,9 +59,9 @@ export class Game {
     );
 
     if (this.scene) {
-      const npc1 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(5, 10, 5), this.highlightLayer, this.targetingSystem);
-      const npc2 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10, 10, 5), this.highlightLayer, this.targetingSystem);
-      const npc3 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10, 10, 10), this.highlightLayer, this.targetingSystem);
+      const npc1 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(5, 1, 5), this.highlightLayer, this.targetingSystem);
+      const npc2 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10, 1, 5), this.highlightLayer, this.targetingSystem);
+      const npc3 = new NPC(this.scene, "npc", this.assetManager, shadowGenerator, new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem);
 
       this.npcs.push(npc1, npc2, npc3);
     }

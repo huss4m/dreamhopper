@@ -52,7 +52,7 @@ export class CharacterPhysicsController {
       if(this.animationManager.hasAnimationEnded("Jump")) {
           // Collision event has occurred
           this.isJumping = false;
-          console.log("Landed, collision detected");
+          //console.log("Landed, collision detected");
       }
  
   });
@@ -78,7 +78,7 @@ export class CharacterPhysicsController {
           aggregate.body.applyImpulse(jumpImpulse, impulsePoint);
 
           this.isJumping = true;
-          console.log("JUMPING")
+          //console.log("JUMPING")
 
        }
     

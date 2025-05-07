@@ -36,9 +36,9 @@ export class Player {
   public addItem(item: Item): void {
     if (!this.inventory.some(i => i.getName() === item.getName())) {
       this.inventory.push(item);
-      console.log(`Added ${item.getName()} to inventory`);
+      //console.log(`Added ${item.getName()} to inventory`);
     } else {
-      console.log(`${item.getName()} already in inventory`);
+      //console.log(`${item.getName()} already in inventory`);
       item.dispose(); // Dispose unused item to prevent memory leaks
     }
   }
@@ -49,9 +49,9 @@ export class Player {
       const item = this.inventory[index];
       this.inventory.splice(index, 1);
       item.dispose(); // Dispose item to free resources
-      console.log(`Removed ${itemName} from inventory`);
+      //console.log(`Removed ${itemName} from inventory`);
     } else {
-      console.log(`${itemName} not found in inventory`);
+      //console.log(`${itemName} not found in inventory`);
     }
   }
 

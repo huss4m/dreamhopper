@@ -19,7 +19,7 @@ export class CharacterAnimationManager {
 
     if (this.getAnimationByName("2HandIdle")) {
       this.getAnimationByName("2HandIdle")!.play(true);
-      console.log("Playing idle animation");
+      //console.log("Playing idle animation");
     } else {
       console.warn("Idle animation not found");
     }
@@ -71,7 +71,7 @@ export class CharacterAnimationManager {
       this.isJumping = true;
     }
 
-    console.log(`Playing animation group '${name}' from ${from} to ${to} at speed ${speed}`);
+    //console.log(`Playing animation group '${name}' from ${from} to ${to} at speed ${speed}`);
   }
 
   public isCharacterJumping(): boolean {
