@@ -8,7 +8,7 @@ import {
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterCameraController } from "./player/CharacterCameraController";
-//import "@babylonjs/core/Debug/debugLayer.js"; // Augments the scene with the debug methods
+//import "@babylonjs/core/Debug/debugLayer.js"; 
 import { HighlightLayer } from "@babylonjs/core";
 
 export class SceneCreator {

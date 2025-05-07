@@ -60,7 +60,7 @@ export class HoverHandler {
     this.configureMesh(mesh);
     this.registerHoverActions(mesh, canvas);
     this.setupCursorStyle(canvas);
-    this.setupDebugging(mesh);
+    //this.setupDebugging(mesh);
   }
 
   private configureMesh(mesh: Mesh): void {

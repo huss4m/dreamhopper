@@ -1,16 +1,19 @@
-import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, ExecuteCodeAction, HighlightLayer, Mesh, PBRMaterial, PointerEventTypes, Scene, Skeleton, Tags, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, StandardMaterial, Tags, Vector3 } from "@babylonjs/core";
 import { AssetManager } from "./AssetManager";
 import { PhysicsController, PhysicsConfig, ColliderType } from "./PhysicsController";
 import { Hoverable, HoverHandler, HoverConfig } from "./HoverableSystem";
+import { Targettable } from "./Targettable";
+import { TargetingSystem } from "./TargetingSystem";
 import { v4 as uuidv4 } from 'uuid';
 
-export class NPC implements Hoverable {
+export class NPC implements Hoverable, Targettable {
   private id: string; // Unique identifier for the NPC
   private npcMesh: Mesh | null = null;
   private npcSkeleton: Skeleton | null = null;
   private animationGroups: AnimationGroup[] = [];
   private physicsController: PhysicsController | null = null;
   private hoverHandler: HoverHandler;
+  private targetCircle: Mesh | null = null; // Mesh for the gradient disc
 
   isTargetted = false;
 
@@ -24,7 +27,8 @@ export class NPC implements Hoverable {
     assetManager: AssetManager,
     shadowGenerator: CascadedShadowGenerator,
     position: Vector3,
-    highlightLayer: HighlightLayer
+    highlightLayer: HighlightLayer,
+    targetingSystem: TargetingSystem
   ) {
     this.id = uuidv4(); // Generate a unique ID for the NPC
     this.highlightLayer = highlightLayer;
@@ -41,6 +45,9 @@ export class NPC implements Hoverable {
       blurVerticalSize: 0.5,
     };
     this.hoverHandler = new HoverHandler(this.scene, this.highlightLayer, hoverConfig);
+
+    // Automatically register with TargetingSystem
+    targetingSystem.registerTarget(this);
 
     this.loadCharacter(name, position);
   }
@@ -79,8 +86,13 @@ export class NPC implements Hoverable {
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
       }
 
-      // Add tags including ID
+      // Enable and add tags to root mesh and all child meshes
+      Tags.EnableFor(this.npcMesh);
       Tags.AddTagsTo(this.npcMesh, `npcID:${this.id}`);
+      this.npcMesh.getChildMeshes().forEach((mesh) => {
+        Tags.EnableFor(mesh);
+        Tags.AddTagsTo(mesh, `npcID:${this.id}`);
+      });
 
       // Initialize physics
       this.setupPhysics();
@@ -134,6 +146,7 @@ export class NPC implements Hoverable {
 
     entries.rootNodes[0].getChildMeshes().forEach((mesh: AbstractMesh) => {
       mesh.setEnabled(true);
+      mesh.isPickable = true; // Ensure child meshes are pickable
     });
 
     entries.animationGroups.forEach((animGroup) => {
@@ -143,6 +156,105 @@ export class NPC implements Hoverable {
     });
 
     return entries;
+  }
+
+  public setTargetted(isTargetted: boolean): void {
+    this.isTargetted = isTargetted;
+    if (this.npcMesh) {
+      // Compute bounding box to find the NPC's feet
+      this.npcMesh.refreshBoundingInfo();
+      const boundingBox = this.npcMesh.getBoundingInfo().boundingBox;
+      const feetPosition = new Vector3(
+        this.npcMesh.position.x,
+        boundingBox.minimumWorld.y + 0.05, // Increased offset to prevent clipping
+        this.npcMesh.position.z
+      );
+
+      console.log(`NPC ${this.id} position:`, this.npcMesh.position);
+      console.log(`NPC ${this.id} feet position:`, feetPosition);
+      console.log(`NPC ${this.id} bounding box min:`, boundingBox.minimumWorld);
+      console.log(`NPC ${this.id} bounding box max:`, boundingBox.maximumWorld);
+
+      // Create or remove the target circle
+      if (isTargetted) {
+        console.log(`Adding target circle to NPC ${this.id} at`, feetPosition);
+        // Create a disc mesh for the gradient circle
+        this.targetCircle = MeshBuilder.CreateDisc(`targetCircle_${this.id}`, {
+          radius: 0.5, // Adjust radius as needed
+          tessellation: 32,
+        }, this.scene);
+        this.targetCircle.position = feetPosition;
+        this.targetCircle.rotation.x = Math.PI / 2;
+
+        // Create a dynamic texture for the gradient with border
+        const textureSize = 512;
+        const dynamicTexture = new DynamicTexture(`targetCircleTex_${this.id}`, textureSize, this.scene, true);
+        const ctx = dynamicTexture.getContext();
+        const gradient = ctx.createRadialGradient(
+          textureSize / 2, textureSize / 2, 0, // Center, inner radius
+          textureSize / 2, textureSize / 2, textureSize / 2 // Center, outer radius
+        );
+        gradient.addColorStop(0.2, "rgba(0, 255, 0, 0)"); // Transparent center
+        gradient.addColorStop(0.8, "rgba(0, 255, 0, 0.4)"); // Gradient green
+        gradient.addColorStop(0.95, "rgba(0, 255, 0, 0.8)"); // Near edge
+        gradient.addColorStop(1, "rgba(0, 255, 0, 1)"); // Solid green border
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, textureSize, textureSize);
+        dynamicTexture.update();
+
+        // Apply material with gradient texture
+        const circleMaterial = new StandardMaterial(`targetCircleMat_${this.id}`, this.scene);
+        circleMaterial.diffuseTexture = dynamicTexture;
+        circleMaterial.opacityTexture = dynamicTexture; // Use texture for transparency
+        circleMaterial.backFaceCulling = false; // Ensure visibility from all angles
+        this.targetCircle.material = circleMaterial;
+        this.targetCircle.isPickable = false;
+        this.targetCircle.alwaysSelectAsActiveMesh = true; // Force render on top to prevent clipping
+
+        // Update circle position in render loop
+        const observer = this.scene.onBeforeRenderObservable.add(() => {
+          if (this.targetCircle && this.npcMesh) {
+            this.npcMesh.refreshBoundingInfo();
+            const updatedFeetPosition = new Vector3(
+              this.npcMesh.position.x,
+              this.npcMesh.getBoundingInfo().boundingBox.minimumWorld.y + 0.05,
+              this.npcMesh.position.z
+            );
+            this.targetCircle.position = updatedFeetPosition;
+            // Add subtle rotation for visual flair
+            this.targetCircle.rotation.y += 0.01;
+          }
+        });
+
+        // Store observer to remove it later
+        this.targetCircle.metadata = { observer };
+
+        // Keep HighlightLayer code for reference
+        console.log(`Adding highlight to NPC ${this.id} and its children`);
+        this.highlightLayer.addMesh(this.npcMesh, Color3.Red(), true);
+        this.npcMesh.getChildMeshes().forEach((mesh) => {
+          this.highlightLayer.addMesh(mesh as Mesh, Color3.Red(), true);
+        });
+      } else {
+        console.log(`Removing target circle from NPC ${this.id}`);
+        if (this.targetCircle) {
+          if (this.targetCircle.metadata?.observer) {
+            this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+          }
+          this.targetCircle.dispose();
+          this.targetCircle = null;
+        }
+
+        // Keep HighlightLayer code for reference
+        console.log(`Removing highlight from NPC ${this.id} and its children`);
+        this.highlightLayer.removeMesh(this.npcMesh);
+        this.npcMesh.getChildMeshes().forEach((mesh) => {
+          this.highlightLayer.removeMesh(mesh as Mesh);
+        });
+      }
+    } else {
+      console.error(`Cannot set target circle or highlight: NPC mesh is null for NPC ID: ${this.id}`);
+    }
   }
 
   public getId(): string {
@@ -188,6 +300,14 @@ export class NPC implements Hoverable {
       this.physicsController = null;
     }
 
+    if (this.targetCircle) {
+      if (this.targetCircle.metadata?.observer) {
+        this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+      }
+      this.targetCircle.dispose();
+      this.targetCircle = null;
+    }
+
     if (this.npcMesh) {
       this.npcMesh.dispose();
       this.npcMesh = null;
@@ -198,7 +318,4 @@ export class NPC implements Hoverable {
 
     this.npcSkeleton = null;
   }
-
-
-
 }
