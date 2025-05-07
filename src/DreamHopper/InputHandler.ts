@@ -91,27 +91,50 @@ import {
       // Diagonal Movement
       if (isZ && isE) {
         this.characterController.physicsController!.isDiagonal = true;
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
-        this.characterController.moveDiagonallyRight(this.moveSpeed);
+        if(!this.characterController.physicsController?.isJumping) 
+        {
+          this.characterController.playAnimation("RUNNING");
+          this.characterController.moveDiagonallyRight(this.moveSpeed);
+        }
+      
       } else if (isZ && isA) {
         this.characterController.physicsController!.isDiagonal = true;
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
-        this.characterController.moveDiagonallyLeft(this.moveSpeed);
+        if(!this.characterController.physicsController?.isJumping) 
+        {
+          this.characterController.playAnimation("RUNNING");
+          this.characterController.moveDiagonallyLeft(this.moveSpeed);
+        }
+ 
       }
       // Forward / Backward / Strafing Movement
       else if (isZ) {
         this.characterController.physicsController!.isDiagonal = false;
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNING");
-        this.characterController.moveForward(this.moveSpeed);
+        if(!this.characterController.physicsController?.isJumping) 
+        {
+          this.characterController.playAnimation("RUNNING");
+          this.characterController.moveForward(this.moveSpeed);
+        }
+  
       } else if (isS) {
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("RUNNINGBACKWARDS");
-        this.characterController.backPedal(this.moveSpeed);
+
+        if(!this.characterController.physicsController?.isJumping)
+        {
+          this.characterController.playAnimation("RUNNINGBACKWARDS");
+          this.characterController.backPedal(this.moveSpeed);
+        }
+   
       } else if (isA) {
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("StrafeLeft");
-        this.characterController.strafeLeft(this.moveSpeed);
+        if(!this.characterController.physicsController?.isJumping)
+          {
+              this.characterController.playAnimation("StrafeLeft");
+              this.characterController.strafeLeft(this.moveSpeed);
+          }
       } else if (isE) {
-        if(!this.characterController.physicsController?.isJumping) this.characterController.playAnimation("StrafeRight");
-        this.characterController.strafeRight(this.moveSpeed);
+        if(!this.characterController.physicsController?.isJumping) {
+          this.characterController.playAnimation("StrafeRight");
+          this.characterController.strafeRight(this.moveSpeed);
+        }
+   
       }
       // Idle (no input)
       else if (!this.keyStates[" "] && !character.isJumping) {
