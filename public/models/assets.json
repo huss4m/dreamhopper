@@ -18,6 +18,17 @@
       "name": "npc",
       "rootUrl": "./models/",
       "filename": "npc.glb"
+    },
+
+    {
+      "name": "cube",
+      "rootUrl": "./models/",
+      "filename": "cube.glb"
+    },
+    {
+      "name": "plank",
+      "rootUrl": "./models/",
+      "filename": "plank.glb"
     }
   ]
   

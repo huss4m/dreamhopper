@@ -64,7 +64,7 @@ export class CharacterAnimationManager {
     const to = toFrame ?? animationGroup.to;
 
     const isJumpAnimation = animationGroup === this.getAnimationByName("Jump")!;
-    animationGroup.start(!isJumpAnimation, 1.0, from, to, false);
+    animationGroup.start(!isJumpAnimation, speed, from, to, false);
     this.currentAnimationName = name;
 
     if (isJumpAnimation) {

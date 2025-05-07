@@ -8,21 +8,21 @@ export class Player {
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator) {
     // Initialize with default swords, including specific offsets
     this.addItem(new Item(
-      "sword",
-      scene,
-      assetManager.getAssetContainer("sword"),
-      shadowGenerator,
-      new Vector3(45, 8, 3), // Position offset for sword
-      new Vector3(0, 0, -Math.PI / 2), // Rotation offset for sword
-      new Vector3(3, 3, 3) // Scaling for sword
-    ));
-    this.addItem(new Item(
-      "sword_of_artorias",
+      "sword1",
       scene,
       assetManager.getAssetContainer("sword_of_artorias"),
       shadowGenerator,
-      new Vector3(-27, 15, -8), // Position offset for sword_of_artorias
-      new Vector3(Math.PI / 5, Math.PI / 2, (2 * Math.PI) / 3), // Rotation offset for sword_of_artorias
+      new Vector3(15, 7, 0), // Position offset for sword
+      new Vector3(Math.PI/2, 0, 0), // Rotation offset for sword
+      new Vector3(5, 5, 5) // Scaling for sword
+    ));
+    this.addItem(new Item(
+      "sword2",
+      scene,
+      assetManager.getAssetContainer("sword_of_artorias"),
+      shadowGenerator,
+      new Vector3(-15, 7, 0), // Position offset for sword_of_artorias
+      new Vector3(Math.PI/2, Math.PI, 0), // Rotation offset for sword_of_artorias
       new Vector3(5, 5, 5) // Scaling for sword_of_artorias
     ));
   }
