@@ -5,13 +5,6 @@ export class CharacterAnimationManager {
   private currentAnimationName: string | null = null;
   private isJumping = false;
 
-  public idle: AnimationGroup | null = null;
-  public jump: AnimationGroup | null = null;
-  public walk: AnimationGroup | null = null;
-  public strafeLeftAnim: AnimationGroup | null = null;
-  public strafeRightAnim: AnimationGroup | null = null;
-  public backPedalAnim: AnimationGroup | null = null;
-
   constructor(private scene: Scene) {}
 
   public initialize(animationGroups: AnimationGroup[]): void {
@@ -23,15 +16,9 @@ export class CharacterAnimationManager {
       return;
     }
 
-    this.idle = this.animationGroups[0];
-    this.jump = this.animationGroups[1];
-    this.walk = this.animationGroups[2];
-    this.backPedalAnim = this.animationGroups[3];
-    this.strafeLeftAnim = this.animationGroups[4];
-    this.strafeRightAnim = this.animationGroups[5];
 
-    if (this.idle) {
-      this.idle.play(true);
+    if (this.getAnimationByName("IDLE")) {
+      this.getAnimationByName("IDLE")!.play(true);
       console.log("Playing idle animation");
     } else {
       console.warn("Idle animation not found");
@@ -41,8 +28,8 @@ export class CharacterAnimationManager {
   }
 
   private setupJumpDetection(): void {
-    if (this.jump) {
-      this.jump.onAnimationGroupEndObservable.add(() => {
+    if (this.getAnimationByName("Jump")!) {
+      this.getAnimationByName("Jump")!.onAnimationGroupEndObservable.add(() => {
         this.isJumping = false;
       });
     } else {
@@ -76,7 +63,7 @@ export class CharacterAnimationManager {
     const from = fromFrame ?? 0;
     const to = toFrame ?? animationGroup.to;
 
-    const isJumpAnimation = animationGroup === this.jump;
+    const isJumpAnimation = animationGroup === this.getAnimationByName("Jump")!;
     animationGroup.start(!isJumpAnimation, 1.0, from, to, false);
     this.currentAnimationName = name;
 
