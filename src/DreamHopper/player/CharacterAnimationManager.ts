@@ -105,7 +105,7 @@ export class CharacterAnimationManager {
     }
   }
 
-  // Simple animation blending (unchanged, but included for completeness)
+
   public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
     let currentWeight = 1;
     let newWeight = 0;
