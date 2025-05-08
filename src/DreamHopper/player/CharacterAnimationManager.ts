@@ -17,8 +17,8 @@ export class CharacterAnimationManager {
     }
 
 
-    if (this.getAnimationByName("2HandIdle")) {
-      this.getAnimationByName("2HandIdle")!.play(true);
+    if (this.getAnimationByName("IdleGreatSword")) {
+      this.getAnimationByName("IdleGreatSword")!.play(true);
       //console.log("Playing idle animation");
     } else {
       console.warn("Idle animation not found");

@@ -93,7 +93,7 @@ import {
         this.characterController.physicsController!.isDiagonal = true;
         if(!this.characterController.physicsController?.isJumping) 
         {
-          this.characterController.playAnimation("RUNNING");
+          this.characterController.playAnimation("RunGreatSword", 1, 1, 38);
           this.characterController.moveDiagonallyRight(this.moveSpeed);
         }
       
@@ -101,7 +101,8 @@ import {
         this.characterController.physicsController!.isDiagonal = true;
         if(!this.characterController.physicsController?.isJumping) 
         {
-          this.characterController.playAnimation("RUNNING");
+          this.characterController.playAnimation("RunGreatSword", 1, 1, 38);
+          //this.characterController.playAnimation("RUNNING");
           this.characterController.moveDiagonallyLeft(this.moveSpeed);
         }
  
@@ -111,7 +112,7 @@ import {
         this.characterController.physicsController!.isDiagonal = false;
         if(!this.characterController.physicsController?.isJumping) 
         {
-          this.characterController.playAnimation("RUNNING");
+          this.characterController.playAnimation("RunGreatSword", 1, 1, 38);
           this.characterController.moveForward(this.moveSpeed);
         }
   
@@ -138,7 +139,7 @@ import {
       }
       // Idle (no input)
       else if (!this.keyStates[" "] && !character.isJumping) {
-        this.characterController.playAnimation("2HandIdle");
+        this.characterController.playAnimation("IdleGreatSword");
         if(!this.characterController.physicsController?.isJumping){
              this.characterController.moveForward(0); // Stops motion
         }
