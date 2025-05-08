@@ -25,6 +25,7 @@ export class NPC implements Hoverable, Targettable {
   highlightLayer: HighlightLayer;
   static availableSpriteManager: SpriteManager | null = null; // SpriteManager for "available" marker
   static completedSpriteManager: SpriteManager | null = null; // SpriteManager for "completed" marker
+  position: Vector3;
 
   constructor(
     private scene: Scene,
@@ -39,6 +40,7 @@ export class NPC implements Hoverable, Targettable {
     this.highlightLayer = highlightLayer;
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
+    this.position = position;
 
     // Initialize hover handler
     const hoverConfig: HoverConfig = {
@@ -388,6 +390,10 @@ export class NPC implements Hoverable, Targettable {
 
   public getScene(): Scene {
     return this.scene;
+  }
+
+  public getPosition() {
+    return this.position;
   }
 
   public dispose(): void {
