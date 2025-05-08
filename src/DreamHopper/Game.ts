@@ -1,11 +1,12 @@
 import { ArcRotateCamera, AssetContainer, Engine, HighlightLayer, Scene, Vector3 } from "@babylonjs/core";
-import { SceneCreator, EnvironmentType } from "./SceneCreator";
+import { SceneCreator } from "./SceneCreator";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
 import "@babylonjs/loaders";
 import { AssetManager } from "./AssetManager";
 import { NPC } from "./NPC";
 import { TargetingSystem } from "./TargetingSystem";
+import { EnvironmentType } from "./EnvironmentCreator";
 
 export interface SceneState {
   npcPositions?: Vector3[];

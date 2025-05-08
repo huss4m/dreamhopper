@@ -2,7 +2,6 @@ import { Scene, CascadedShadowGenerator } from "@babylonjs/core";
 import { ForestEnvironment } from "./environments/ForestEnvironment";
 import { DesertEnvironment } from "./environments/DesertEnvironment";
 
-
 export enum EnvironmentType {
   FOREST = "forest",
   DESERT = "desert",
@@ -23,7 +22,6 @@ export class EnvironmentCreator {
         return new ForestEnvironment(this.scene);
       case EnvironmentType.DESERT:
         return new DesertEnvironment(this.scene);
-      
       default:
         throw new Error(`Unknown environment type: ${type}`);
     }

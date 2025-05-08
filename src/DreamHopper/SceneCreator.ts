@@ -26,7 +26,7 @@ export class SceneCreator {
     this.environmentCreator = new EnvironmentCreator(this.scene);
     this.highlightLayer = new HighlightLayer("highlightLayer", this.scene);
     this.initializePhysics();
-    this.setupEnvironment(environmentType);
+    this.createEnvironment(environmentType);
   }
 
   public createScene(): Scene {
@@ -52,20 +52,11 @@ export class SceneCreator {
     }
   }
 
-  private async setupEnvironment(environmentType: EnvironmentType): Promise<void> {
+
+  private async createEnvironment(environmentType: EnvironmentType): Promise<void> {
     this.environment = this.environmentCreator.createEnvironment(environmentType);
     await this.environment.create();
-    
-    const envTex = CubeTexture.CreateFromPrefilteredData("./environment/bluesky.env", this.scene);
-    envTex.gammaSpace = false;
-    envTex.rotationY = Math.PI;
-    this.scene.environmentTexture = envTex;
-  
-    const skybox = this.scene.createDefaultSkybox(envTex, true, 100000, 0);
-    if (skybox && skybox.material) {
-      skybox.applyFog = false;
-    }
   }
-}
 
-export { EnvironmentType };
+  
+}
