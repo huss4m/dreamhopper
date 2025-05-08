@@ -93,7 +93,7 @@ import {
         this.characterController.physicsController!.isDiagonal = true;
         if(!this.characterController.physicsController?.isJumping) 
         {
-          this.characterController.playAnimation("RunGreatSword", 1, 1, 38);
+          this.characterController.playAnimation("RunGreatSword", 1, 1, 35);
           this.characterController.moveDiagonallyRight(this.moveSpeed);
         }
       

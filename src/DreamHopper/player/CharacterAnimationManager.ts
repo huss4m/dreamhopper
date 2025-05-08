@@ -4,6 +4,8 @@ export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];
   private currentAnimationName: string | null = null;
   private isJumping = false;
+  private isBlending = false;
+  private blendFrameId: number | null = null; // Track requestAnimationFrame ID
 
   constructor(private scene: Scene) {}
 
@@ -16,9 +18,9 @@ export class CharacterAnimationManager {
       return;
     }
 
-    const idleAnimation = this.getAnimationByName("IdleGreatSword");
-    if (idleAnimation) {
-      idleAnimation.play(true);
+    if (this.getAnimationByName("IdleGreatSword")) {
+      this.getAnimationByName("IdleGreatSword")!.play(true);
+      this.currentAnimationName = "IdleGreatSword";
     } else {
       console.warn("Idle animation not found");
     }
@@ -27,119 +29,142 @@ export class CharacterAnimationManager {
   }
 
   private setupJumpDetection(): void {
-    const jumpAnim = this.getAnimationByName("Jump");
-    if (jumpAnim) {
-      jumpAnim.onAnimationGroupEndObservable.add(() => {
+    if (this.getAnimationByName("Jump")) {
+      this.getAnimationByName("Jump")!.onAnimationGroupEndObservable.add(() => {
         this.isJumping = false;
-        this.currentAnimationName = null; // Allow idle animation to play
-        const idleAnimation = this.getAnimationByName("IdleGreatSword");
-        if (idleAnimation && !this.keyStatesActive()) {
-          idleAnimation.play(true);
-        }
       });
     } else {
       console.warn("Jump animation not found");
     }
   }
 
-  private keyStatesActive(): boolean {
-    // This method should be updated to check actual key states via InputHandler
-    // For now, assume no movement keys are pressed
-    return false;
-  }
-
   public playAnimation(
     name: string,
     speed = 1.0,
     fromFrame?: number,
-    toFrame?: number,
-    blendDuration = 0.3
+    toFrame?: number
   ): void {
-    const newAnimation = this.getAnimationByName(name);
-    if (!newAnimation) {
+    const newAnim = this.getAnimationByName(name);
+    if (!newAnim) {
       console.warn(`Animation group '${name}' not found`);
       return;
     }
 
-    if (name === this.currentAnimationName) {
+    // Skip if already playing the same animation
+    if (name === this.currentAnimationName && newAnim.isPlaying) {
       return;
     }
 
-    const isJumpAnimation = name === "Jump";
+    // Cancel any ongoing blending
+    if (this.blendFrameId !== null) {
+      cancelAnimationFrame(this.blendFrameId);
+      this.blendFrameId = null;
+    }
 
-    // Stop all animations except the new one
-    this.animationGroups.forEach(group => {
-      if (group.name !== name && group.isPlaying) {
-        if (isJumpAnimation) {
-          // For jump, stop other animations immediately without blending
-          group.stop();
-          group.weight = -1; // Disable influence
-        } else {
-          // Blend for non-jump animations
-          this.blendAnimation(group, newAnimation, blendDuration);
-        }
-      }
-    });
+    const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
 
-    newAnimation.speedRatio = speed;
-    const from = fromFrame ?? 0;
-    const to = toFrame ?? newAnimation.to;
+    // Stop previous animation and reset weights
+    if (prevAnim) {
+      prevAnim.setWeightForAllAnimatables(0);
+      prevAnim.stop();
+    }
 
-    newAnimation.start(!isJumpAnimation, speed, from, to, false);
-    newAnimation.weight = 1; // Ensure full influence
+    // Start the new animation
+    newAnim.stop(); // Ensure clean start
+    newAnim.start(!(newAnim.name === "Jump"), speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
+    newAnim.setWeightForAllAnimatables(0);
+
     this.currentAnimationName = name;
+    this.isBlending = true;
 
-    if (isJumpAnimation) {
+    // Perform blending over 300ms
+    const blendDuration = 300;
+    const startTime = performance.now();
+
+    const blendStep = (now: number) => {
+      const t = Math.min((now - startTime) / blendDuration, 1); // Normalize 0 -> 1
+      newAnim.setWeightForAllAnimatables(t);
+      if (prevAnim) prevAnim.setWeightForAllAnimatables(1 - t);
+
+      if (t < 1) {
+        this.blendFrameId = requestAnimationFrame(blendStep);
+      } else {
+        // Blending complete
+        if (prevAnim) prevAnim.stop();
+        newAnim.setWeightForAllAnimatables(1);
+        this.isBlending = false;
+        this.blendFrameId = null;
+      }
+    };
+
+    this.blendFrameId = requestAnimationFrame(blendStep);
+
+    // If it's a jump animation, mark jumping
+    if (newAnim === this.getAnimationByName("Jump")) {
       this.isJumping = true;
     }
   }
 
-  private blendAnimation(
-    fromAnim: AnimationGroup,
-    toAnim: AnimationGroup,
-    blendDuration: number
-  ): void {
-    const frameRate = this.scene.getEngine().getFps();
-    const blendFrames = blendDuration * frameRate;
+  // Simple animation blending (unchanged, but included for completeness)
+  public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
+    let currentWeight = 1;
+    let newWeight = 0;
 
-    // Start the new animation with initial weight of 0
-    toAnim.start(true, toAnim.speedRatio, toAnim.from, toAnim.to, false);
-    toAnim.weight = 0;
+    toAnim.play(true);
 
-    // Create a blending animation
-    let currentFrame = 0;
-    const onAnimationFrame = () => {
-      currentFrame++;
-      const t = currentFrame / blendFrames;
-      
-      // Linear interpolation for blending
-      const fromWeight = 1 - t;
-      const toWeight = t;
+    while (newWeight < 1) {
+      newWeight += 0.01;
+      currentWeight -= 0.01;
+      toAnim.setWeightForAllAnimatables(newWeight);
+      fromAnim.setWeightForAllAnimatables(currentWeight);
+      yield; // Pause execution until next frame
+    }
 
-      fromAnim.weight = fromWeight;
-      toAnim.weight = toWeight;
+    toAnim.setWeightForAllAnimatables(1);
+    fromAnim.setWeightForAllAnimatables(0);
+  }
 
-      if (currentFrame >= blendFrames) {
-        fromAnim.stop();
-        fromAnim.weight = -1; // Disable influence
-        toAnim.weight = 1;
-        this.scene.onBeforeRenderObservable.removeCallback(onAnimationFrame);
+  // Start blending between two animations
+  public blendAnimations(fromAnimName: string, toAnimName: string): void {
+    const fromAnim = this.getAnimationByName(fromAnimName);
+    const toAnim = this.getAnimationByName(toAnimName);
+
+    if (!fromAnim || !toAnim) {
+      console.warn("One or both animations not found for blending");
+      return;
+    }
+
+    if (this.isBlending) {
+      console.warn("Already blending animations");
+      return;
+    }
+
+    this.isBlending = true;
+
+    const blendGen = this.animationBlending(toAnim, fromAnim);
+
+    const blendStep = () => {
+      if (!blendGen.next().done) {
+        this.blendFrameId = requestAnimationFrame(blendStep);
+      } else {
+        this.isBlending = false;
+        this.blendFrameId = null;
       }
     };
 
-    this.scene.onBeforeRenderObservable.add(onAnimationFrame);
+    this.blendFrameId = requestAnimationFrame(blendStep);
   }
 
   public isCharacterJumping(): boolean {
     return this.isJumping;
   }
 
-  public hasAnimationEnded(name: string): boolean {
+  hasAnimationEnded(name: string): boolean {
     const anim = this.getAnimationByName(name);
-    return anim ? !anim.isPlaying : true;
+    return anim?.isPlaying === false;
   }
 
-  public getAnimationByName(name: string): AnimationGroup | undefined {
+  getAnimationByName(name: string): AnimationGroup | undefined {
     return this.animationGroups.find(group => group.name === name);
   }
 
