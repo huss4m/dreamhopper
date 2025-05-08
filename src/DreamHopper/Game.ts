@@ -31,7 +31,7 @@ export class Game {
     
     // Create and store scenes 
     this.scenes.push(this.sceneCreator.createScene()); // Index 0: FOREST
-    
+    this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene()); 
   
     /*
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene()); // Index 1: DESERT
@@ -104,7 +104,7 @@ export class Game {
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[2] || new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem)
     ];
 
-    this.inputHandler = new InputHandler(scene, this.characterController, this.canvas);
+    this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
   }
 
   public switchScene(environmentType: EnvironmentType): void {
@@ -166,3 +166,5 @@ export class Game {
     this.engine.dispose();
   }
 }
+
+export { EnvironmentType };
