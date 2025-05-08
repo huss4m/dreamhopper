@@ -73,6 +73,13 @@ export class Game {
       return;
     }
 
+    // Verify shadow generator configuration
+    if (!shadowGenerator.getLight()) {
+      console.error("Shadow generator has no associated light!");
+      return;
+    }
+    console.log("Shadow generator initialized with light:", shadowGenerator.getLight().name);
+
     // Get the guy asset container
     const guyAssetContainer = this.assetManager.getAssetContainer("guy");
     if (!guyAssetContainer) {
@@ -91,6 +98,21 @@ export class Game {
       this.assetManager
     );
 
+    // Add character to shadow generator
+    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+    if (characterMesh) {
+      shadowGenerator.addShadowCaster(characterMesh, true);
+      characterMesh.receiveShadows = true;
+      // Include child meshes for shadows
+      characterMesh.getChildMeshes().forEach(child => {
+        shadowGenerator.addShadowCaster(child, true);
+        child.receiveShadows = true;
+      });
+      console.log("Character mesh added to shadow generator:", characterMesh.name);
+    } else {
+      console.warn("Character mesh not found for shadow generator");
+    }
+
     // Create NPCs and restore positions if available
     const savedState = this.sceneStates[sceneIndex];
     this.npcs = [
@@ -98,6 +120,32 @@ export class Game {
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[1] || new Vector3(10, 1, 5), this.highlightLayer, this.targetingSystem),
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[2] || new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem)
     ];
+
+    // Add NPCs to shadow generator
+    this.npcs.forEach((npc, index) => {
+      const npcMesh = npc.getMesh();
+      if (npcMesh) {
+        shadowGenerator.addShadowCaster(npcMesh, true);
+        npcMesh.receiveShadows = true;
+        // Include child meshes for shadows
+        npcMesh.getChildMeshes().forEach(child => {
+          shadowGenerator.addShadowCaster(child, true);
+          child.receiveShadows = true;
+        });
+        console.log(`NPC ${index} mesh added to shadow generator:`, npcMesh.name);
+      } else {
+        console.warn(`NPC ${index} mesh not found for shadow generator`);
+      }
+    });
+
+    // Ensure ground receives shadows (assuming SceneCreator creates a ground mesh)
+    const groundMesh = scene.getMeshByName("ground");
+    if (groundMesh) {
+      groundMesh.receiveShadows = true;
+      console.log("Ground mesh set to receive shadows:", groundMesh.name);
+    } else {
+      console.warn("Ground mesh not found in scene");
+    }
 
     // Initialize InputHandler and await its setup
     this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
@@ -147,12 +195,16 @@ export class Game {
     this.targetingSystem?.dispose();
     this.assetManager?.dispose();
 
-    // Create new SceneCreator for the new environment
+    // Create new SceneCreator for the new environment and ensure scene is properly set up
     this.sceneCreator = new SceneCreator(this.engine, this.canvas, environmentType);
+    const newScene = this.sceneCreator.createScene();
+    
+    // Replace the old scene with the new one
+    this.scenes[index] = newScene;
+    this.activeScene = newScene;
 
     // Reinitialize components for the new scene
-    this.activeScene = scene;
-    await this.initializeSceneComponents(scene, index);
+    await this.initializeSceneComponents(newScene, index);
     
     console.log(`Switched to ${environmentType} scene.`);
   }
@@ -166,4 +218,3 @@ export class Game {
     this.engine.dispose();
   }
 }
-

@@ -33,6 +33,7 @@ export class DesertEnvironment implements Environment {
         this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
+        
     }
 
     private async setupSkybox(): Promise<void> {
