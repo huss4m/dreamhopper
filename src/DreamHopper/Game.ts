@@ -11,7 +11,6 @@ export interface SceneState {
   npcPositions?: Vector3[];
 }
 
-
 export class Game {
   private engine: Engine;
   private characterController!: CharacterController;
@@ -33,11 +32,6 @@ export class Game {
     this.scenes.push(this.sceneCreator.createScene()); // Index 0: FOREST
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene()); 
   
-    /*
-    this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene()); // Index 1: DESERT
-    this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.URBAN).createScene()); // Index 2: URBAN
-    */
-
     // Initialize scene states (one for each scene)
     this.sceneStates = this.scenes.map(() => ({}));
 
@@ -54,7 +48,7 @@ export class Game {
     await this.initializeSceneComponents(this.activeScene!, 0);
     
     this.engine.runRenderLoop(() => {
-      if (this.activeScene) {
+      if (this.activeScene && this.inputHandler.getIsInitialized()) {
         this.inputHandler.update();
         this.activeScene.render();
       }
@@ -104,10 +98,15 @@ export class Game {
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[2] || new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem)
     ];
 
+    // Initialize InputHandler and await its setup
     this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
+    const initSuccess = await this.inputHandler.init();
+    if (!initSuccess) {
+      console.warn("InputHandler using fallback keybindings");
+    }
   }
 
-  public switchScene(environmentType: EnvironmentType): void {
+  public async switchScene(environmentType: EnvironmentType): Promise<void> {
     let index: number;
     switch (environmentType) {
       case EnvironmentType.FOREST:
@@ -152,7 +151,7 @@ export class Game {
 
     // Reinitialize components for the new scene
     this.activeScene = scene;
-    this.initializeSceneComponents(scene, index);
+    await this.initializeSceneComponents(scene, index);
     
     console.log(`Switched to ${environmentType} scene.`);
   }
@@ -167,4 +166,3 @@ export class Game {
   }
 }
 
-export { EnvironmentType };

@@ -1,0 +1,58 @@
+{
+    "bindings": {
+      "Z": {
+        "key": "Z",
+        "continuous": true,
+        "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1, "endFrame": 38 },
+        "action": "moveForward"
+      },
+      "S": {
+        "key": "S",
+        "continuous": true,
+        "animation": { "name": "RUNNINGBACKWARDS" },
+        "action": "backPedal"
+      },
+      "A": {
+        "key": "A",
+        "continuous": true,
+        "animation": { "name": "StrafeLeft" },
+        "action": "strafeLeft"
+      },
+      "E": {
+        "key": "E",
+        "continuous": true,
+        "animation": { "name": "StrafeRight" },
+        "action": "strafeRight"
+      },
+      "Q": {
+        "key": "Q",
+        "continuous": true,
+        "action": "rotateLeft"
+      },
+      "D": {
+        "key": "D",
+        "continuous": true,
+        "action": "rotateRight"
+      },
+      "SPACE": {
+        "key": " ",
+        "action": "jump"
+      },
+      "U": {
+        "key": "U",
+        "action": "switchScene"
+      },
+      "Z_E": {
+        "key": "Z+E",
+        "continuous": true,
+        "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1, "endFrame": 35 },
+        "action": "moveDiagonallyRight"
+      },
+      "Z_A": {
+        "key": "Z+A",
+        "continuous": true,
+        "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1, "endFrame": 38 },
+        "action": "moveDiagonallyLeft"
+      }
+    }
+  }
