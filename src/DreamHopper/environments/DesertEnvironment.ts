@@ -85,9 +85,7 @@ export class DesertEnvironment implements Environment {
     private async loadGroundMesh(): Promise<void> {
         try {
             const result = await SceneLoader.ImportMeshAsync("", "./models/", "dunes.glb", this.scene);
-            const targetPosition = new Vector3
-
-(0, 0, 0);
+            const targetPosition = new Vector3(0, 0, 0);
 
             result.meshes.forEach(mesh => {
                 mesh.position = targetPosition;
