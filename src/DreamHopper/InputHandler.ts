@@ -9,7 +9,7 @@ import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
 import { EnvironmentType } from "./EnvironmentCreator";
 
-// Defining the structure of  key action for TypeScript typing
+// Defining the structure of key action for TypeScript typing
 interface KeyAction {
   key: string;
   action: string | { [key: string]: any };
@@ -21,7 +21,6 @@ interface KeyAction {
     endFrame?: number;
   };
 }
-
 
 export class InputHandler {
   private keyStates: { [key: string]: boolean } = {};
@@ -42,7 +41,6 @@ export class InputHandler {
     this.game = game;
   }
 
-  // Async initialization to load keybindings
   public async init(): Promise<boolean> {
     try {
       const response = await fetch('./controls/keybindings.json');
@@ -58,7 +56,6 @@ export class InputHandler {
     }
   }
 
-  // Check if initialized
   public getIsInitialized(): boolean {
     return this.isInitialized;
   }
@@ -69,11 +66,9 @@ export class InputHandler {
       const key = kbInfo.event.key.toUpperCase();
       const isDown = kbInfo.type === KeyboardEventTypes.KEYDOWN;
 
-      // Track state for all keys defined in keyBindings
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
 
-        // Execute non-continuous actions on key down
         if (isDown) {
           const binding = Object.values(this.keyBindings).find(b => b.key === key && !b.continuous);
           if (binding) {
@@ -104,35 +99,28 @@ export class InputHandler {
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  /*
-  private setupPointerLock(): void {
-    this.canvas.addEventListener("click", () => {
-      this.canvas.requestPointerLock();
-    });
-  } */
-
   private executeAction(binding: KeyAction): void {
     const character = this.characterController.getCharacter();
     switch (binding.action) {
       case "moveForward":
         this.characterController.physicsController!.isDiagonal = false;
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.moveForward(this.moveSpeed);
+          this.characterController.moveForward(this.moveSpeed, binding.animation);
         }
         break;
       case "backPedal":
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.backPedal(this.moveSpeed);
+          this.characterController.backPedal(this.moveSpeed, binding.animation);
         }
         break;
       case "strafeLeft":
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.strafeLeft(this.moveSpeed);
+          this.characterController.strafeLeft(this.moveSpeed, binding.animation);
         }
         break;
       case "strafeRight":
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.strafeRight(this.moveSpeed);
+          this.characterController.strafeRight(this.moveSpeed, binding.animation);
         }
         break;
       case "rotateLeft":
@@ -143,8 +131,7 @@ export class InputHandler {
         break;
       case "jump":
         if (!this.wasSpacePressed && !character.isJumping) {
-          this.characterController.playAnimation("Jump", 1, 8, 95);
-          this.characterController.jump();
+          this.characterController.jump(binding.animation);
         }
         break;
       case "switchScene":
@@ -153,50 +140,36 @@ export class InputHandler {
       case "moveDiagonallyRight":
         this.characterController.physicsController!.isDiagonal = true;
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.moveDiagonallyRight(this.moveSpeed);
+          this.characterController.moveDiagonallyRight(this.moveSpeed, binding.animation);
         }
         break;
       case "moveDiagonallyLeft":
         this.characterController.physicsController!.isDiagonal = true;
         if (!this.characterController.physicsController?.isJumping) {
-          this.characterController.moveDiagonallyLeft(this.moveSpeed);
+          this.characterController.moveDiagonallyLeft(this.moveSpeed, binding.animation);
         }
         break;
     }
   }
 
   public update(): void {
-    if (!this.isInitialized) return; // Skip update if not initialized
+    if (!this.isInitialized) return;
 
     const character = this.characterController.getCharacter();
-
-    // Handle continuous actions and animations
     let isMoving = false;
 
     // Check diagonal movements (combined keys)
     if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
       this.executeAction(this.keyBindings["Z_E"]);
-      if (this.keyBindings["Z_E"].animation && !character.isJumping) {
-        const { name, loop = 1, speed = 1, endFrame } = this.keyBindings["Z_E"].animation!;
-        this.characterController.playAnimation(name, loop, speed, endFrame);
-      }
       isMoving = true;
     } else if (this.keyStates["Z"] && this.keyStates["A"] && this.keyBindings["Z_A"]) {
       this.executeAction(this.keyBindings["Z_A"]);
-      if (this.keyBindings["Z_A"].animation && !character.isJumping) {
-        const { name, loop = 1, speed = 1, endFrame } = this.keyBindings["Z_A"].animation!;
-        this.characterController.playAnimation(name, loop, speed, endFrame);
-      }
       isMoving = true;
     } else {
       // Handle single-key continuous actions
       for (const binding of Object.values(this.keyBindings)) {
         if (binding.continuous && binding.key !== "Z+E" && binding.key !== "Z+A" && this.keyStates[binding.key]) {
           this.executeAction(binding);
-          if (binding.animation && !character.isJumping) {
-            const { name, loop = 1, speed = 1, endFrame } = binding.animation;
-            this.characterController.playAnimation(name, loop, speed, endFrame);
-          }
           isMoving = true;
         }
       }
@@ -211,9 +184,9 @@ export class InputHandler {
 
     // Idle state
     if (!isMoving && !this.keyStates[" "] && !character.isJumping) {
-      this.characterController.playAnimation("IdleGreatSword");
+      this.characterController.playIdleAnimation();
       if (!this.characterController.physicsController?.isJumping) {
-        this.characterController.moveForward(0); // Stops motion
+        this.characterController.moveForward(0);
       }
     }
 

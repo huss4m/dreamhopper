@@ -7,7 +7,6 @@ import {
   PhysicsMotionType,
   ParticleSystem,
   Texture,
-  NoiseProceduralTexture,
   MeshBuilder,
 } from "@babylonjs/core";
 import { AssetManager } from "../AssetManager";
@@ -17,6 +16,13 @@ import { ItemAttachmentManager } from "../items/ItemAttachmentManager";
 import { CharacterMeshLoader } from "./CharacterMeshLoader";
 import { Character } from "../types";
 import { Player } from "./Player";
+
+interface AnimationData {
+  name: string;
+  loop?: number;
+  speed?: number;
+  endFrame?: number;
+}
 
 export class CharacterController {
   private animationManager: CharacterAnimationManager;
@@ -77,7 +83,6 @@ export class CharacterController {
         cameraTarget.position.copyFrom(meshPos.add(offset));
       });
 
-      // Equip items from player's inventory
       const inventory = this.player.getInventory();
       for (const item of inventory) {
         const itemName = item.getName();
@@ -89,7 +94,7 @@ export class CharacterController {
             characterMesh
           );
         } else if (itemName === "sword2") {
-         console.log("ph");
+          console.log("ph");
           /*
           await this.itemAttachmentManager.attachItemToHand(
             item,
@@ -105,38 +110,59 @@ export class CharacterController {
     }
   }
 
-  public playAnimation(name: string, speedRatio = 1, fromFrame?: number, toFrame?: number): void {
-    this.animationManager.playAnimation(name, speedRatio, fromFrame, toFrame);
+  private playAnimationWithData(animationData?: AnimationData): void {
+    if (animationData && !this.getCharacter().isJumping) {
+      const { name, loop = 1, speed = 1, endFrame } = animationData;
+      this.animationManager.playAnimation(name, speed, undefined, endFrame);
+    }
   }
 
-  public jump(): void {
+  public playIdleAnimation(): void {
+    if (!this.getCharacter().isJumping) {
+      this.animationManager.playAnimation("IdleGreatSword", 1);
+    }
+  }
+
+  public jump(animationData?: AnimationData): void {
+    if (animationData) {
+      const { name, speed = 1 } = animationData;
+      this.animationManager.playAnimation(name, speed, 8, 95);
+    } else {
+      this.animationManager.playAnimation("Jump", 1, 8, 95);
+    }
     if (this.physicsController) {
       this.physicsController.applyJumpForce();
     }
   }
 
-  public moveForward(speed: number): void {
+  public moveForward(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveForward(speed);
+    this.playAnimationWithData(animationData);
   }
 
-  public moveDiagonallyRight(speed: number): void {
+  public moveDiagonallyRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyRight(speed);
+    this.playAnimationWithData(animationData);
   }
 
-  public moveDiagonallyLeft(speed: number): void {
+  public moveDiagonallyLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyLeft(speed);
+    this.playAnimationWithData(animationData);
   }
 
-  public strafeLeft(speed: number): void {
+  public strafeLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeLeft(speed);
+    this.playAnimationWithData(animationData);
   }
 
-  public strafeRight(speed: number): void {
+  public strafeRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeRight(speed);
+    this.playAnimationWithData(animationData);
   }
 
-  public backPedal(speed: number): void {
+  public backPedal(speed: number, animationData?: AnimationData): void {
     this.physicsController?.backPedal(speed);
+    this.playAnimationWithData(animationData);
   }
 
   public rotateLeft(yaw: number): void {
@@ -162,72 +188,49 @@ export class CharacterController {
     return this.player;
   }
 
-
   public setupParticleSystem(): void {
     const skeleton = this.characterMeshLoader.getSkeleton();
     const characterMesh = this.characterMeshLoader.getCharacterMesh();
-  
+
     if (!skeleton || !characterMesh) {
       console.error("Skeleton or character mesh not loaded.");
       return;
     }
-  
-    // Helper function to create a particle system for a given hand bone
+
     const createHandParticleSystem = (boneName: string, systemName: string): ParticleSystem => {
       const particleSystem = new ParticleSystem(systemName, 5, this.scene);
-  
-      // Set particle texture
       particleSystem.particleTexture = new Texture("./Flare.png", this.scene);
-  
-      // Find the hand bone in the skeleton
+
       const handBone = skeleton.bones.find(bone => bone.name === boneName);
       if (!handBone) {
         console.error(`Bone ${boneName} not found in skeleton.`);
         return particleSystem;
       }
-  
-      // dummy mesh to act as the emitter
+
       const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.01 }, this.scene);
-      dummyMesh.isVisible = false; // Hide 
-      dummyMesh.parent = handBone.getTransformNode(); // Parent to the hand bone's transform node
+      dummyMesh.isVisible = false;
+      dummyMesh.parent = handBone.getTransformNode();
       dummyMesh.position = new Vector3(0, 10, 0);
 
-      // Set the dummy mesh as the emitter
       particleSystem.emitter = dummyMesh;
-  
-      // Emission box for particles relative to the hand bone
-      particleSystem.minEmitBox = new Vector3(-0.1, -0.1, -0.1); // Smaller box for hand
+      particleSystem.minEmitBox = new Vector3(-0.1, -0.1, -0.1);
       particleSystem.maxEmitBox = new Vector3(0.1, 0.1, 0.1);
-  
-      // Angular speed in radians
       particleSystem.minAngularSpeed = 0;
       particleSystem.maxAngularSpeed = Math.PI;
-  
-      // Speed
-      particleSystem.minEmitPower = 10; 
+      particleSystem.minEmitPower = 10;
       particleSystem.maxEmitPower = 50;
       particleSystem.updateSpeed = 0.005;
-  
-      // Size of each particle
-      particleSystem.minSize = 0.2; 
+      particleSystem.minSize = 0.2;
       particleSystem.maxSize = 0.5;
-  
-      particleSystem.gravity = new Vector3(0, 0, 0)
-
-      
-      particleSystem.direction1 = new Vector3(0, 0, 0); 
-      particleSystem.direction2 = new Vector3(0, 0, 0); 
-
-
+      particleSystem.gravity = new Vector3(0, 0, 0);
+      particleSystem.direction1 = new Vector3(0, 0, 0);
+      particleSystem.direction2 = new Vector3(0, 0, 0);
       particleSystem.isLocal = true;
-  
-      // Start the particle system
       particleSystem.start();
-  
+
       return particleSystem;
     };
-  
-    // Create particle systems for both hands
+
     this.particleSystem = {
       rightHand: createHandParticleSystem("mixamorig:RightHand", "rightHandParticles"),
       leftHand: createHandParticleSystem("mixamorig:LeftHand", "leftHandParticles"),
@@ -239,6 +242,6 @@ export class CharacterController {
     this.physicsController?.dispose();
     this.itemAttachmentManager.dispose();
     this.characterMeshLoader.dispose();
-    this.player.getInventory().forEach(item => item.dispose()); // Dispose inventory items
+    this.player.getInventory().forEach(item => item.dispose());
   }
 }
