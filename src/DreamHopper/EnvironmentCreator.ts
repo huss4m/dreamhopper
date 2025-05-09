@@ -11,6 +11,7 @@ export enum EnvironmentType {
 export interface Environment {
   create(): Promise<void>;
   getShadowGenerator(): CascadedShadowGenerator | null;
+  dispose(): void;
 }
 
 export class EnvironmentCreator {

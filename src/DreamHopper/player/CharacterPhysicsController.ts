@@ -324,9 +324,7 @@ export class CharacterPhysicsController {
 
     this.mesh.rotationQuaternion = quaternion;
 
-    if (!this.mesh.rotationQuaternion) {
-      this.mesh.rotation = quaternion.toEulerAngles();
-    }
+  
 
     const aggregate = this.physicsController.getPhysicsAggregate();
     if (aggregate) {

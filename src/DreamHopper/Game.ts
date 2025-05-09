@@ -16,9 +16,9 @@ export class Game {
   private engine: Engine;
   private characterController!: CharacterController;
   private inputHandler!: InputHandler;
-  private targetingSystem: TargetingSystem;
+  private targetingSystem!: TargetingSystem;
   assetManager!: AssetManager;
-  highlightLayer: HighlightLayer;
+  highlightLayer!: HighlightLayer;
   npcs: NPC[] = [];
   sceneCreator: any;
   private scenes: Scene[] = [];
@@ -39,9 +39,6 @@ export class Game {
     // Set initial scene (FOREST)
     this.activeScene = this.scenes[0];
 
-    this.assetManager = new AssetManager(this.activeScene);
-    this.highlightLayer = this.sceneCreator.highlightLayer;
-    this.targetingSystem = new TargetingSystem(this.activeScene);
     this.initialize();
   }
 
@@ -80,12 +77,7 @@ export class Game {
     }
     console.log("Shadow generator initialized with light:", shadowGenerator.getLight().name);
 
-    // Get the guy asset container
-    const guyAssetContainer = this.assetManager.getAssetContainer("guy");
-    if (!guyAssetContainer) {
-      console.error("guyAssetContainer is undefined");
-      return;
-    }
+    
 
     // Initialize components
     this.highlightLayer = this.sceneCreator.highlightLayer;
@@ -138,15 +130,7 @@ export class Game {
       }
     });
 
-    // Ensure ground receives shadows (assuming SceneCreator creates a ground mesh)
-    const groundMesh = scene.getMeshByName("ground");
-    if (groundMesh) {
-      groundMesh.receiveShadows = true;
-      console.log("Ground mesh set to receive shadows:", groundMesh.name);
-    } else {
-      console.warn("Ground mesh not found in scene");
-    }
-
+    
     // Initialize InputHandler and await its setup
     this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
     const initSuccess = await this.inputHandler.init();

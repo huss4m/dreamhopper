@@ -15,14 +15,22 @@ import {
     Mesh,
     Color4,
     ParticleSystem,
-    CubeTexture
+    CubeTexture,
+    AbstractMesh
 } from "@babylonjs/core";
 import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
 import { Environment } from "../EnvironmentCreator";
 
 export class ForestEnvironment implements Environment {
     private light: DirectionalLight | null = null;
+    private ambientLight: HemisphericLight | null = null;
     private shadowGenerator: CascadedShadowGenerator | null = null;
+    private groundMeshes: Mesh[] = [];
+    private rock: Mesh | null = null;
+    private mistSystem: ParticleSystem | null = null;
+    private skybox: Mesh | null = null;
+    private envTexture: CubeTexture | null = null;
+    private debugMeshes: Mesh[] = [];
 
     constructor(private scene: Scene) {}
 
@@ -33,19 +41,18 @@ export class ForestEnvironment implements Environment {
         this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
-
-        this.logModelBones();
+        await this.logModelBones();
     }
 
     private async setupSkybox(): Promise<void> {
-        const envTex = CubeTexture.CreateFromPrefilteredData("./environment/bluesky.env", this.scene);
-        envTex.gammaSpace = false;
-        envTex.rotationY = Math.PI;
-        this.scene.environmentTexture = envTex;
+        this.envTexture = CubeTexture.CreateFromPrefilteredData("./environment/bluesky.env", this.scene);
+        this.envTexture.gammaSpace = false;
+        this.envTexture.rotationY = Math.PI;
+        this.scene.environmentTexture = this.envTexture;
 
-        const skybox = this.scene.createDefaultSkybox(envTex, true, 100000, 0);
-        if (skybox && skybox.material) {
-            skybox.applyFog = false;
+        this.skybox = this.scene.createDefaultSkybox(this.envTexture, true, 100000, 0);
+        if (this.skybox && this.skybox.material) {
+            this.skybox.applyFog = false;
         }
     }
 
@@ -54,10 +61,10 @@ export class ForestEnvironment implements Environment {
         this.light.intensity = 2.5;
         this.light.position = new Vector3(50, 100, 50);
 
-        const ambientLight = new HemisphericLight("ambientLight", new Vector3(0, 1, 0), this.scene);
-        ambientLight.intensity = 0.6;
-        ambientLight.diffuse = new Color3(0.8, 0.85, 0.9);
-        ambientLight.groundColor = new Color3(0.6, 0.65, 0.7);
+        this.ambientLight = new HemisphericLight("ambientLight", new Vector3(0, 1, 0), this.scene);
+        this.ambientLight.intensity = 0.6;
+        this.ambientLight.diffuse = new Color3(0.8, 0.85, 0.9);
+        this.ambientLight.groundColor = new Color3(0.6, 0.65, 0.7);
 
         this.shadowGenerator = new CascadedShadowGenerator(2048, this.light);
         this.shadowGenerator.numCascades = 4;
@@ -72,7 +79,7 @@ export class ForestEnvironment implements Environment {
 
     private setupFog(): void {
         this.scene.fogMode = Scene.FOGMODE_EXP2;
-        this.scene.fogDensity = 0.008   ;
+        this.scene.fogDensity = 0.008;
         this.scene.fogColor = new Color3(0.9, 0.92, 0.95);
         this.scene.fogEnabled = true;
     }
@@ -86,6 +93,9 @@ export class ForestEnvironment implements Environment {
                 mesh.position = targetPosition;
                 mesh.receiveShadows = true;
                 mesh.isPickable = true;
+                if (mesh instanceof Mesh) {
+                    this.groundMeshes.push(mesh);
+                }
 
                 const allMeshes = mesh.getChildMeshes();
                 allMeshes.push(mesh);
@@ -116,19 +126,21 @@ export class ForestEnvironment implements Environment {
                         mat.metallic = 0.5;
                         mat.usePhysicalLightFalloff = true;
 
-                        try {
-                            const barkPhysicsConfig: PhysicsConfig = {
-                                colliderType: ColliderType.Mesh,
-                                colliderParams: {},
-                                physicsProps: {
-                                    mass: 0,
-                                    friction: 0.8,
-                                    restitution: 0.1
-                                }
-                            };
-                            new PhysicsController(this.scene, child as Mesh, barkPhysicsConfig);
-                        } catch (physicsError) {
-                            console.error(`Failed to apply physics to ${child.name}:`, physicsError);
+                        if (child instanceof Mesh) {
+                            try {
+                                const barkPhysicsConfig: PhysicsConfig = {
+                                    colliderType: ColliderType.Mesh,
+                                    colliderParams: {},
+                                    physicsProps: {
+                                        mass: 0,
+                                        friction: 0.8,
+                                        restitution: 0.1
+                                    }
+                                };
+                                new PhysicsController(this.scene, child, barkPhysicsConfig);
+                            } catch (physicsError) {
+                                console.error(`Failed to apply physics to ${child.name}:`, physicsError);
+                            }
                         }
                     }
 
@@ -158,16 +170,19 @@ export class ForestEnvironment implements Environment {
                         } else if (child.material instanceof StandardMaterial) {
                             child.material.specularColor = new Color3(0, 0, 0);
                             child.material.specularPower = 0;
+
                         }
-                        try {
-                            new PhysicsAggregate(
-                                child,
-                                PhysicsShapeType.MESH,
-                                { mass: 0, restitution: 0, friction: 5.0 },
-                                this.scene
-                            );
-                        } catch (physicsError) {
-                            console.error(`Failed to apply physics to ${child.name}:`, physicsError);
+                        if (child instanceof Mesh) {
+                            try {
+                                new PhysicsAggregate(
+                                    child,
+                                    PhysicsShapeType.MESH,
+                                    { mass: 0, restitution: 0, friction: 5.0 },
+                                    this.scene
+                                );
+                            } catch (physicsError) {
+                                console.error(`Failed to apply physics to ${child.name}:`, physicsError);
+                            }
                         }
                     }
                 });
@@ -178,10 +193,10 @@ export class ForestEnvironment implements Environment {
     }
 
     private createRock(): void {
-        const rock = MeshBuilder.CreateIcoSphere("rock", { radius: 1, subdivisions: 2 }, this.scene);
-        rock.position = new Vector3(5, 15, 5);
-        rock.receiveShadows = true;
-        rock.isPickable = true;
+        this.rock = MeshBuilder.CreateIcoSphere("rock", { radius: 1, subdivisions: 2 }, this.scene);
+        this.rock.position = new Vector3(5, 15, 5);
+        this.rock.receiveShadows = true;
+        this.rock.isPickable = true;
 
         const rockMaterial = new PBRMaterial("rockMaterial", this.scene);
         rockMaterial.albedoColor = new Color3(1, 1, 1);
@@ -190,10 +205,10 @@ export class ForestEnvironment implements Environment {
         rockMaterial.roughness = 0.5;
         rockMaterial.metallic = 0.2;
         rockMaterial.usePhysicalLightFalloff = true;
-        rock.material = rockMaterial;
+        this.rock.material = rockMaterial;
 
         if (this.shadowGenerator) {
-            this.shadowGenerator.addShadowCaster(rock);
+            this.shadowGenerator.addShadowCaster(this.rock);
         }
 
         const rockPhysicsConfig: PhysicsConfig = {
@@ -207,46 +222,48 @@ export class ForestEnvironment implements Environment {
         };
 
         try {
-            new PhysicsController(this.scene, rock, rockPhysicsConfig);
+            new PhysicsController(this.scene, this.rock, rockPhysicsConfig);
         } catch (physicsError) {
             console.error("Failed to apply physics to rock:", physicsError);
         }
     }
 
     private createMistParticles(): void {
-        const mistSystem = new ParticleSystem("mist", 200, this.scene);
-        mistSystem.particleTexture = new Texture("./Mist2.png", this.scene);
-        mistSystem.emitter = new Vector3(0, 1, 0);
-        mistSystem.minEmitBox = new Vector3(-50, 0.5, -50);
-        mistSystem.maxEmitBox = new Vector3(50, 2, 50);
-        mistSystem.minSize = 25.0;
-        mistSystem.maxSize = 25.0;
-        mistSystem.minLifeTime = 5.0;
-        mistSystem.maxLifeTime = 10.0;
-        mistSystem.emitRate = 2;
-        mistSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-        mistSystem.gravity = new Vector3(1, 0.8, 0);
-        mistSystem.direction1 = new Vector3(-0.1, 0.05, -0.1);
-        mistSystem.direction2 = new Vector3(0.1, 0.05, 0.1);
-        mistSystem.minAngularSpeed = 0;
-        mistSystem.maxAngularSpeed = 0.1;
-        mistSystem.minEmitPower = 0.1;
-        mistSystem.maxEmitPower = 0.3;
-        mistSystem.color1 = new Color4(0.8, 0.85, 0.9, 0.1);
-        mistSystem.color2 = new Color4(0.9, 0.92, 0.95, 0.05);
-        mistSystem.colorDead = new Color4(0.8, 0.85, 0.9, 0.0);
-        mistSystem.start();
+        this.mistSystem = new ParticleSystem("mist", 200, this.scene);
+        this.mistSystem.particleTexture = new Texture("./Mist2.png", this.scene);
+        this.mistSystem.emitter = new Vector3(0, 1, 0);
+        this.mistSystem.minEmitBox = new Vector3(-50, 0.5, -50);
+        this.mistSystem.maxEmitBox = new Vector3(50, 2, 50);
+        this.mistSystem.minSize = 25.0;
+        this.mistSystem.maxSize = 25.0;
+        this.mistSystem.minLifeTime = 5.0;
+        this.mistSystem.maxLifeTime = 10.0;
+        this.mistSystem.emitRate = 2;
+        this.mistSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
+        this.mistSystem.gravity = new Vector3(1, 0.8, 0);
+        this.mistSystem.direction1 = new Vector3(-0.1, 0.05, -0.1);
+        this.mistSystem.direction2 = new Vector3(0.1, 0.05, 0.1);
+        this.mistSystem.minAngularSpeed = 0;
+        this.mistSystem.maxAngularSpeed = 0.1;
+        this.mistSystem.minEmitPower = 0.1;
+        this.mistSystem.maxEmitPower = 0.3;
+        this.mistSystem.color1 = new Color4(0.8, 0.85, 0.9, 0.1);
+        this.mistSystem.color2 = new Color4(0.9, 0.92, 0.95, 0.05);
+        this.mistSystem.colorDead = new Color4(0.8, 0.85, 0.9, 0.0);
+        this.mistSystem.start();
     }
 
     public getShadowGenerator(): CascadedShadowGenerator | null {
         return this.shadowGenerator;
     }
 
-
     private async logModelBones(): Promise<void> {
         try {
             const result = await SceneLoader.ImportMeshAsync("", "./models/", "guycrig.glb", this.scene);
             result.meshes.forEach(mesh => {
+                if (mesh instanceof Mesh) {
+                    this.debugMeshes.push(mesh);
+                }
                 if (mesh.skeleton) {
                     mesh.skeleton.bones.forEach(bone => {
                         console.log(`Bone name: ${bone.name}`);
@@ -254,7 +271,87 @@ export class ForestEnvironment implements Environment {
                 }
             });
         } catch (error) {
-            console.error("Error loading testcrig.glb:", error);
+            console.error("Error loading guycrig.glb:", error);
         }
+    }
+
+    public dispose(): void {
+        // Dispose ground meshes and their physics aggregates
+        this.groundMeshes.forEach(mesh => {
+            if (mesh.physicsBody) {
+                mesh.physicsBody.dispose();
+            }
+            if (mesh.material) {
+                mesh.material.dispose();
+            }
+            mesh.dispose();
+        });
+        this.groundMeshes = [];
+
+        // Dispose rock and its physics
+        if (this.rock) {
+            if (this.rock.physicsBody) {
+                this.rock.physicsBody.dispose();
+            }
+            if (this.rock.material) {
+                this.rock.material.dispose();
+            }
+            this.rock.dispose();
+            this.rock = null;
+        }
+
+        // Dispose mist particle system
+        if (this.mistSystem) {
+            if (this.mistSystem.particleTexture) {
+                this.mistSystem.particleTexture.dispose();
+            }
+            this.mistSystem.dispose();
+            this.mistSystem = null;
+        }
+
+        // Dispose skybox and environment texture
+        if (this.skybox) {
+            if (this.skybox.material) {
+                this.skybox.material.dispose();
+            }
+            this.skybox.dispose();
+            this.skybox = null;
+        }
+        if (this.envTexture) {
+            this.envTexture.dispose();
+            this.envTexture = null;
+        }
+        this.scene.environmentTexture = null;
+
+        // Dispose lights
+        if (this.light) {
+            this.light.dispose();
+            this.light = null;
+        }
+        if (this.ambientLight) {
+            this.ambientLight.dispose();
+            this.ambientLight = null;
+        }
+
+        // Dispose shadow generator
+        if (this.shadowGenerator) {
+            this.shadowGenerator.dispose();
+            this.shadowGenerator = null;
+        }
+
+        // Dispose debug meshes from logModelBones
+        this.debugMeshes.forEach(mesh => {
+            if (mesh.physicsBody) {
+                mesh.physicsBody.dispose();
+            }
+            if (mesh.material) {
+                mesh.material.dispose();
+            }
+            mesh.dispose();
+        });
+        this.debugMeshes = [];
+
+        // Disable fog
+        this.scene.fogEnabled = false;
     }
 }
