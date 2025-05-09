@@ -44,7 +44,7 @@ export class NPC implements Hoverable, Targettable {
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
     this.position = position;
-    this.forwardDirection = Vector3.Forward();
+    this.forwardDirection = Vector3.Left();
 
     // Initialize hover handler
     const hoverConfig: HoverConfig = {
@@ -62,6 +62,9 @@ export class NPC implements Hoverable, Targettable {
 
     this.loadCharacter(name, position);
     this.orientToForwardDirection();
+
+
+    this.moveTo(new Vector3(30,0,30))
   }
 
   public async loadCharacter(name: string, position: Vector3): Promise<void> {
@@ -451,24 +454,74 @@ export class NPC implements Hoverable, Targettable {
 
 
   public orientToForwardDirection(): void {
-  
-      const normalizedForward = this.forwardDirection.normalizeToNew();
-      const worldForward = Vector3.Forward();
-      const quaternion = Quaternion.FromUnitVectorsToRef(
-        worldForward,
-        normalizedForward,
-        new Quaternion()
-      );
-  
-      this.npcMesh!.rotationQuaternion = quaternion;
-  
-      if (!this.npcMesh!.rotationQuaternion) {
-        this.npcMesh!.rotation = quaternion.toEulerAngles();
-      }
-  
-      const aggregate = this.physicsController!.getPhysicsAggregate();
-      if (aggregate) {
+    const npcMesh = this.npcMesh!;
+    const normalizedForward = this.forwardDirection.normalizeToNew();
+
+    // Ensure the direction is on the XZ plane (ignore Y for yaw-only rotation)
+    const flatForward = new Vector3(normalizedForward.x, 0, normalizedForward.z).normalize();
+
+    // Skip rotation if the direction is zero or invalid
+    if (flatForward.lengthSquared() < 0.0001) return;
+
+    // Calculate the angle to rotate around the Y-axis (yaw)
+    const angle = Math.atan2(flatForward.x, flatForward.z) + Math.PI; // Add 180 degrees to flip forward
+
+    // Apply rotation as a quaternion around the Y-axis
+    npcMesh.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), angle);
+
+    // Ensure no angular velocity to prevent physics-driven rotation
+    const aggregate = this.physicsController?.getPhysicsAggregate();
+    if (aggregate) {
         aggregate.body.setAngularVelocity(new Vector3(0, 0, 0));
-      }
     }
+}
+
+
+
+    public generateRandomDirection() {
+      const angle = Math.random() * 2 * Math.PI; // Random angle in radians
+      const x = Math.cos(angle);
+      const z = Math.sin(angle);
+      return new Vector3(x, 0, z); // Y is 0 (flat plane)
+    }
+
+    public moveTo(position: Vector3): void {
+      const npcMesh = this.npcMesh!;
+      const physicsAggregate = this.physicsController?.getPhysicsAggregate();
+      if (!npcMesh || !physicsAggregate) return;
+  
+     
+      const observer = this.npcMesh!.getScene().onBeforeRenderObservable.add(() => {
+        
+          const currentPosition = npcMesh.position.clone();
+  
+       
+          const direction = position.subtract(currentPosition).normalize();
+  
+       
+          const distanceThreshold = 0.1;
+          const distanceToTarget = Vector3.Distance(currentPosition, position);
+  
+          if (distanceToTarget > distanceThreshold) {
+             
+              this.forwardDirection = direction;
+  
+             
+              this.orientToForwardDirection();
+  
+              // Set velocity 
+              const speed = 2; 
+              const velocity = direction.scale(speed);
+              velocity.y = physicsAggregate.body.getLinearVelocity().y; // Preserve vertical velocity
+  
+              physicsAggregate.body.setLinearVelocity(velocity);
+          } else {
+              // Stop movement when close enough to the target
+              physicsAggregate.body.setLinearVelocity(new Vector3(0, physicsAggregate.body.getLinearVelocity().y, 0));
+  
+              // Remove the observer to stop further updates
+              this.npcMesh!.getScene().onBeforeRenderObservable.remove(observer);
+          }
+      });
+  }
 }
