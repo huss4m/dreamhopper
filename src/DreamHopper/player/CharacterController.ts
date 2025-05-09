@@ -87,9 +87,17 @@ export class CharacterController {
       for (const item of inventory) {
         const itemName = item.getName();
         if (itemName === "sword1") {
+          /*
           await this.itemAttachmentManager.attachItemToHand(
             item,
             "mixamorig:RightHand",
+            skeleton,
+            characterMesh
+          );
+*/
+          await this.itemAttachmentManager.attachItemToHand(
+            item,
+            (this.player.isSheathed?"mixamorig:Spine":"mixamorig:RightHand"),
             skeleton,
             characterMesh
           );

@@ -4,9 +4,38 @@ import { Item } from "../items/Item";
 
 export class Player {
   private inventory: Item[] = [];
+  
+  isSheathed = false;
+
+  posOffset: Vector3;
+  rotOffset: Vector3;
 
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator) {
+
+    if(this.isSheathed) {
+      this.posOffset = new Vector3(0, 0, -0.21);
+      this.rotOffset = new Vector3(-11*Math.PI/12, Math.PI/11, +Math.PI/3);
+    }
+    else {
+      this.posOffset = new Vector3(0.8, 0.05, 0.05);
+      this.rotOffset = new Vector3(Math.PI, 0, 0);
+    }
+
     // Initialize with default swords, including specific offsets
+    this.addItem(new Item(
+      "sword1",
+      scene,
+      assetManager.getAssetContainer("dragon_slayer"),
+      shadowGenerator,
+      this.posOffset, // Position offset for sword
+      this.rotOffset, // Rotation offset for sword
+      new Vector3(1.2, 1.2, 1.2) // Scaling for sword
+    ));
+
+
+    
+    /*
+
     this.addItem(new Item(
       "sword1",
       scene,
@@ -16,7 +45,7 @@ export class Player {
       new Vector3(0, 0, 0), // Rotation offset for sword
       new Vector3(1.2, 1.2, 1.2) // Scaling for sword
     ));
-    /*
+
     this.addItem(new Item(
       "sword2",
       scene,
@@ -57,5 +86,13 @@ export class Player {
 
   public hasItem(itemName: string): boolean {
     return this.inventory.some(i => i.getName() === itemName);
+  }
+
+  public sheathe() {
+    this.isSheathed = true;
+  }
+
+  public unSheathe() {
+    this.isSheathed = false;
   }
 }
