@@ -1,18 +1,20 @@
 import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
-import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
 import { Hoverable, HoverHandler, HoverConfig } from "../HoverableSystem";
 import { Targettable } from "../Targettable";
 import { TargetingSystem } from "../TargetingSystem";
 import { v4 as uuidv4 } from 'uuid';
+import { NPCPhysicsController, PhysicsConfig } from "./NPCPhysicsController";
+import { ColliderType } from "../PhysicsController";
+import { NPCAnimationManager } from "./NPCAnimationManager";
 
 export class NPC implements Hoverable, Targettable {
   private id: string; // Unique identifier for the NPC
   private npcMesh: Mesh | null = null;
   private npcSkeleton: Skeleton | null = null;
-  private animationGroups: AnimationGroup[] = [];
-  private physicsController: PhysicsController | null = null;
+  private animationManager: NPCAnimationManager;
+  private physicsController: NPCPhysicsController | null = null;
   private hoverHandler: HoverHandler;
   private targetCircle: Mesh | null = null; // Mesh for the gradient disc
   private questMarker: Sprite | null = null; // Sprite for the quest marker
@@ -27,9 +29,6 @@ export class NPC implements Hoverable, Targettable {
   static completedSpriteManager: SpriteManager | null = null; // SpriteManager for "completed" marker
   position: Vector3;
 
-
-  forwardDirection!: Vector3;
-  
   constructor(
     private scene: Scene,
     name: string,
@@ -44,7 +43,7 @@ export class NPC implements Hoverable, Targettable {
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
     this.position = position;
-    this.forwardDirection = Vector3.Left();
+    this.animationManager = new NPCAnimationManager(this.scene);
 
     // Initialize hover handler
     const hoverConfig: HoverConfig = {
@@ -61,10 +60,7 @@ export class NPC implements Hoverable, Targettable {
     targetingSystem.registerTarget(this);
 
     this.loadCharacter(name, position);
-    this.orientToForwardDirection();
-
-
-    this.moveTo(new Vector3(30,0,30))
+    //this.startWandering();
   }
 
   public async loadCharacter(name: string, position: Vector3): Promise<void> {
@@ -78,7 +74,7 @@ export class NPC implements Hoverable, Targettable {
       const clones = this.duplicate(npcAssetContainer, position);
       this.npcMesh = clones.rootNodes[0] as Mesh;
       this.npcSkeleton = clones.skeletons[0];
-      this.animationGroups = clones.animationGroups || [];
+      const animationGroups = clones.animationGroups || [];
 
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
@@ -95,7 +91,7 @@ export class NPC implements Hoverable, Targettable {
         }
       });
 
-      // Add to shadow generator
+      // Add to compil generator
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
@@ -112,11 +108,11 @@ export class NPC implements Hoverable, Targettable {
       // Initialize physics
       this.setupPhysics();
 
+      // Initialize animations
+      this.animationManager.initialize(animationGroups);
+
       // Setup hover
       this.hoverHandler.setupHover(this);
-
-      // Start idle animation
-      this.getAnimationByName('Idle')?.start(true);
     } catch (error) {
       console.error(`Failed to load character for NPC ID: ${this.id}`, error);
     }
@@ -145,10 +141,9 @@ export class NPC implements Hoverable, Targettable {
       },
     };
 
-    this.physicsController = new PhysicsController(this.scene, this.npcMesh, physicsConfig);
-    this.physicsController.getPhysicsAggregate()?.body.setMassProperties({
-      inertia: new Vector3(0, 1, 0),
-    });
+    this.physicsController = new NPCPhysicsController(this.scene, this.npcMesh, physicsConfig);
+    this.physicsController.setInertia(new Vector3(0, 1, 0));
+    this.physicsController.orientToForwardDirection(Vector3.Left());
   }
 
   private duplicate(container: AssetContainer, position: Vector3) {
@@ -185,7 +180,6 @@ export class NPC implements Hoverable, Targettable {
       this.questMarker.dispose();
       this.questMarker = null;
     }
-
 
     if (!markerType || !this.npcMesh) {
       return;
@@ -242,8 +236,6 @@ export class NPC implements Hoverable, Targettable {
 
       // Position the sprite
       this.questMarker.position = headPosition;
-
-
 
       // Update sprite position in render loop
       this.questMarkerObserver = this.scene.onBeforeRenderObservable.add(() => {
@@ -375,20 +367,19 @@ export class NPC implements Hoverable, Targettable {
     return this.npcSkeleton;
   }
 
-  public getAnimationGroups(): AnimationGroup[] {
-    return this.animationGroups;
+  public getAnimationManager(): NPCAnimationManager {
+    return this.animationManager;
   }
 
-  public hasAnimationEnded(index: number): boolean {
-    const anim = this.animationGroups[index];
-    return anim.isPlaying === false;
+  public hasAnimationEnded(name: string): boolean {
+    return this.animationManager.hasAnimationEnded(name);
   }
 
   public getAnimationByName(name: string): AnimationGroup | undefined {
-    return this.animationGroups.find(group => group.name === name);
+    return this.animationManager.getAnimationByName(name);
   }
 
-  public getPhysicsController(): PhysicsController | null {
+  public getPhysics(): NPCPhysicsController | null {
     return this.physicsController;
   }
 
@@ -442,86 +433,25 @@ export class NPC implements Hoverable, Targettable {
       this.npcMesh = null;
     }
 
-    this.animationGroups.forEach(anim => anim.dispose());
-    this.animationGroups = [];
-
+    this.animationManager.dispose();
     this.npcSkeleton = null;
   }
 
-
-
-
-
-
-  public orientToForwardDirection(): void {
-    const npcMesh = this.npcMesh!;
-    const normalizedForward = this.forwardDirection.normalizeToNew();
-
-    // Ensure the direction is on the XZ plane (ignore Y for yaw-only rotation)
-    const flatForward = new Vector3(normalizedForward.x, 0, normalizedForward.z).normalize();
-
-    // Skip rotation if the direction is zero or invalid
-    if (flatForward.lengthSquared() < 0.0001) return;
-
-    // Calculate the angle to rotate around the Y-axis (yaw)
-    const angle = Math.atan2(flatForward.x, flatForward.z) + Math.PI; // Add 180 degrees to flip forward
-
-    // Apply rotation as a quaternion around the Y-axis
-    npcMesh.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), angle);
-
-    // Ensure no angular velocity to prevent physics-driven rotation
-    const aggregate = this.physicsController?.getPhysicsAggregate();
-    if (aggregate) {
-        aggregate.body.setAngularVelocity(new Vector3(0, 0, 0));
+  public moveTo(position: Vector3): void {
+    if (this.physicsController) {
+      this.physicsController.moveTo(position);
     }
-}
+  }
 
-
-
-    public generateRandomDirection() {
-      const angle = Math.random() * 2 * Math.PI; // Random angle in radians
-      const x = Math.cos(angle);
-      const z = Math.sin(angle);
-      return new Vector3(x, 0, z); // Y is 0 (flat plane)
+  public startWandering(maxDistance = 10): void {
+    if (this.physicsController) {
+      this.physicsController.startWandering(maxDistance);
     }
+  }
 
-    public moveTo(position: Vector3): void {
-      const npcMesh = this.npcMesh!;
-      const physicsAggregate = this.physicsController?.getPhysicsAggregate();
-      if (!npcMesh || !physicsAggregate) return;
-  
-     
-      const observer = this.npcMesh!.getScene().onBeforeRenderObservable.add(() => {
-        
-          const currentPosition = npcMesh.position.clone();
-  
-       
-          const direction = position.subtract(currentPosition).normalize();
-  
-       
-          const distanceThreshold = 0.1;
-          const distanceToTarget = Vector3.Distance(currentPosition, position);
-  
-          if (distanceToTarget > distanceThreshold) {
-             
-              this.forwardDirection = direction;
-  
-             
-              this.orientToForwardDirection();
-  
-              // Set velocity 
-              const speed = 2; 
-              const velocity = direction.scale(speed);
-              velocity.y = physicsAggregate.body.getLinearVelocity().y; // Preserve vertical velocity
-  
-              physicsAggregate.body.setLinearVelocity(velocity);
-          } else {
-              // Stop movement when close enough to the target
-              physicsAggregate.body.setLinearVelocity(new Vector3(0, physicsAggregate.body.getLinearVelocity().y, 0));
-  
-              // Remove the observer to stop further updates
-              this.npcMesh!.getScene().onBeforeRenderObservable.remove(observer);
-          }
-      });
+  public stopWandering(): void {
+    if (this.physicsController) {
+      this.physicsController.stopWandering();
+    }
   }
 }

@@ -72,7 +72,7 @@ export class ForestEnvironment implements Environment {
 
     private setupFog(): void {
         this.scene.fogMode = Scene.FOGMODE_EXP2;
-        this.scene.fogDensity = 0.008;
+        this.scene.fogDensity = 0.008   ;
         this.scene.fogColor = new Color3(0.9, 0.92, 0.95);
         this.scene.fogEnabled = true;
     }
