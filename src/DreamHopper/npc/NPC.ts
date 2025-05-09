@@ -1,4 +1,4 @@
-import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
 import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
@@ -27,6 +27,9 @@ export class NPC implements Hoverable, Targettable {
   static completedSpriteManager: SpriteManager | null = null; // SpriteManager for "completed" marker
   position: Vector3;
 
+
+  forwardDirection!: Vector3;
+  
   constructor(
     private scene: Scene,
     name: string,
@@ -41,6 +44,7 @@ export class NPC implements Hoverable, Targettable {
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
     this.position = position;
+    this.forwardDirection = Vector3.Forward();
 
     // Initialize hover handler
     const hoverConfig: HoverConfig = {
@@ -57,6 +61,7 @@ export class NPC implements Hoverable, Targettable {
     targetingSystem.registerTarget(this);
 
     this.loadCharacter(name, position);
+    this.orientToForwardDirection();
   }
 
   public async loadCharacter(name: string, position: Vector3): Promise<void> {
@@ -439,4 +444,31 @@ export class NPC implements Hoverable, Targettable {
 
     this.npcSkeleton = null;
   }
+
+
+
+
+
+
+  public orientToForwardDirection(): void {
+  
+      const normalizedForward = this.forwardDirection.normalizeToNew();
+      const worldForward = Vector3.Forward();
+      const quaternion = Quaternion.FromUnitVectorsToRef(
+        worldForward,
+        normalizedForward,
+        new Quaternion()
+      );
+  
+      this.npcMesh!.rotationQuaternion = quaternion;
+  
+      if (!this.npcMesh!.rotationQuaternion) {
+        this.npcMesh!.rotation = quaternion.toEulerAngles();
+      }
+  
+      const aggregate = this.physicsController!.getPhysicsAggregate();
+      if (aggregate) {
+        aggregate.body.setAngularVelocity(new Vector3(0, 0, 0));
+      }
+    }
 }
