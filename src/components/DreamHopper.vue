@@ -25,7 +25,6 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { CharacterAnimations } from "public/models/CharacterAnimations";
 import { Game } from "@/DreamHopper/Game";
 
 export default defineComponent({

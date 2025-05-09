@@ -4,7 +4,7 @@ import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
 import "@babylonjs/loaders";
 import { AssetManager } from "./AssetManager";
-import { NPC } from "./NPC";
+import { NPC } from "./npc/NPC";
 import { TargetingSystem } from "./TargetingSystem";
 import { EnvironmentType } from "./EnvironmentCreator";
 

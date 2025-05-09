@@ -1,10 +1,10 @@
 import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
-import { AssetManager } from "./AssetManager";
-import { PhysicsController, PhysicsConfig, ColliderType } from "./PhysicsController";
-import { Hoverable, HoverHandler, HoverConfig } from "./HoverableSystem";
-import { Targettable } from "./Targettable";
-import { TargetingSystem } from "./TargetingSystem";
+import { AssetManager } from "../AssetManager";
+import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
+import { Hoverable, HoverHandler, HoverConfig } from "../HoverableSystem";
+import { Targettable } from "../Targettable";
+import { TargetingSystem } from "../TargetingSystem";
 import { v4 as uuidv4 } from 'uuid';
 
 export class NPC implements Hoverable, Targettable {
