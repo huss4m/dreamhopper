@@ -12,9 +12,9 @@ export class Player {
       scene,
       assetManager.getAssetContainer("dragon_slayer"),
       shadowGenerator,
-      new Vector3(80, 7, 0), // Position offset for sword
+      new Vector3(0.8, 0.1, 0), // Position offset for sword
       new Vector3(0, 0, 0), // Rotation offset for sword
-      new Vector3(120, 120, 120) // Scaling for sword
+      new Vector3(1.2, 1.2, 1.2) // Scaling for sword
     ));
     /*
     this.addItem(new Item(

@@ -33,6 +33,8 @@ export class ForestEnvironment implements Environment {
         this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
+
+        this.logModelBones();
     }
 
     private async setupSkybox(): Promise<void> {
@@ -238,5 +240,21 @@ export class ForestEnvironment implements Environment {
 
     public getShadowGenerator(): CascadedShadowGenerator | null {
         return this.shadowGenerator;
+    }
+
+
+    private async logModelBones(): Promise<void> {
+        try {
+            const result = await SceneLoader.ImportMeshAsync("", "./models/", "guycrig.glb", this.scene);
+            result.meshes.forEach(mesh => {
+                if (mesh.skeleton) {
+                    mesh.skeleton.bones.forEach(bone => {
+                        console.log(`Bone name: ${bone.name}`);
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("Error loading testcrig.glb:", error);
+        }
     }
 }
