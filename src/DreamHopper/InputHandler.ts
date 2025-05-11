@@ -28,6 +28,8 @@ export class InputHandler {
   private moveSpeed = 5;
   private rotationSpeed = 0.05;
   private wasSpacePressed = false;
+  private wasSlashPressed = false;
+  private wasSheathePressed = false;
   private game: Game;
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
@@ -68,13 +70,6 @@ export class InputHandler {
 
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
-
-        if (isDown) {
-          const binding = Object.values(this.keyBindings).find(b => b.key === key && !b.continuous);
-          if (binding) {
-            this.executeAction(binding);
-          }
-        }
       }
     });
   }
@@ -149,6 +144,16 @@ export class InputHandler {
           this.characterController.moveDiagonallyLeft(this.moveSpeed, binding.animation);
         }
         break;
+      case "slash":
+        if (!this.characterController.isAnimationPlaying("Slash")) {
+          this.characterController.slash(binding.animation);
+        }
+        break;
+      case "toggleSheathe":
+        if (!this.wasSheathePressed) {
+          this.characterController.toggleSheathe();
+        }
+        break;
     }
   }
 
@@ -158,32 +163,55 @@ export class InputHandler {
     const character = this.characterController.getCharacter();
     let isMoving = false;
 
-    // Check diagonal movements (combined keys)
+    // Handle jump (non-continuous action)
+    if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
+      const jumpBinding = this.keyBindings["SPACE"];
+      this.executeAction(jumpBinding);
+      this.wasSpacePressed = true;
+    } else if (!this.keyStates[" "]) {
+      this.wasSpacePressed = false;
+    }
+
+    // Handle slash (non-continuous action)
+    if (this.keyStates["1"] && !this.wasSlashPressed && !this.characterController.isAnimationPlaying("Slash")) {
+      const slashBinding = this.keyBindings["1"];
+      this.executeAction(slashBinding);
+      this.wasSlashPressed = true;
+    } else if (!this.keyStates["1"]) {
+      this.wasSlashPressed = false;
+    }
+
+    // Handle toggle sheathe (non-continuous action)
+    if (this.keyStates["W"] && !this.wasSheathePressed) {
+      const sheatheBinding = this.keyBindings["W"];
+      this.executeAction(sheatheBinding);
+      this.wasSheathePressed = true;
+    } else if (!this.keyStates["W"]) {
+      this.wasSheathePressed = false;
+    }
+
+    // Collect all active continuous actions
+    const activeActions: KeyAction[] = [];
     if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
-      this.executeAction(this.keyBindings["Z_E"]);
-      isMoving = true;
+      activeActions.push(this.keyBindings["Z_E"]);
     } else if (this.keyStates["Z"] && this.keyStates["A"] && this.keyBindings["Z_A"]) {
-      this.executeAction(this.keyBindings["Z_A"]);
-      isMoving = true;
+      activeActions.push(this.keyBindings["Z_A"]);
     } else {
-      // Handle single-key continuous actions
       for (const binding of Object.values(this.keyBindings)) {
         if (binding.continuous && binding.key !== "Z+E" && binding.key !== "Z+A" && this.keyStates[binding.key]) {
-          this.executeAction(binding);
-          isMoving = true;
+          activeActions.push(binding);
         }
       }
     }
 
-    // Handle space key state for jump
-    if (this.keyStates[" "]) {
-      this.wasSpacePressed = true;
-    } else {
-      this.wasSpacePressed = false;
+    // Execute all active continuous actions
+    for (const binding of activeActions) {
+      this.executeAction(binding);
+      isMoving = true;
     }
 
-    // Idle state
-    if (!isMoving && !this.keyStates[" "] && !character.isJumping) {
+    // Idle state: only if not moving, not jumping, and not playing Slash
+    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !this.characterController.isAnimationPlaying("Slash")) {
       this.characterController.playIdleAnimation();
       if (!this.characterController.physicsController?.isJumping) {
         this.characterController.moveForward(0);

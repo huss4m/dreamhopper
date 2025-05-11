@@ -83,39 +83,46 @@ export class CharacterController {
         cameraTarget.position.copyFrom(meshPos.add(offset));
       });
 
-      const inventory = this.player.getInventory();
-      for (const item of inventory) {
-        const itemName = item.getName();
-        if (itemName === "sword1") {
-          /*
-          await this.itemAttachmentManager.attachItemToHand(
-            item,
-            "mixamorig:RightHand",
-            skeleton,
-            characterMesh
-          );
-*/
-          await this.itemAttachmentManager.attachItemToHand(
-            item,
-            (this.player.isSheathed?"mixamorig:Spine":"mixamorig:RightHand"),
-            skeleton,
-            characterMesh
-          );
-        } else if (itemName === "sword2") {
-          console.log("ph");
-          /*
-          await this.itemAttachmentManager.attachItemToHand(
-            item,
-            "mixamorig:LeftHand",
-            skeleton,
-            characterMesh
-          );
-          */
-        }
-      }
-
-      this.setupParticleSystem();
+      await this.updateSwordAttachment();
     }
+  }
+
+  private async updateSwordAttachment(): Promise<void> {
+    const characterMesh = this.characterMeshLoader.getCharacterMesh();
+    const skeleton = this.characterMeshLoader.getSkeleton();
+    if (!characterMesh || !skeleton) return;
+
+    const inventory = this.player.getInventory();
+    for (const item of inventory) {
+      const itemName = item.getName();
+      if (itemName === "sword1") {
+        // Detach the item first to avoid duplicate attachments
+        this.itemAttachmentManager.detachItem(item);
+        await this.itemAttachmentManager.attachItemToHand(
+          item,
+          this.player.isSheathed ? "mixamorig:Spine" : "mixamorig:RightHand",
+          skeleton,
+          characterMesh,
+          this.player.posOffset,
+          this.player.rotOffset
+        );
+      }
+    }
+  }
+
+  public toggleSheathe(): void {
+    if (this.player.isSheathed) {
+      this.player.unSheathe();
+    } else {
+      this.player.sheathe();
+    }
+    this.player.posOffset = this.player.isSheathed
+      ? new Vector3(0, 0, -0.21)
+      : new Vector3(0.8, 0.05, 0.05);
+    this.player.rotOffset = this.player.isSheathed
+      ? new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3)
+      : new Vector3(Math.PI, 0, 0);
+    this.updateSwordAttachment();
   }
 
   private playAnimationWithData(animationData?: AnimationData): void {
@@ -126,7 +133,7 @@ export class CharacterController {
   }
 
   public playIdleAnimation(): void {
-    if (!this.getCharacter().isJumping) {
+    if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Slash")) {
       this.animationManager.playAnimation("IdleGreatSword", 1);
     }
   }
@@ -143,34 +150,55 @@ export class CharacterController {
     }
   }
 
+  public slash(animationData?: AnimationData): void {
+    if (animationData) {
+      const { name, speed = 1 } = animationData;
+      this.animationManager.playAnimation(name, speed);
+    } else {
+      this.animationManager.playAnimation("Slash", 1);
+    }
+  }
+
   public moveForward(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveForward(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public moveDiagonallyRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyRight(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public moveDiagonallyLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyLeft(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public strafeLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeLeft(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public strafeRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeRight(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public backPedal(speed: number, animationData?: AnimationData): void {
     this.physicsController?.backPedal(speed);
-    this.playAnimationWithData(animationData);
+    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+      this.playAnimationWithData(animationData);
+    }
   }
 
   public rotateLeft(yaw: number): void {
@@ -194,6 +222,10 @@ export class CharacterController {
 
   public getPlayer(): Player {
     return this.player;
+  }
+
+  public isAnimationPlaying(name: string): boolean {
+    return this.animationManager.isAnimationPlaying(name);
   }
 
   public setupParticleSystem(): void {

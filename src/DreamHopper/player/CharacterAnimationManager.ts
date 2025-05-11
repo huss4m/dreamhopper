@@ -26,15 +26,27 @@ export class CharacterAnimationManager {
     }
 
     this.setupJumpDetection();
+    this.setupSlashDetection();
   }
 
   private setupJumpDetection(): void {
     if (this.getAnimationByName("Jump")) {
       this.getAnimationByName("Jump")!.onAnimationGroupEndObservable.add(() => {
         this.isJumping = false;
+        this.currentAnimationName = null;
       });
     } else {
       console.warn("Jump animation not found");
+    }
+  }
+
+  private setupSlashDetection(): void {
+    if (this.getAnimationByName("Slash")) {
+      this.getAnimationByName("Slash")!.onAnimationGroupEndObservable.add(() => {
+        this.currentAnimationName = null;
+      });
+    } else {
+      console.warn("Slash animation not found");
     }
   }
 
@@ -50,9 +62,15 @@ export class CharacterAnimationManager {
       return;
     }
 
-    // Skip if already playing the same animation
-    if (name === this.currentAnimationName && newAnim.isPlaying) {
-      return;
+    // Allow Slash or Jump to interrupt other animations
+    if ((name === "Slash" || name === "Jump") && this.currentAnimationName !== name) {
+      const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
+      if (prevAnim) {
+        prevAnim.stop();
+        prevAnim.setWeightForAllAnimatables(0);
+      }
+    } else if (name === this.currentAnimationName && newAnim.isPlaying) {
+      return; // Skip if already playing the same animation
     }
 
     // Cancel any ongoing blending
@@ -63,15 +81,15 @@ export class CharacterAnimationManager {
 
     const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
 
-    // Stop previous animation and reset weights
-    if (prevAnim) {
+    // Stop previous animation and reset weights (unless Slash or Jump already handled it)
+    if (prevAnim && name !== "Slash" && name !== "Jump") {
       prevAnim.setWeightForAllAnimatables(0);
       prevAnim.stop();
     }
 
     // Start the new animation
     newAnim.stop(); // Ensure clean start
-    newAnim.start(!(newAnim.name === "Jump"), speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
+    newAnim.start(!(newAnim.name === "Jump" || newAnim.name === "Slash"), speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
     newAnim.setWeightForAllAnimatables(0);
 
     this.currentAnimationName = name;
@@ -105,7 +123,6 @@ export class CharacterAnimationManager {
     }
   }
 
-
   public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
     let currentWeight = 1;
     let newWeight = 0;
@@ -124,7 +141,6 @@ export class CharacterAnimationManager {
     fromAnim.setWeightForAllAnimatables(0);
   }
 
-  // Start blending between two animations
   public blendAnimations(fromAnimName: string, toAnimName: string): void {
     const fromAnim = this.getAnimationByName(fromAnimName);
     const toAnim = this.getAnimationByName(toAnimName);
@@ -140,6 +156,7 @@ export class CharacterAnimationManager {
     }
 
     this.isBlending = true;
+    this.currentAnimationName = toAnimName;
 
     const blendGen = this.animationBlending(toAnim, fromAnim);
 
@@ -157,6 +174,11 @@ export class CharacterAnimationManager {
 
   public isCharacterJumping(): boolean {
     return this.isJumping;
+  }
+
+  public isAnimationPlaying(name: string): boolean {
+    const anim = this.getAnimationByName(name);
+    return anim?.isPlaying || false;
   }
 
   hasAnimationEnded(name: string): boolean {

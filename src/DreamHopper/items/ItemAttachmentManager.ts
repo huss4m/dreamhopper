@@ -45,6 +45,21 @@ export class ItemAttachmentManager {
     }
   }
 
+  public detachItem(item: Item): void {
+    try {
+      const itemMesh = item.getParentMesh();
+      
+      // Detach the item mesh from the bone
+      itemMesh.detachFromBone();
+  
+   
+      itemMesh.parent = null;
+  
+      console.log(`Item '${item.getName()}' detached from bone.`);
+    } catch (err) {
+      console.error(`Error detaching item '${item.getName()}':`, err);
+    }
+  }
   public dispose(): void {
     // No items stored locally; Player handles disposal
   }
