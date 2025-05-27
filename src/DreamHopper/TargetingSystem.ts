@@ -18,6 +18,10 @@ export class TargetingSystem {
     delete this.targetMap[targetId];
   }
 
+  public getCurrentTarget(): Targettable | null {
+    return this.currentTarget;
+  }
+
   private setupTargeting(): void {
     this.pointerObserver = this.scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0) { // Left click
@@ -44,7 +48,7 @@ export class TargetingSystem {
               }
               this.currentTarget = selectedTarget;
               this.currentTarget.setTargetted(true);
-             // console.log("Targeting target ", this.currentTarget.getId());
+              //console.log("Targeting target ", this.currentTarget.getId());
             }
             return;
           }

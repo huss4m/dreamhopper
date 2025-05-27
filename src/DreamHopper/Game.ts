@@ -1,4 +1,4 @@
-import { ArcRotateCamera, AssetContainer, Engine, HighlightLayer, Scene, Vector3 } from "@babylonjs/core";
+import { ArcRotateCamera, AssetContainer, Engine, HighlightLayer, Scene, Vector3, Observable, Mesh } from "@babylonjs/core";
 import { SceneCreator } from "./SceneCreator";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -7,9 +7,11 @@ import { AssetManager } from "./AssetManager";
 import { NPC } from "./npc/NPC";
 import { TargetingSystem } from "./TargetingSystem";
 import { EnvironmentType } from "./EnvironmentCreator";
+import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
 
 export interface SceneState {
   npcPositions?: Vector3[];
+  crystalState?: DreamCrystalState;
 }
 
 export class Game {
@@ -20,6 +22,7 @@ export class Game {
   assetManager!: AssetManager;
   highlightLayer!: HighlightLayer;
   npcs: NPC[] = [];
+  private dreamCrystalManager!: DreamCrystalManager;
   sceneCreator: any;
   private scenes: Scene[] = [];
   private activeScene: Scene | null = null;
@@ -28,15 +31,35 @@ export class Game {
   constructor(private canvas: HTMLCanvasElement, environmentType: EnvironmentType = EnvironmentType.FOREST) {
     this.engine = new Engine(canvas, true);
     this.sceneCreator = new SceneCreator(this.engine, canvas, environmentType);
-    
-    // Create and store scenes 
-    this.scenes.push(this.sceneCreator.createScene()); // Index 0: FOREST
-    this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene()); 
-  
-    // Initialize scene states (one for each scene)
-    this.sceneStates = this.scenes.map(() => ({}));
 
-    // Set initial scene (FOREST)
+    this.scenes.push(this.sceneCreator.createScene()); // Index 0: FOREST
+    this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene());
+
+    this.sceneStates = [
+      // FOREST scene
+      {
+        crystalState: {
+          positions: [
+            new Vector3(2, 2, 2),
+            new Vector3(8, 2, 0),
+            new Vector3(-3, 2, 6),
+          ],
+          collected: [],
+        },
+      },
+      // DESERT scene
+      {
+        crystalState: {
+          positions: [
+            new Vector3(0, 1, 5),
+            new Vector3(10, 1, -5),
+            new Vector3(-7, 1, 3),
+          ],
+          collected: [],
+        },
+      },
+    ];
+
     this.activeScene = this.scenes[0];
 
     this.initialize();
@@ -44,7 +67,11 @@ export class Game {
 
   private async initialize(): Promise<void> {
     await this.initializeSceneComponents(this.activeScene!, 0);
-    
+
+    this.dreamCrystalManager.getOnAllCrystalsCollected().add(() => {
+      console.log("All DreamCrystals collected! You win!");
+    });
+
     this.engine.runRenderLoop(() => {
       if (this.activeScene && this.inputHandler.getIsInitialized()) {
         this.inputHandler.update();
@@ -58,28 +85,22 @@ export class Game {
   }
 
   private async initializeSceneComponents(scene: Scene, sceneIndex: number): Promise<void> {
-    // Load all assets
     this.assetManager = new AssetManager(scene);
-    await this.assetManager.initializeFromJson('./models/assets.json');
+    await this.assetManager.initializeFromJson("./models/assets.json");
     console.log("All assets loaded.");
 
-    // Get shadow generator
     const shadowGenerator = this.sceneCreator.getShadowGenerator();
     if (!shadowGenerator) {
       console.error("Shadow generator not initialized!");
       return;
     }
 
-    // Verify shadow generator configuration
     if (!shadowGenerator.getLight()) {
       console.error("Shadow generator has no associated light!");
       return;
     }
     console.log("Shadow generator initialized with light:", shadowGenerator.getLight().name);
 
-    
-
-    // Initialize components
     this.highlightLayer = this.sceneCreator.highlightLayer;
     this.targetingSystem = new TargetingSystem(scene);
     this.characterController = new CharacterController(
@@ -87,39 +108,38 @@ export class Game {
       this.canvas,
       scene.activeCamera as ArcRotateCamera,
       shadowGenerator,
-      this.assetManager
+      this.assetManager,
+      this.targetingSystem
     );
 
-    // Add character to shadow generator
     const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
     if (characterMesh) {
+      console.log("Player mesh name:", characterMesh.name); // Debug mesh name
       shadowGenerator.addShadowCaster(characterMesh, true);
       characterMesh.receiveShadows = true;
-      // Include child meshes for shadows
+      characterMesh.checkCollisions = true;
       characterMesh.getChildMeshes().forEach(child => {
         shadowGenerator.addShadowCaster(child, true);
         child.receiveShadows = true;
+        child.checkCollisions = true;
       });
       console.log("Character mesh added to shadow generator:", characterMesh.name);
     } else {
       console.warn("Character mesh not found for shadow generator");
     }
 
-    // Create NPCs and restore positions if available
     const savedState = this.sceneStates[sceneIndex];
     this.npcs = [
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[0] || new Vector3(5, 1, 5), this.highlightLayer, this.targetingSystem),
       new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[1] || new Vector3(10, 1, 5), this.highlightLayer, this.targetingSystem),
-      new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[2] || new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem)
+      new NPC(scene, "npc", this.assetManager, shadowGenerator, savedState.npcPositions?.[2] || new Vector3(10, 1, 10), this.highlightLayer, this.targetingSystem),
     ];
 
-    // Add NPCs to shadow generator
     this.npcs.forEach((npc, index) => {
       const npcMesh = npc.getMesh();
       if (npcMesh) {
         shadowGenerator.addShadowCaster(npcMesh, true);
         npcMesh.receiveShadows = true;
-        // Include child meshes for shadows
         npcMesh.getChildMeshes().forEach(child => {
           shadowGenerator.addShadowCaster(child, true);
           child.receiveShadows = true;
@@ -130,8 +150,15 @@ export class Game {
       }
     });
 
-    
-    // Initialize InputHandler and await its setup
+    this.dreamCrystalManager = new DreamCrystalManager(
+      scene,
+      this.assetManager.getAssetContainer("dreamCrystal"),
+      shadowGenerator,
+      characterMesh! // Pass player mesh
+    );
+    const crystalState = savedState.crystalState || { positions: [], collected: [] };
+    this.dreamCrystalManager.initialize(crystalState.positions, crystalState.collected);
+
     this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
     const initSuccess = await this.inputHandler.init();
     if (!initSuccess) {
@@ -162,40 +189,36 @@ export class Game {
       return;
     }
 
-    // Save current scene's NPC state
-    if (this.activeScene && this.npcs.length) {
+    if (this.activeScene) {
       const currentIndex = this.scenes.indexOf(this.activeScene);
       if (currentIndex !== -1) {
         this.sceneStates[currentIndex] = {
-          npcPositions: this.npcs.map(npc => npc.getPosition())
+          npcPositions: this.npcs.map(npc => npc.getPosition()),
+          crystalState: this.dreamCrystalManager.getState(),
         };
       }
     }
 
-    // Clean up existing components
     this.npcs.forEach(npc => npc.dispose());
     this.npcs = [];
+    this.dreamCrystalManager.dispose();
     this.characterController?.dispose();
     this.targetingSystem?.dispose();
     this.assetManager?.dispose();
 
-    // Create new SceneCreator for the new environment and ensure scene is properly set up
     this.sceneCreator = new SceneCreator(this.engine, this.canvas, environmentType);
     const newScene = this.sceneCreator.createScene();
-    
-    // Replace the old scene with the new one
     this.scenes[index] = newScene;
     this.activeScene = newScene;
 
-    // Reinitialize components for the new scene
     await this.initializeSceneComponents(newScene, index);
-    
     console.log(`Switched to ${environmentType} scene.`);
   }
 
   public dispose(): void {
     this.characterController?.dispose();
     this.npcs.forEach(npc => npc.dispose());
+    this.dreamCrystalManager?.dispose();
     this.targetingSystem?.dispose();
     this.assetManager?.dispose();
     this.scenes.forEach(scene => scene.dispose());

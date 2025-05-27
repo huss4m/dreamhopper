@@ -79,7 +79,7 @@ export class NPC implements Hoverable, Targettable {
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
 
-      // Apply material properties
+      // Apply material properties and ensure collisions for all meshes
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
         if (mat) {
@@ -89,9 +89,10 @@ export class NPC implements Hoverable, Targettable {
           mat.reflectivityColor = new Color3(0.3, 0.3, 0.3);
           mat.microSurface = 0.8;
         }
+        mesh.checkCollisions = true; // Ensure child meshes support collisions
       });
 
-      // Add to compil generator
+      // Add to shadow generator
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));

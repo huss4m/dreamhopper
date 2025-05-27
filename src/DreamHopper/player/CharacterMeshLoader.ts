@@ -31,9 +31,9 @@ import {
   
     public async loadCharacter(position: Vector3): Promise<void> {
       try {
-        const guyAssetContainer = this.assetManager.getAssetContainer("guy");
+        const guyAssetContainer = this.assetManager.getAssetContainer("caster");
         if (!guyAssetContainer) {
-          console.error("Failed to load the 'guy' asset container.");
+          console.error("Failed to load the 'caster' asset container.");
           return;
         }
   

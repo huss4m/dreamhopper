@@ -9,7 +9,6 @@ import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
 import { EnvironmentType } from "./EnvironmentCreator";
 
-// Defining the structure of key action for TypeScript typing
 interface KeyAction {
   key: string;
   action: string | { [key: string]: any };
@@ -28,7 +27,7 @@ export class InputHandler {
   private moveSpeed = 5;
   private rotationSpeed = 0.05;
   private wasSpacePressed = false;
-  private wasSlashPressed = false;
+  private wasDreamboltPressed = false;
   private wasSheathePressed = false;
   private game: Game;
   private keyBindings: { [key: string]: KeyAction } = {};
@@ -144,9 +143,9 @@ export class InputHandler {
           this.characterController.moveDiagonallyLeft(this.moveSpeed, binding.animation);
         }
         break;
-      case "slash":
-        if (!this.characterController.isAnimationPlaying("Slash")) {
-          this.characterController.slash(binding.animation);
+      case "castDreambolt":
+        if (!this.characterController.isAnimationPlaying("Dreambolt")) {
+          this.characterController.castDreambolt(binding.animation);
         }
         break;
       case "toggleSheathe":
@@ -172,13 +171,13 @@ export class InputHandler {
       this.wasSpacePressed = false;
     }
 
-    // Handle slash (non-continuous action)
-    if (this.keyStates["1"] && !this.wasSlashPressed && !this.characterController.isAnimationPlaying("Slash")) {
-      const slashBinding = this.keyBindings["1"];
-      this.executeAction(slashBinding);
-      this.wasSlashPressed = true;
+    // Handle castDreambolt (non-continuous action)
+    if (this.keyStates["1"] && !this.wasDreamboltPressed && !this.characterController.isAnimationPlaying("Dreambolt")) {
+      const dreamboltBinding = this.keyBindings["1"];
+      this.executeAction(dreamboltBinding);
+      this.wasDreamboltPressed = true;
     } else if (!this.keyStates["1"]) {
-      this.wasSlashPressed = false;
+      this.wasDreamboltPressed = false;
     }
 
     // Handle toggle sheathe (non-continuous action)
@@ -210,8 +209,8 @@ export class InputHandler {
       isMoving = true;
     }
 
-    // Idle state: only if not moving, not jumping, and not playing Slash
-    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !this.characterController.isAnimationPlaying("Slash")) {
+    // Idle state: only if not moving, not jumping, and not playing Dreambolt
+    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !this.characterController.isAnimationPlaying("Dreambolt")) {
       this.characterController.playIdleAnimation();
       if (!this.characterController.physicsController?.isJumping) {
         this.characterController.moveForward(0);

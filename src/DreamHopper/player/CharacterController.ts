@@ -8,6 +8,9 @@ import {
   ParticleSystem,
   Texture,
   MeshBuilder,
+  Mesh,
+  StandardMaterial,
+  Color3,
 } from "@babylonjs/core";
 import { AssetManager } from "../AssetManager";
 import { CharacterAnimationManager } from "./CharacterAnimationManager";
@@ -16,6 +19,7 @@ import { ItemAttachmentManager } from "../items/ItemAttachmentManager";
 import { CharacterMeshLoader } from "./CharacterMeshLoader";
 import { Character } from "../types";
 import { Player } from "./Player";
+import { TargetingSystem } from "../TargetingSystem";
 
 interface AnimationData {
   name: string;
@@ -37,10 +41,11 @@ export class CharacterController {
     private canvas: HTMLCanvasElement,
     private camera: ArcRotateCamera,
     shadowGenerator: CascadedShadowGenerator,
-    assetManager: AssetManager
+    assetManager: AssetManager,
+    private targetingSystem: TargetingSystem // Add TargetingSystem parameter
   ) {
     this.scene.collisionsEnabled = true;
-    this.animationManager = new CharacterAnimationManager(scene);
+    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem); // Pass targetingSystem
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
     this.player = new Player(scene, assetManager, shadowGenerator);
@@ -93,10 +98,10 @@ export class CharacterController {
     if (!characterMesh || !skeleton) return;
 
     const inventory = this.player.getInventory();
+    /*
     for (const item of inventory) {
       const itemName = item.getName();
       if (itemName === "sword1") {
-        // Detach the item first to avoid duplicate attachments
         this.itemAttachmentManager.detachItem(item);
         await this.itemAttachmentManager.attachItemToHand(
           item,
@@ -107,7 +112,7 @@ export class CharacterController {
           this.player.rotOffset
         );
       }
-    }
+    }*/
   }
 
   public toggleSheathe(): void {
@@ -133,8 +138,8 @@ export class CharacterController {
   }
 
   public playIdleAnimation(): void {
-    if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Slash")) {
-      this.animationManager.playAnimation("IdleGreatSword", 1);
+    if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Dreambolt")) {
+      this.animationManager.playAnimation("Idle", 1);
     }
   }
 
@@ -150,53 +155,53 @@ export class CharacterController {
     }
   }
 
-  public slash(animationData?: AnimationData): void {
+  public castDreambolt(animationData?: AnimationData): void {
     if (animationData) {
       const { name, speed = 1 } = animationData;
       this.animationManager.playAnimation(name, speed);
     } else {
-      this.animationManager.playAnimation("Slash", 1);
+      this.animationManager.playAnimation("Dreambolt", 1);
     }
   }
 
   public moveForward(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveForward(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }
 
   public moveDiagonallyRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyRight(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }
 
   public moveDiagonallyLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.moveDiagonallyLeft(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }
 
   public strafeLeft(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeLeft(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }
 
   public strafeRight(speed: number, animationData?: AnimationData): void {
     this.physicsController?.strafeRight(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }
 
   public backPedal(speed: number, animationData?: AnimationData): void {
     this.physicsController?.backPedal(speed);
-    if (!this.isAnimationPlaying("Slash") && !this.isAnimationPlaying("Jump")) {
+    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
       this.playAnimationWithData(animationData);
     }
   }

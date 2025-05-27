@@ -4,6 +4,13 @@
       "rootUrl": "./models/",
       "filename": "guycrig.glb"
     },
+
+    {
+      "name": "caster",
+      "rootUrl": "./models/",
+      "filename": "caster.glb"
+    },
+
     {
       "name": "sword",
       "rootUrl": "./models/",
@@ -44,6 +51,16 @@
       "name": "exclamation_point",
       "rootUrl": "./models/",
       "filename": "exclamation_point.glb"
+    },
+    {
+      "name": "portals",
+      "rootUrl": "./models/",
+      "filename": "portals.glb"
+    },
+    {
+      "name": "dreamCrystal",
+      "rootUrl": "./models/",
+      "filename": "dream_crystal.glb"
     }
 
   ]

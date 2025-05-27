@@ -17,7 +17,7 @@ export interface CharacterPhysicsConfig extends PhysicsConfig {
 
 export class CharacterPhysicsController {
   private physicsController: PhysicsController;
-  private forwardDirection: Vector3;
+  public forwardDirection: Vector3;
   private enableCharacterMovement: boolean;
   public isDiagonal = false;
   public isJumping = false;

@@ -3,13 +3,13 @@
     "Z": {
       "key": "Z",
       "continuous": true,
-      "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1 },
+      "animation": { "name": "Run", "loop": 1, "speed": 1 },
       "action": "moveForward"
     },
     "S": {
       "key": "S",
       "continuous": true,
-      "animation": { "name": "RUNNINGBACKWARDS" },
+      "animation": { "name": "RunBackwards" },
       "action": "backPedal"
     },
     "A": {
@@ -21,7 +21,7 @@
     "E": {
       "key": "E",
       "continuous": true,
-      "animation": { "name": "StrafeRight" },
+      "animation": { "name": "RightStrafe" },
       "action": "strafeRight"
     },
     "Q": {
@@ -45,20 +45,20 @@
     "Z_E": {
       "key": "Z+E",
       "continuous": true,
-      "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1 },
+      "animation": { "name": "Run", "loop": 1, "speed": 1 },
       "action": "moveDiagonallyRight"
     },
     "Z_A": {
       "key": "Z+A",
       "continuous": true,
-      "animation": { "name": "RunGreatSword", "loop": 1, "speed": 1 },
+      "animation": { "name": "Run", "loop": 1, "speed": 1 },
       "action": "moveDiagonallyLeft"
     },
     "1": {
       "key": "1",
       "continuous": false,
-      "animation": { "name": "Slash", "loop": 0, "speed": 1 },
-      "action": "slash"
+      "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
+      "action": "castDreambolt"
     },
     "W": {
       "key": "W",

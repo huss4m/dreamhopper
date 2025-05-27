@@ -10,7 +10,7 @@ export class Item {
   private parentMesh: Mesh;
   private name: string;
   private shadowGenerator: CascadedShadowGenerator;
-  private scene: Scene;
+  public scene: Scene;
   private positionOffset: Vector3; // Store position offset
   private rotationOffset: Vector3; // Store rotation offset
   private scaling: Vector3; // Store scaling
