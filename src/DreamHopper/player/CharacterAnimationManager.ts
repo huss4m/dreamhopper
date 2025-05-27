@@ -139,7 +139,7 @@ export class CharacterAnimationManager {
       if (moveDirection.lengthSquared() > 0.0001) {
         moveDirection = moveDirection.normalize();
         console.log(`Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
-        console.log(`Move direction: ${moveDirection.toString()}`);
+       // console.log(`Move direction: ${moveDirection.toString()}`);
       } else {
         moveDirection = forward;
         console.log(`Target ${target!.getId()} is at same position as sphere, using forward direction`);
@@ -159,7 +159,7 @@ export class CharacterAnimationManager {
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
       traveledDistance += moveDistance;
 
-      console.log(`Sphere position: ${sphere.position.toString()}, traveled: ${traveledDistance}`);
+      //console.log(`Sphere position: ${sphere.position.toString()}, traveled: ${traveledDistance}`);
 
       if (targetMesh) {
         targetMesh.computeWorldMatrix(true);

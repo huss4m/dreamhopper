@@ -27,6 +27,7 @@ export class SceneCreator {
     this.highlightLayer = new HighlightLayer("highlightLayer", this.scene);
     this.initializePhysics();
     this.createEnvironment(environmentType);
+    
   }
 
   public createScene(): Scene {
