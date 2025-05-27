@@ -41,7 +41,7 @@ export class ForestEnvironment implements Environment {
         this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
-        await this.logModelBones();
+       // await this.logModelBones();
     }
 
     private async setupSkybox(): Promise<void> {

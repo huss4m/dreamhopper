@@ -29,12 +29,14 @@ export class TargetingSystem {
           let mesh = pointerInfo.pickInfo.pickedMesh;
           let targetId: string | undefined;
 
-          // Check the picked mesh and its parents for targetID tag
+          // Check the picked mesh and its parents for npcID or enemyID tag
           while (mesh && !targetId) {
             const tags = Tags.GetTags(mesh);
             if (tags) {
               const tagArray = tags.split(" ").filter((tag: any) => tag);
-              targetId = tagArray.find((tag: string) => tag.startsWith("npcID:"))?.split(":")[1];
+              targetId = tagArray.find((tag: string) => 
+                tag.startsWith("npcID:") || tag.startsWith("enemyID:")
+              )?.split(":")[1];
             }
             mesh = mesh.parent as Mesh;
           }

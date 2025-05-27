@@ -26,6 +26,11 @@
       "rootUrl": "./models/",
       "filename": "npc.glb"
     },
+    {
+      "name": "enemy",
+      "rootUrl": "./models/",
+      "filename": "enemy.glb"
+    },
 
     {
       "name": "cube",

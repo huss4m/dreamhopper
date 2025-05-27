@@ -47,7 +47,7 @@ import {
         this.characterMesh.position = position;
         this.characterMesh.checkCollisions = true;
   
-        this.characterMesh.getChildMeshes().forEach(mesh => {
+       /* this.characterMesh.getChildMeshes().forEach(mesh => {
           const mat = mesh.material as PBRMaterial;
           if (mat) {
             mat.metallic = 0.2;
@@ -56,7 +56,7 @@ import {
             mat.reflectivityColor = new Color3(0.3, 0.3, 0.3);
             mat.microSurface = 0.8;
           }
-        });
+        });*/
   
         if (this.shadowGenerator) {
           this.shadowGenerator.addShadowCaster(this.characterMesh);

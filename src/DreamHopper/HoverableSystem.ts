@@ -1,9 +1,10 @@
-import { AbstractMesh, ActionManager, Color3, ExecuteCodeAction, HighlightLayer, Mesh, Scene, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, Color3, ExecuteCodeAction, HighlightLayer, Mesh, Scene, Tags } from "@babylonjs/core";
 
 // Interface for hoverable objects
 export interface Hoverable {
   getMesh(): Mesh | null;
   getScene(): Scene;
+  getHighlightMesh?(): Mesh | null; // Optional: mesh to highlight
 }
 
 // Configuration for hover behavior
@@ -20,6 +21,7 @@ export interface HoverConfig {
 export class HoverHandler {
   private highlightLayer: HighlightLayer | null;
   private config: HoverConfig;
+  private isHovered = false; // Track hover state
 
   constructor(
     private scene: Scene,
@@ -31,9 +33,9 @@ export class HoverHandler {
       highlightColor: config.highlightColor || Color3.Yellow(),
       customCursorUrl: config.customCursorUrl || "./images/cursorTargetAlly.png",
       innerGlow: config.innerGlow !== undefined ? config.innerGlow : true,
-      outerGlow: config.outerGlow !== undefined ? config.outerGlow : false,
-      blurHorizontalSize: config.blurHorizontalSize || 0.5,
-      blurVerticalSize: config.blurVerticalSize || 0.5,
+      outerGlow: config.outerGlow !== undefined ? config.outerGlow : true,
+      blurHorizontalSize: config.blurHorizontalSize || 1.0,
+      blurVerticalSize: config.blurVerticalSize || 1.0,
     };
 
     // Configure highlight layer
@@ -56,11 +58,10 @@ export class HoverHandler {
       return;
     }
 
-    // Setup mesh properties, actions, cursor, and debugging
+    // Setup mesh properties, actions, and cursor
     this.configureMesh(mesh);
-    this.registerHoverActions(mesh, canvas);
+    this.registerHoverActions(mesh, hoverable, canvas);
     this.setupCursorStyle(canvas);
-    //this.setupDebugging(mesh);
   }
 
   private configureMesh(mesh: Mesh): void {
@@ -70,6 +71,7 @@ export class HoverHandler {
     mesh.getChildMeshes().forEach((child) => {
       child.isPickable = true;
       child.isVisible = true;
+      console.log(`Configured child: ${child.name}, isVisible: ${child.isVisible}, isPickable: ${child.isPickable}`);
     });
 
     // Initialize ActionManager for mesh and children
@@ -83,54 +85,61 @@ export class HoverHandler {
     });
   }
 
-  private registerHoverActions(mesh: Mesh, canvas: HTMLCanvasElement): void {
+  private registerHoverActions(mesh: Mesh, hoverable: Hoverable, canvas: HTMLCanvasElement): void {
     const customCursorStyle = `url("${this.config.customCursorUrl}"), auto`;
 
     // Type guard for Mesh
     const isMesh = (m: AbstractMesh): m is Mesh => m instanceof Mesh;
 
+    // Get the mesh to highlight (defaults to root mesh if not specified)
+    const highlightMesh = hoverable.getHighlightMesh ? hoverable.getHighlightMesh() : mesh;
+
     // Highlight functions
-    const applyHighlight = (m: AbstractMesh) => {
-      if (isMesh(m)) {
-        this.highlightLayer!.addMesh(m, this.config.highlightColor!, true);
+    const applyHighlight = () => {
+      if (this.isHovered) return; // Prevent re-applying
+      this.isHovered = true;
+      if (highlightMesh && isMesh(highlightMesh)) {
+        console.log(`Applying highlight to children of ${highlightMesh.name}`);
+        highlightMesh.getChildMeshes().forEach((m) => {
+          if (isMesh(m) && !Tags.GetTags(m)?.includes("hitbox")) {
+            console.log(`Highlighting child: ${m.name}`);
+            this.highlightLayer!.addMesh(m, this.config.highlightColor!, true);
+          }
+        });
+        canvas.setAttribute("data-hover", "true");
+        console.log(`Set data-hover=true, cursor: ${customCursorStyle}`);
       }
     };
-    const removeHighlight = (m: AbstractMesh) => {
-      if (isMesh(m)) {
-        this.highlightLayer!.removeMesh(m);
+    const removeHighlight = () => {
+      if (!this.isHovered) return; // Prevent re-removing
+      this.isHovered = false;
+      if (highlightMesh && isMesh(highlightMesh)) {
+        console.log(`Removing highlight from children of ${highlightMesh.name}`);
+        highlightMesh.getChildMeshes().forEach((m) => {
+          if (isMesh(m)) {
+            this.highlightLayer!.removeMesh(m);
+          }
+        });
+        canvas.removeAttribute("data-hover");
+        console.log(`Removed data-hover`);
       }
-    };
-
-    // Hover handlers
-    const onHoverIn = (meshName: string) => {
-      //console.log(`HOVERING on mesh: ${meshName}`);
-      applyHighlight(mesh);
-      mesh.getChildMeshes().forEach(applyHighlight);
-      canvas.setAttribute("data-hover", "true");
-    };
-
-    const onHoverOut = (meshName: string) => {
-      //console.log(`UNHOVERING from mesh: ${meshName}`);
-      removeHighlight(mesh);
-      mesh.getChildMeshes().forEach(removeHighlight);
-      canvas.removeAttribute("data-hover");
     };
 
     // Register actions for root mesh
     mesh.actionManager!.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => onHoverIn(mesh.name))
+      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => applyHighlight())
     );
     mesh.actionManager!.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => onHoverOut(mesh.name))
+      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => removeHighlight())
     );
 
     // Register actions for child meshes
     mesh.getChildMeshes().forEach((child) => {
       child.actionManager!.registerAction(
-        new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => onHoverIn(child.name))
+        new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => applyHighlight())
       );
       child.actionManager!.registerAction(
-        new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => onHoverOut(child.name))
+        new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => removeHighlight())
       );
     });
   }
@@ -144,39 +153,6 @@ export class HoverHandler {
         cursor: ${customCursorStyle} !important;
       }
     `, 0);
-  }
-
-  private setupDebugging(mesh: Mesh): void {
-    // Debug pointer interactions
-    this.scene.onPointerObservable.add((pointerInfo) => {
-      if (pointerInfo.type === 1) { // PointerEventTypes.POINTERMOVE
-        const pickResult = pointerInfo.pickInfo;
-        if (pickResult?.hit && pickResult.pickedMesh) {
-          console.log("Pointer hit mesh:", pickResult.pickedMesh.name, "at position:", pickResult.pickedPoint?.asArray());
-          if (pickResult.pickedMesh === mesh || mesh.getChildMeshes().includes(pickResult.pickedMesh)) {
-            //console.log("Pointer is over hoverable mesh or its child:", pickResult.pickedMesh.name);
-          }
-        } else {
-          console.log("Pointer move, no mesh hit");
-        }
-      }
-    });
-
-    // Debug mesh properties
-    console.log("Hoverable Mesh Setup:", {
-      name: mesh.name,
-      isPickable: mesh.isPickable,
-      isVisible: mesh.isVisible,
-      position: mesh.position.asArray(),
-      hasActionManager: !!mesh.actionManager,
-      boundingBox: mesh.getBoundingInfo()?.boundingBox,
-      childMeshes: mesh.getChildMeshes().map((m) => ({
-        name: m.name,
-        isPickable: m.isPickable,
-        isVisible: m.isVisible,
-        hasActionManager: !!m.actionManager,
-        boundingBox: m.getBoundingInfo()?.boundingBox,
-      })),
-    });
+    console.log(`Added cursor style: ${customCursorStyle}`);
   }
 }

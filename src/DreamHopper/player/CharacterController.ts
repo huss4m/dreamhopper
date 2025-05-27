@@ -11,6 +11,7 @@ import {
   Mesh,
   StandardMaterial,
   Color3,
+  Color4,
 } from "@babylonjs/core";
 import { AssetManager } from "../AssetManager";
 import { CharacterAnimationManager } from "./CharacterAnimationManager";
@@ -29,12 +30,12 @@ interface AnimationData {
 }
 
 export class CharacterController {
-  private animationManager: CharacterAnimationManager;
+  public animationManager: CharacterAnimationManager;
   public physicsController: CharacterPhysicsController | null = null;
   private itemAttachmentManager: ItemAttachmentManager;
   public characterMeshLoader: CharacterMeshLoader;
   private player: Player;
-  particleSystem: any;
+  particleSystem: { rightHand: ParticleSystem; leftHand: ParticleSystem } | null = null;
 
   constructor(
     private scene: Scene,
@@ -42,10 +43,10 @@ export class CharacterController {
     private camera: ArcRotateCamera,
     shadowGenerator: CascadedShadowGenerator,
     assetManager: AssetManager,
-    private targetingSystem: TargetingSystem // Add TargetingSystem parameter
+    private targetingSystem: TargetingSystem
   ) {
     this.scene.collisionsEnabled = true;
-    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem); // Pass targetingSystem
+    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem);
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
     this.player = new Player(scene, assetManager, shadowGenerator);
@@ -56,7 +57,7 @@ export class CharacterController {
     await this.characterMeshLoader.loadCharacter(new Vector3(13, 5, 0));
     const characterMesh = this.characterMeshLoader.getCharacterMesh();
     const skeleton = this.characterMeshLoader.getSkeleton();
-
+    
     if (characterMesh && skeleton) {
       const physicsConfig: CharacterPhysicsConfig = {
         colliderType: ColliderType.Capsule,
@@ -89,6 +90,22 @@ export class CharacterController {
       });
 
       await this.updateSwordAttachment();
+
+      // Setup particle system and listen for Dreambolt animation state
+      this.setupParticleSystem();
+      this.animationManager.onDreamboltAnimationState.add(({ isPlaying }) => {
+        if (this.particleSystem) {
+          if (isPlaying) {
+            this.particleSystem.rightHand.start();
+            this.particleSystem.leftHand.start();
+            console.log("Started hand particle systems for Dreambolt animation");
+          } else {
+            this.particleSystem.rightHand.stop();
+            this.particleSystem.leftHand.stop();
+            console.log("Stopped hand particle systems after Dreambolt animation");
+          }
+        }
+      });
     }
   }
 
@@ -98,21 +115,6 @@ export class CharacterController {
     if (!characterMesh || !skeleton) return;
 
     const inventory = this.player.getInventory();
-    /*
-    for (const item of inventory) {
-      const itemName = item.getName();
-      if (itemName === "sword1") {
-        this.itemAttachmentManager.detachItem(item);
-        await this.itemAttachmentManager.attachItemToHand(
-          item,
-          this.player.isSheathed ? "mixamorig:Spine" : "mixamorig:RightHand",
-          skeleton,
-          characterMesh,
-          this.player.posOffset,
-          this.player.rotOffset
-        );
-      }
-    }*/
   }
 
   public toggleSheathe(): void {
@@ -252,10 +254,10 @@ export class CharacterController {
         return particleSystem;
       }
 
-      const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.01 }, this.scene);
-      dummyMesh.isVisible = false;
+      const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.1 }, this.scene);
+      dummyMesh.isVisible = false; // Hide emitter mesh
       dummyMesh.parent = handBone.getTransformNode();
-      dummyMesh.position = new Vector3(0, 10, 0);
+      dummyMesh.position = new Vector3(0, 0, 0); // Center on hand
 
       particleSystem.emitter = dummyMesh;
       particleSystem.minEmitBox = new Vector3(-0.1, -0.1, -0.1);
@@ -265,28 +267,39 @@ export class CharacterController {
       particleSystem.minEmitPower = 10;
       particleSystem.maxEmitPower = 50;
       particleSystem.updateSpeed = 0.005;
-      particleSystem.minSize = 0.2;
-      particleSystem.maxSize = 0.5;
+      particleSystem.minSize = 0.5;
+      particleSystem.maxSize = 1;
       particleSystem.gravity = new Vector3(0, 0, 0);
       particleSystem.direction1 = new Vector3(0, 0, 0);
       particleSystem.direction2 = new Vector3(0, 0, 0);
       particleSystem.isLocal = true;
-      particleSystem.start();
-
-      return particleSystem;
+      particleSystem.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
+      particleSystem.color2 = new Color4(0.8, 0.0, 0.5, 0.9);
+      particleSystem.colorDead = new Color4(0, 0, 0.2, 0.0);
+      particleSystem.minLifeTime = 0.5;
+      particleSystem.maxLifeTime = 0.9;
+      return particleSystem; // Do not start here
     };
 
     this.particleSystem = {
       rightHand: createHandParticleSystem("mixamorig:RightHand", "rightHandParticles"),
-      leftHand: createHandParticleSystem("mixamorig:LeftHand", "leftHandParticles"),
+      leftHand: createHandParticleSystem("mixamorig:LeftHand",
+ "leftHandParticles"),
     };
   }
 
   public dispose(): void {
     this.animationManager.dispose();
     this.physicsController?.dispose();
-    this.itemAttachmentManager.dispose();
+    this.itemAttachmentManager?.dispose();
     this.characterMeshLoader.dispose();
     this.player.getInventory().forEach(item => item.dispose());
+    if (this.particleSystem) {
+      this.particleSystem.rightHand.stop();
+      this.particleSystem.rightHand.dispose();
+      this.particleSystem.leftHand.stop();
+      this.particleSystem.leftHand.dispose();
+      this.particleSystem = null;
+    }
   }
 }

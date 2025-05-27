@@ -1,9 +1,9 @@
 <template>
   <main>
-    <canvas></canvas>
+    <canvas ref="canvas"></canvas>
+    <CastingBar v-if="animationManager" :animation-manager="animationManager" />
+    <DreamCrystalCounter v-if="dreamCrystalManager" :dream-crystal-manager="dreamCrystalManager" />
 
-
-    
     <!-- Spell bar container -->
     <div class="spell-bar">
       <!-- Spell slot examples (empty slots) -->
@@ -17,86 +17,100 @@
       <div class="spell-slot"></div>
       <div class="spell-slot"></div>
       <div class="spell-slot"></div>
-  
-      <!-- Add more slots as needed -->
     </div>
   </main>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref, onMounted } from "vue";
 import { Game } from "@/DreamHopper/Game";
+import CastingBar from "./CastingBar.vue";
+import DreamCrystalCounter from "./DreamCrystalCounter.vue";
 
 export default defineComponent({
   name: "DreamHopper",
+  components: { CastingBar, DreamCrystalCounter },
+  setup() {
+    const canvas = ref<HTMLCanvasElement | null>(null);
+    const animationManager = ref<any>(null);
+    const dreamCrystalManager = ref<any>(null);
 
-  mounted() {
-    const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-    new Game(canvas);
+    onMounted(async () => {
+      if (canvas.value) {
+        const game = new Game(canvas.value);
+        await game.waitForInitialization();
+        animationManager.value = game.getAnimationManager();
+        dreamCrystalManager.value = game.getDreamCrystalManager();
+        console.log("DreamHopper: animationManager set:", animationManager.value);
+        console.log("DreamHopper: dreamCrystalManager set:", dreamCrystalManager.value);
+        if (!animationManager.value) {
+          console.error("DreamHopper: Failed to get animationManager after initialization");
+        }
+        if (!dreamCrystalManager.value) {
+          console.error("DreamHopper: Failed to get dreamCrystalManager after initialization");
+        }
+      }
+    });
+
+    return { canvas, animationManager, dreamCrystalManager };
   },
 });
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&family=Roboto:wght@100;700&display=swap");
 
 main {
-  width: 100vw;  /* Full viewport width */
-  height: 100vh; /* Full viewport height */
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  margin: 0; /* Ensure no margin */
+  margin: 0;
 }
 
 canvas {
-  width: 100%;  /* Take full width of its parent */
-  height: 100%; /* Take full height of its parent */
+  width: 100%;
+  height: 100%;
   border: none;
   outline: none;
   box-shadow: 8px 8px 10px -6px #000000;
 }
 
-
-/* Spell bar at the bottom of the screen */
 .spell-bar {
   position: absolute;
-  bottom: 20px; /* Adjust if you want some space above the bottom */
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 10px; /* Space between each spell slot */
+  gap: 10px;
   padding: 10px;
-  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
-  border-radius: 15px; /* Rounded corners for the spell bar */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); /* Optional: shadow for effect */
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* Individual spell slot (empty) */
 .spell-slot {
-  width: 50px; /* Width of each slot */
-  height: 50px; /* Height of each slot */
+  width: 50px;
+  height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.2); /* Light transparent background for each slot */
-  border-radius: 10px; /* Rounded corners for the slot */
-  border: 2px solid #444; /* Darker border */
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  border: 2px solid #444;
   position: relative;
   cursor: url("../../public/images/cursorTargetAlly.png"), auto;
 }
 
-/* Hover effect on spell slots */
 .spell-slot:hover {
-  background-color: rgba(255, 255, 255, 0.3); /* Slightly brighter background on hover */
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Optional: Active or selected spell effect */
 .spell-slot.active {
-  border: 2px solid #ffcc00; /* Gold border for active slot */
-  box-shadow: 0 0 10px #ffcc00; /* Glow effect for active spell */
+  border: 2px solid #ffcc00;
+  box-shadow: 0 0 10px #ffcc00;
 }
 </style>

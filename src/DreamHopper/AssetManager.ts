@@ -31,27 +31,20 @@ export class AssetManager {
     }
   }
 
-
-  // Initialize and load assets manually
-  /*
-  async initialize(): Promise<void> {
-    if (!this.scene) {
-      console.error("Scene not set in AssetManager during initialization");
-      return;
-    }
-
-    console.log("Initializing assets...");
-
+  // Load a JSON file and return its parsed content
+  async loadJson(jsonUrl: string): Promise<any> {
     try {
-      await this.loadAsset("guy", "./models/", "guy2.glb");
-      await this.loadAsset("sword", "./models/", "steel_sword.glb");
-      await this.loadAsset("sword_of_artorias", "./models/", "sword_of_artorias.glb");
-
-      console.log("Assets loaded successfully.");
+      const response = await fetch(jsonUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch JSON from ${jsonUrl}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error("Error loading assets:", error);
+      console.error(`Error loading JSON from ${jsonUrl}:`, error);
+      return {};
     }
-  }*/
+  }
 
   // Load a specific asset into the asset container
   private async loadAsset(name: string, rootUrl: string, filename: string): Promise<void> {

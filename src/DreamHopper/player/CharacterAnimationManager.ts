@@ -1,4 +1,4 @@
-import { AnimationGroup, Scene, Mesh, StandardMaterial, Color3, Vector3, MeshBuilder, EventState } from "@babylonjs/core";
+import { AnimationGroup, Scene, Mesh, StandardMaterial, Color3, Vector3, MeshBuilder, EventState, ParticleSystem, Texture, Color4, Observable } from "@babylonjs/core";
 import { CharacterController } from "./CharacterController";
 import { TargetingSystem } from "../TargetingSystem";
 
@@ -8,7 +8,8 @@ export class CharacterAnimationManager {
   private isJumping = false;
   private isBlending = false;
   private blendFrameId: number | null = null;
-  private dreamboltSpawned = false; // Flag to prevent multiple spawns
+  private dreamboltSpawned = false;
+  public onDreamboltAnimationState = new Observable<{ isPlaying: boolean, progress?: number }>();
 
   constructor(
     private scene: Scene,
@@ -51,7 +52,10 @@ export class CharacterAnimationManager {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
     if (dreamboltAnim) {
       console.log("Dreambolt animation found, monitoring for 85% progress");
-     
+      dreamboltAnim.onAnimationGroupEndObservable.add(() => {
+        this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
+        console.log("Dreambolt animation ended, notified observers");
+      });
     } else {
       console.warn("Dreambolt animation not found");
     }
@@ -76,58 +80,67 @@ export class CharacterAnimationManager {
 
     console.log("Spawning Dreambolt sphere");
 
-    // Create sphere
     const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("dreamboltMat", this.scene);
-    material.diffuseColor = new Color3(0.2, 0.8, 1.0); // Light blue color
-    material.emissiveColor = new Color3(0.2, 0.8, 1.0); // Emissive to ensure visibility
+    material.diffuseColor = new Color3(0.9, 0.8, 1.0);
+    material.emissiveColor = new Color3(0.2, 0.8, 1.0);
     sphere.material = material;
-    sphere.isVisible = true;
+    sphere.isVisible = false;
 
-    // Calculate spawn position: 2 units in forward direction, 1.5 units above character
+    const boltParticles = new ParticleSystem("boltParticles", 1000, this.scene);
+    boltParticles.particleTexture = new Texture("./Flare.png", this.scene);
+    boltParticles.emitter = sphere;
+    boltParticles.minEmitBox = Vector3.Zero();
+    boltParticles.maxEmitBox = Vector3.Zero();
+    boltParticles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
+    boltParticles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
+    boltParticles.colorDead = new Color4(0, 0, 0.2, 0.0);
+    boltParticles.minSize = 0.3;
+    boltParticles.maxSize = 0.7;
+    boltParticles.minLifeTime = 0.15;
+    boltParticles.maxLifeTime = 0.4;
+    boltParticles.emitRate = 1200;
+    boltParticles.blendMode = ParticleSystem.BLENDMODE_ADD;
+    boltParticles.gravity = Vector3.Zero();
+    boltParticles.direction1 = Vector3.Zero();
+    boltParticles.direction2 = Vector3.Zero();
+    boltParticles.start();
+
     const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
-    const spawnOffset = forward.add(new Vector3(0, 1.2, 0)); // 2 units forward, 1.5 units up
+    const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
     const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
     sphere.position = startPos;
     sphere.checkCollisions = true;
 
     console.log(`Sphere spawned at position: ${sphere.position.toString()}`);
 
-    // Determine movement direction: toward target's x,z and vertical center, else character's forward direction
     let moveDirection: Vector3;
-    let targetMesh: Mesh | null = null; // Store target mesh for collision check
+    let targetMesh: Mesh | null = null;
     if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
       const target = this.targetingSystem.getCurrentTarget();
       targetMesh = target!.getMesh()!;
 
-      // Ensure bounding box includes child meshes
       targetMesh.computeWorldMatrix(true);
       targetMesh.refreshBoundingInfo();
       const boundingBox = targetMesh.getBoundingInfo().boundingBox;
 
-      // Calculate vertical center of the target
       const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
       const targetPos = targetMesh.getAbsolutePosition();
 
-      // Log bounding box details for debugging
       console.log(`Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
 
-      // Use target's x,z and vertical center y
       const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
 
-      // Fallback: if centerY is too low , add offset
       if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
-        adjustedTargetPos.y = targetPos.y + 0.875; // Assume ~1.75-unit tall NPC, center at half height
+        adjustedTargetPos.y = targetPos.y + 0.875;
         console.log(`Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
       }
       moveDirection = adjustedTargetPos.subtract(sphere.position);
-      // Check if direction is non-zero (avoid normalizing zero vector)
       if (moveDirection.lengthSquared() > 0.0001) {
         moveDirection = moveDirection.normalize();
         console.log(`Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
         console.log(`Move direction: ${moveDirection.toString()}`);
       } else {
-        // If sphere is at same position as target, use forward direction
         moveDirection = forward;
         console.log(`Target ${target!.getId()} is at same position as sphere, using forward direction`);
       }
@@ -136,54 +149,56 @@ export class CharacterAnimationManager {
       console.log("No target or target mesh not found, moving sphere in character's forward direction");
     }
 
-    // Move sphere
-    const speed = 10; // Units per second
-    const maxDistance = 20;
+    const speed = 10;
+    const maxDistance = 100;
     let traveledDistance = 0;
 
-    // Define the render loop callback
     const renderCallback = (eventData: Scene, eventState: EventState) => {
-      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000; // Seconds
+      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
       const moveDistance = speed * deltaTime;
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
       traveledDistance += moveDistance;
 
       console.log(`Sphere position: ${sphere.position.toString()}, traveled: ${traveledDistance}`);
 
-      // Check for collision with target mesh
       if (targetMesh) {
         targetMesh.computeWorldMatrix(true);
         targetMesh.refreshBoundingInfo();
         if (sphere.intersectsMesh(targetMesh, true)) {
           console.log(`Sphere hit target ${this.targetingSystem?.getCurrentTarget()?.getId() || 'unknown'}, disposing`);
           sphere.dispose();
+          boltParticles.stop();
+          boltParticles.dispose();
           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
           return;
         }
-        // Check child meshes
         const childMeshes = targetMesh.getChildMeshes(false);
         for (const child of childMeshes) {
           if (child instanceof Mesh && sphere.intersectsMesh(child, true)) {
             console.log(`Sphere hit target child mesh ${child.name}, disposing`);
             sphere.dispose();
+            boltParticles.stop();
+            boltParticles.dispose();
             this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
             return;
           }
         }
       }
 
-      // Check for collision or max distance
       if (traveledDistance >= maxDistance || sphere.intersectsMesh(characterMesh, false)) {
         console.log("Sphere disposed: reached max distance or collided with character");
         sphere.dispose();
+        boltParticles.stop();
+        boltParticles.dispose();
         this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
       } else {
-        // Check collision with other meshes
         const meshes = this.scene.meshes.filter(m => m !== sphere && m !== characterMesh && m.checkCollisions);
         for (const mesh of meshes) {
           if (sphere.intersectsMesh(mesh, false)) {
             console.log(`Sphere collided with ${mesh.name}, disposing`);
             sphere.dispose();
+            boltParticles.stop();
+            boltParticles.dispose();
             this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
             break;
           }
@@ -191,7 +206,6 @@ export class CharacterAnimationManager {
       }
     };
 
-    // Add the callback to the render loop
     this.scene.onBeforeRenderObservable.add(renderCallback);
   }
 
@@ -206,8 +220,6 @@ export class CharacterAnimationManager {
       console.warn(`Animation group '${name}' not found`);
       return;
     }
-
-    console.log(`Playing animation: ${name}`);
 
     if ((name === "Dreambolt" || name === "Jump") && this.currentAnimationName !== name) {
       const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
@@ -262,26 +274,28 @@ export class CharacterAnimationManager {
       this.isJumping = true;
     }
 
-    // Monitor Dreambolt animation for 85% progress
     if (name === "Dreambolt") {
-      this.dreamboltSpawned = false; // Reset flag
+      this.dreamboltSpawned = false;
+      this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0 });
+      console.log("Dreambolt animation started, notified observers");
       const observer = this.scene.onBeforeRenderObservable.add(() => {
-        if (newAnim.isPlaying && !this.dreamboltSpawned && newAnim.animatables.length > 0) {
+        if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
           const currentFrame = animatable.masterFrame;
           const from = newAnim.from;
           const to = newAnim.to;
           const progress = (currentFrame - from) / (to - from);
-          console.log(`Dreambolt animation progress: ${progress}, frame: ${currentFrame}/${to}`);
-          if (progress >= 0.5) {
+          this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress });
+          if (progress >= 0.5 && !this.dreamboltSpawned) {
             console.log("Dreambolt animation reached 85%, spawning sphere");
             this.spawnDreamboltSphere();
             this.dreamboltSpawned = true;
+            this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0.85 });
             this.scene.onBeforeRenderObservable.remove(observer);
           }
-        } else if (!newAnim.isPlaying || newAnim.animatables.length === 0) {
-          // Animation stopped or no animatables, remove observer
+        } else {
           console.log("Dreambolt animation stopped or no animatables, removing observer");
+          this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
           this.scene.onBeforeRenderObservable.remove(observer);
         }
       });
@@ -358,5 +372,7 @@ export class CharacterAnimationManager {
   public dispose(): void {
     this.animationGroups.forEach(group => group.dispose());
     this.animationGroups = [];
+    this.onDreamboltAnimationState.clear();
+    console.log("CharacterAnimationManager disposed");
   }
 }

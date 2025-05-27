@@ -10,11 +10,12 @@ export class DreamCrystalManager {
   private scene: Scene;
   private assetContainer: AssetContainer | undefined;
   private shadowGenerator: CascadedShadowGenerator;
-  private playerMesh: Mesh; 
+  private playerMesh: Mesh;
   private dreamCrystals: DreamCrystal[] = [];
   private collectedCrystals = 0;
   private totalCrystals = 0;
   private onAllCrystalsCollected: Observable<void> = new Observable();
+  private onCrystalCollectedObservable: Observable<void> = new Observable();
 
   constructor(scene: Scene, assetContainer: AssetContainer | undefined, shadowGenerator: CascadedShadowGenerator, playerMesh: Mesh) {
     this.scene = scene;
@@ -37,7 +38,7 @@ export class DreamCrystalManager {
           this.scene,
           this.assetContainer,
           this.shadowGenerator,
-          this.playerMesh, 
+          this.playerMesh,
           position,
           new Vector3(0, 0, 0),
           new Vector3(0.2, 0.2, 0.2)
@@ -58,7 +59,8 @@ export class DreamCrystalManager {
 
   private onCrystalCollected(): void {
     this.collectedCrystals++;
-    console.log(`Collected ${this.collectedCrystals}/${this.totalCrystals} DreamCrystals`);
+    console.log(`DreamCrystalManager: Collected ${this.collectedCrystals}/${this.totalCrystals} DreamCrystals`);
+    this.onCrystalCollectedObservable.notifyObservers();
     if (this.collectedCrystals >= this.totalCrystals) {
       this.onAllCrystalsCollected.notifyObservers();
     }
@@ -75,10 +77,16 @@ export class DreamCrystalManager {
     return this.onAllCrystalsCollected;
   }
 
+  public getOnCrystalCollectedObservable(): Observable<void> {
+    return this.onCrystalCollectedObservable;
+  }
+
   public dispose(): void {
     this.dreamCrystals.forEach(crystal => crystal.dispose());
     this.dreamCrystals = [];
     this.collectedCrystals = 0;
     this.totalCrystals = 0;
+    this.onCrystalCollectedObservable.clear();
+    this.onAllCrystalsCollected.clear();
   }
 }
