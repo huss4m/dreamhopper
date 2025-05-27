@@ -39,7 +39,6 @@ export class Game {
     this.soundManager = new SoundManager([
       "/music/music1.mp3",
       "/music/music2.mp3",
-      "/music/music3.mp3"
     ]);
 
     this.scenes.push(this.sceneCreator.createScene());
