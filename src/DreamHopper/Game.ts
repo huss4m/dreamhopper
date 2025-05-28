@@ -1,19 +1,18 @@
-import { ArcRotateCamera, AssetContainer, Engine, HighlightLayer, Scene, Vector3 } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Mesh } from "@babylonjs/core";
 import { SceneCreator } from "./SceneCreator";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
 import "@babylonjs/loaders";
 import { AssetManager } from "./AssetManager";
-import { NPC } from "./npc/NPC";
 import { TargetingSystem } from "./TargetingSystem";
 import { EnvironmentType } from "./EnvironmentCreator";
-import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
 import { GameManager } from "./GameManager";
 import { SoundManager } from "./SoundManager";
+import { DreamHopperLoadingScreen } from "./DreamHopperLoadingScreen";
 
 export interface SceneState {
   npcPositions?: Vector3[];
-  crystalState?: DreamCrystalState;
+  enemyPositions?: Vector3[];
 }
 
 export class Game {
@@ -24,7 +23,6 @@ export class Game {
   private assetManager!: AssetManager;
   private highlightLayer!: HighlightLayer;
   private gameManager!: GameManager;
-  private dreamCrystalManager!: DreamCrystalManager;
   private soundManager: SoundManager;
   private sceneCreator: SceneCreator;
   private scenes: Scene[] = [];
@@ -32,6 +30,7 @@ export class Game {
   private sceneStates: SceneState[] = [];
   private initializationPromise: Promise<void>;
   private isInitialized = false;
+  private loadingScreen: DreamHopperLoadingScreen;
 
   constructor(private canvas: HTMLCanvasElement, environmentType: EnvironmentType = EnvironmentType.FOREST) {
     this.engine = new Engine(canvas, true);
@@ -41,30 +40,16 @@ export class Game {
       "/music/music2.mp3",
     ]);
 
+    // Initialize custom loading screen
+    this.loadingScreen = new DreamHopperLoadingScreen(this.engine);
+    this.engine.loadingScreen = this.loadingScreen;
+
     this.scenes.push(this.sceneCreator.createScene());
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene());
 
     this.sceneStates = [
-      {
-        crystalState: {
-          positions: [
-            new Vector3(2, 2, 2),
-            new Vector3(8, 2, 0),
-            new Vector3(-3, 2, 6),
-          ],
-          collected: [],
-        },
-      },
-      {
-        crystalState: {
-          positions: [
-            new Vector3(0, 1, 5),
-            new Vector3(10, 1, -5),
-            new Vector3(-7, 1, 3),
-          ],
-          collected: [],
-        },
-      },
+      { npcPositions: [], enemyPositions: [] },
+      { npcPositions: [], enemyPositions: [] },
     ];
 
     this.activeScene = this.scenes[0];
@@ -73,9 +58,23 @@ export class Game {
 
   private async initialize(): Promise<void> {
     try {
-      await this.initializeSceneComponents(this.activeScene!, 0);
+      // Show the loading screen
+      this.engine.displayLoadingUI();
+
+      // Track progress (5 async steps: assets, NPCs, enemies, crystals, sound)
+      const totalSteps = 5;
+      let currentStep = 0;
+
+      await this.initializeSceneComponents(this.activeScene!, 0, () => {
+        currentStep++;
+        this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
+      });
+
       await this.soundManager.initialize();
-      this.dreamCrystalManager.getOnAllCrystalsCollected().add(() => {
+      currentStep++;
+      this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
+
+      this.gameManager.getDreamCrystalManager().getOnAllCrystalsCollected().add(() => {
         console.log("All DreamCrystals collected! You win!");
       });
 
@@ -92,17 +91,22 @@ export class Game {
 
       this.isInitialized = true;
       console.log("Game initialized");
+
+      // Hide the loading screen
+      this.engine.hideLoadingUI();
     } catch (error) {
       console.error("Game: Initialization failed:", error);
+      this.engine.hideLoadingUI();
       throw error;
     }
   }
 
-  private async initializeSceneComponents(scene: Scene, sceneIndex: number): Promise<void> {
+  private async initializeSceneComponents(scene: Scene, sceneIndex: number, onStepComplete: () => void): Promise<void> {
     try {
       this.assetManager = new AssetManager(scene);
       await this.assetManager.initializeFromJson("./models/assets.json");
       console.log("Game: All assets loaded.");
+      onStepComplete();
 
       const shadowGenerator = this.sceneCreator.getShadowGenerator();
       if (!shadowGenerator) {
@@ -117,7 +121,6 @@ export class Game {
       this.highlightLayer = this.sceneCreator.highlightLayer;
       this.targetingSystem = new TargetingSystem(scene);
 
-      
       this.gameManager = new GameManager(
         scene,
         this.assetManager,
@@ -125,6 +128,13 @@ export class Game {
         this.highlightLayer,
         this.targetingSystem
       );
+
+      const savedState = this.sceneStates[sceneIndex];
+      await this.gameManager.initializeNPCs(savedState.npcPositions);
+      onStepComplete();
+      await this.gameManager.initializeEnemies(savedState.enemyPositions);
+      onStepComplete();
+
       this.characterController = new CharacterController(
         scene,
         this.canvas,
@@ -147,33 +157,22 @@ export class Game {
           child.checkCollisions = true;
         });
         console.log("Game: Character mesh added to shadow generator:", characterMesh.name);
+        this.gameManager.setCharacterMesh(characterMesh);
       } else {
         console.warn("Game: Character mesh not found for shadow generator");
       }
 
-
-      const savedState = this.sceneStates[sceneIndex];
-      const npcPositions = savedState.npcPositions || [];
-
-      this.gameManager.initializeNPCs();
-      this.gameManager.initializeEnemies();
-
-      this.dreamCrystalManager = new DreamCrystalManager(
-        scene,
-        this.assetManager.getAssetContainer("dreamCrystal"),
-        shadowGenerator,
-        characterMesh!
-      );
-      const crystalState = savedState.crystalState || { positions: [], collected: [] };
-      this.dreamCrystalManager.initialize(crystalState.positions, crystalState.collected);
+      await this.gameManager.initializeDreamCrystals();
+      onStepComplete();
 
       const player = this.characterController.getPlayer();
+      const crystalState = this.gameManager.getDreamCrystalManager().getState();
       player.setTotalCrystals(crystalState.positions.length);
       player.resetCrystalCount();
       crystalState.collected.forEach((collected, i) => {
         if (collected) player.incrementCrystalCount();
       });
-      this.dreamCrystalManager.getOnAllCrystalsCollected().add(() => {
+      this.gameManager.getDreamCrystalManager().getOnAllCrystalsCollected().add(() => {
         player.incrementCrystalCount();
       });
 
@@ -215,30 +214,49 @@ export class Game {
         if (currentIndex !== -1) {
           this.sceneStates[currentIndex] = {
             npcPositions: this.gameManager.getNPCPositions(),
-            crystalState: this.dreamCrystalManager.getState(),
+            enemyPositions: this.gameManager.getEnemyPositions(),
           };
         }
       }
 
       this.gameManager.dispose();
-      this.dreamCrystalManager.dispose();
       this.characterController?.dispose();
       this.targetingSystem?.dispose();
       this.assetManager?.dispose();
+
+      // Show loading screen
+      this.engine.displayLoadingUI();
+
+      // Track progress (4 steps: scene creation, components, sound, final setup)
+      const totalSteps = 4;
+      let currentStep = 0;
 
       this.sceneCreator = new SceneCreator(this.engine, this.canvas, environmentType);
       const newScene = this.sceneCreator.createScene();
       this.scenes[index] = newScene;
       this.activeScene = newScene;
+      currentStep++;
+      this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
       this.characterController = null;
-      await this.initializeSceneComponents(newScene, index);
+      await this.initializeSceneComponents(newScene, index, () => {
+        currentStep++;
+        this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
+      });
+
       if (!this.soundManager.isMusicPlaying()) {
         await this.soundManager.initialize();
       }
+      currentStep++;
+      this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
+
       console.log(`Game: Switched to ${environmentType} scene`);
+
+      // Hide loading screen
+      this.engine.hideLoadingUI();
     } catch (error) {
       console.error("Game: Scene switch failed:", error);
+      this.engine.hideLoadingUI();
       throw error;
     }
   }
@@ -252,11 +270,11 @@ export class Game {
   }
 
   public getDreamCrystalManager() {
-    if (!this.dreamCrystalManager) {
-      console.warn("Game: DreamCrystalManager not initialized yet");
+    if (!this.gameManager) {
+      console.warn("Game: GameManager not initialized yet");
       return null;
     }
-    return this.dreamCrystalManager;
+    return this.gameManager.getDreamCrystalManager();
   }
 
   public waitForInitialization(): Promise<void> {
@@ -267,7 +285,6 @@ export class Game {
     try {
       this.characterController?.dispose();
       this.gameManager?.dispose();
-      this.dreamCrystalManager?.dispose();
       this.targetingSystem?.dispose();
       this.assetManager?.dispose();
       this.soundManager.dispose();

@@ -1,13 +1,16 @@
-import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator } from "@babylonjs/core";
+import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator, Mesh } from "@babylonjs/core";
 import { AssetManager } from "./AssetManager";
 import { NPC } from "./npc/NPC";
 import { Enemy } from "./enemy/Enemy";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { TargetingSystem } from "./TargetingSystem";
+import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
 
 export class GameManager {
   private npcs: NPC[] = [];
   private enemies: Enemy[] = [];
+  private dreamCrystalManager: DreamCrystalManager | null = null;
+  private characterMesh: Mesh | null = null;
 
   constructor(
     private scene: Scene,
@@ -17,12 +20,17 @@ export class GameManager {
     private targetingSystem: TargetingSystem
   ) {}
 
-  async initializeNPCs(): Promise<NPC[]> {
+  public setCharacterMesh(mesh: Mesh): void {
+    console.log("GameManager: Setting character mesh:", mesh.name);
+    this.characterMesh = mesh;
+  }
+
+  async initializeNPCs(savedPositions?: Vector3[]): Promise<NPC[]> {
     const configData = await this.assetManager.loadJson("./game_config.json");
     const npcPositions = configData.npcs?.map((pos: { x: number, y: number, z: number }) => 
       new Vector3(pos.x, pos.y, pos.z)) || [];
 
-    const positionsToUse = npcPositions;
+    const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;
 
     this.npcs = positionsToUse.map((position: Vector3, index: number) => 
       new NPC(
@@ -45,9 +53,9 @@ export class GameManager {
           this.shadowGenerator.addShadowCaster(child, true);
           child.receiveShadows = true;
         });
-        console.log(`NPC ${index} mesh added to shadow generator:`, npcMesh.name);
+        console.log(`GameManager: NPC ${index} mesh added to shadow generator:`, npcMesh.name);
       } else {
-        console.warn(`NPC ${index} mesh not found for shadow generator`);
+        console.warn(`GameManager: NPC ${index} mesh not found for shadow generator`);
       }
     });
 
@@ -64,7 +72,7 @@ export class GameManager {
     this.enemies = positionsToUse.map((position: Vector3, index: number) => 
       new Enemy(
         this.scene,
-        "enemy", // Using same asset as NPCs
+        "enemy",
         this.assetManager,
         this.shadowGenerator,
         position,
@@ -82,13 +90,38 @@ export class GameManager {
           this.shadowGenerator.addShadowCaster(child, true);
           child.receiveShadows = true;
         });
-        console.log(`Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
+        console.log(`GameManager: Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
+        console.log(`GameManager: Enemy ${index} ID:`, enemy.getId());
       } else {
-        console.warn(`Enemy ${index} mesh not found for shadow generator`);
+        console.warn(`GameManager: Enemy ${index} mesh not found for shadow generator`);
       }
     });
 
     return this.enemies;
+  }
+
+  async initializeDreamCrystals(savedState?: DreamCrystalState): Promise<DreamCrystalManager> {
+    const configData = await this.assetManager.loadJson("./game_config.json");
+    const crystalPositions = configData.crystals?.map((pos: { x: number, y: number, z: number }) => 
+      new Vector3(pos.x, pos.y, pos.z)) || [];
+
+    const stateToUse: DreamCrystalState = savedState || { positions: crystalPositions, collected: new Array(crystalPositions.length).fill(false) };
+
+    if (!this.characterMesh) {
+      throw new Error("GameManager: Character mesh not provided or not loaded");
+    }
+
+    console.log("GameManager: Initializing DreamCrystalManager with character mesh:", this.characterMesh.name);
+
+    this.dreamCrystalManager = new DreamCrystalManager(
+      this.scene,
+      this.assetManager.getAssetContainer("dreamCrystal"),
+      this.shadowGenerator,
+      this.characterMesh
+    );
+    this.dreamCrystalManager.initialize(stateToUse.positions, stateToUse.collected);
+
+    return this.dreamCrystalManager;
   }
 
   getNPCs(): NPC[] {
@@ -99,6 +132,13 @@ export class GameManager {
     return this.enemies;
   }
 
+  getDreamCrystalManager(): DreamCrystalManager {
+    if (!this.dreamCrystalManager) {
+      throw new Error("GameManager: DreamCrystalManager not initialized");
+    }
+    return this.dreamCrystalManager;
+  }
+
   getNPCPositions(): Vector3[] {
     return this.npcs.map(npc => npc.getPosition());
   }
@@ -107,10 +147,20 @@ export class GameManager {
     return this.enemies.map(enemy => enemy.getPosition());
   }
 
+  getDreamCrystalState(): DreamCrystalState {
+    if (!this.dreamCrystalManager) {
+      throw new Error("GameManager: DreamCrystalManager not initialized");
+    }
+    return this.dreamCrystalManager.getState();
+  }
+
   dispose(): void {
     this.npcs.forEach(npc => npc.dispose());
     this.enemies.forEach(enemy => enemy.dispose());
+    this.dreamCrystalManager?.dispose();
     this.npcs = [];
     this.enemies = [];
+    this.dreamCrystalManager = null;
+    this.characterMesh = null;
   }
 }
