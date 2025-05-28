@@ -4,20 +4,9 @@
     <CastingBar v-if="animationManager" :animation-manager="animationManager" />
     <DreamCrystalCounter v-if="dreamCrystalManager" :dream-crystal-manager="dreamCrystalManager" />
 
-    <!-- Spell bar container -->
-    <div class="spell-bar">
-      <!-- Spell slot examples (empty slots) -->
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-      <div class="spell-slot"></div>
-    </div>
+    <!-- 
+    -->
+   
   </main>
 </template>
 
