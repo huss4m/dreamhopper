@@ -151,10 +151,9 @@ export class CharacterAnimationManager {
     console.log(`CharacterAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
 
     let moveDirection: Vector3;
-    let targetMesh: Mesh | null = null;
     if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
       const target = this.targetingSystem.getCurrentTarget();
-      targetMesh = target!.getMesh()!;
+      const targetMesh = target!.getMesh()!;
 
       targetMesh.computeWorldMatrix(true);
       targetMesh.refreshBoundingInfo();
@@ -185,16 +184,13 @@ export class CharacterAnimationManager {
     }
 
     const speed = 10;
-    const maxDistance = 100;
-    let traveledDistance = 0;
 
     const renderCallback = (eventData: Scene, eventState: EventState) => {
       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
       const moveDistance = speed * deltaTime;
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
-      traveledDistance += moveDistance;
 
-      // Check for intersection with enemy hitboxes
+      // Check for intersection with enemy hitboxes only
       const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
       for (const hitbox of hitboxes) {
         if (sphere.intersectsMesh(hitbox, true)) {
@@ -217,42 +213,6 @@ export class CharacterAnimationManager {
             }
           }
         }
-      }
-
-      if (targetMesh) {
-        targetMesh.computeWorldMatrix(true);
-        targetMesh.refreshBoundingInfo();
-        if (sphere.intersectsMesh(targetMesh, true)) {
-          console.log(`CharacterAnimationManager: Sphere hit target ${this.targetingSystem?.getCurrentTarget()?.getId() || 'unknown'}, triggering fireworks`);
-          this.triggerFireworks(sphere.position.clone());
-          particles.stop();
-          particles.dispose();
-          sphere.dispose();
-          this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-          return;
-        }
-        const childMeshes = targetMesh.getChildMeshes(false);
-        for (const child of childMeshes) {
-          if (child instanceof Mesh && sphere.intersectsMesh(child, true)) {
-            console.log(`CharacterAnimationManager: Sphere hit target child mesh ${child.name}, triggering fireworks`);
-            this.triggerFireworks(sphere.position.clone());
-            particles.stop();
-            particles.dispose();
-            sphere.dispose();
-            this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-            return;
-          }
-        }
-      }
-
-      if (traveledDistance >= maxDistance) {
-        console.log("CharacterAnimationManager: Sphere reached max distance, triggering fireworks");
-        this.triggerFireworks(sphere.position.clone());
-        particles.stop();
-        particles.dispose();
-        sphere.dispose();
-        this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-        return;
       }
     };
 
