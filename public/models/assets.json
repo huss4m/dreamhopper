@@ -66,6 +66,21 @@
       "name": "dreamCrystal",
       "rootUrl": "./models/",
       "filename": "dream_crystal.glb"
+    },
+    {
+      "name": "plushToy",
+      "rootUrl": "./models/",
+      "filename": "plush_toy.glb"
+    },
+    {
+      "name": "cake3D",
+      "rootUrl": "./models/",
+      "filename": "cake_3d.glb"
+    },
+    {
+      "name": "plushUnicorn",
+      "rootUrl": "./models/",
+      "filename": "plush_unicorn.glb"
     }
 
   ]

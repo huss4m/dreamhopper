@@ -417,7 +417,7 @@ export class Enemy implements Hoverable, Targettable {
       this.enemySkeleton = null;
   
       // Load new NPC model
-      const npcAssetContainer = this.assetManager.getAssetContainer("npc");
+      const npcAssetContainer = this.assetManager.getAssetContainer("plushUnicorn");
       if (!npcAssetContainer) {
         console.error(`Failed to load npc asset container for Enemy ${this.id}`);
         this.position = currentPosition;
