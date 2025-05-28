@@ -21,6 +21,7 @@ import { CharacterMeshLoader } from "./CharacterMeshLoader";
 import { Character } from "../types";
 import { Player } from "./Player";
 import { TargetingSystem } from "../TargetingSystem";
+import { GameManager } from "../GameManager"; // Added import
 
 interface AnimationData {
   name: string;
@@ -43,10 +44,11 @@ export class CharacterController {
     private camera: ArcRotateCamera,
     shadowGenerator: CascadedShadowGenerator,
     assetManager: AssetManager,
-    private targetingSystem: TargetingSystem
+    private targetingSystem: TargetingSystem,
+    private gameManager: GameManager // Added parameter
   ) {
     this.scene.collisionsEnabled = true;
-    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem);
+    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem, gameManager); // Pass gameManager
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
     this.player = new Player(scene, assetManager, shadowGenerator);
@@ -283,8 +285,7 @@ export class CharacterController {
 
     this.particleSystem = {
       rightHand: createHandParticleSystem("mixamorig:RightHand", "rightHandParticles"),
-      leftHand: createHandParticleSystem("mixamorig:LeftHand",
- "leftHandParticles"),
+      leftHand: createHandParticleSystem("mixamorig:LeftHand", "leftHandParticles"),
     };
   }
 

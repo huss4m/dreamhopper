@@ -27,6 +27,8 @@ export class Enemy implements Hoverable, Targettable {
   highlightLayer: HighlightLayer;
   position: Vector3;
 
+  isTransformed = false;
+
   constructor(
     private scene: Scene,
     name: string,
@@ -370,6 +372,137 @@ export class Enemy implements Hoverable, Targettable {
   public stopWandering(): void {
     if (this.physicsController) {
       this.physicsController.stopWandering();
+    }
+  }
+
+
+  public async swapToNPCModel(): Promise<void> {
+    if (!this.assetManager) {
+      console.error(`Cannot swap model: AssetManager is not defined for Enemy ${this.id}`);
+      return;
+    }
+  
+    try {
+      // Store current position and physics state
+      const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
+      const wasWandering =  false;
+  
+      // Explicitly stop and dispose physics controller
+      if (this.physicsController) {
+        this.physicsController.stopWandering(); // Stop movement to clear any observers
+        this.physicsController.dispose(); // Dispose physics controller and its observers
+        this.physicsController = null; // Ensure null to prevent access
+      }
+  
+      // Dispose other resources
+      if (this.targetCircle) {
+        if (this.targetCircle.metadata?.observer) {
+          this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+        }
+        this.targetCircle.dispose();
+        this.targetCircle = null;
+      }
+  
+      if (this.hitboxMesh) {
+        this.hitboxMesh.dispose();
+        this.hitboxMesh = null;
+      }
+  
+      if (this.enemyMesh) {
+        this.enemyMesh.dispose();
+        this.enemyMesh = null;
+      }
+  
+      this.animationManager.dispose();
+      this.enemySkeleton = null;
+  
+      // Load new NPC model
+      const npcAssetContainer = this.assetManager.getAssetContainer("npc");
+      if (!npcAssetContainer) {
+        console.error(`Failed to load npc asset container for Enemy ${this.id}`);
+        this.position = currentPosition;
+        return;
+      }
+  
+      // Instantiate new model
+      const clones = this.duplicate(npcAssetContainer, currentPosition);
+      this.enemyMesh = clones.rootNodes[0] as Mesh;
+      this.enemySkeleton = clones.skeletons[0];
+      const animationGroups = clones.animationGroups || [];
+  
+      // Configure new mesh
+      this.enemyMesh.position = currentPosition;
+      this.enemyMesh.checkCollisions = true;
+      this.enemyMesh.isPickable = true;
+  
+      // Configure child meshes
+      this.enemyMesh.getChildMeshes().forEach((mesh) => {
+        mesh.checkCollisions = true;
+        mesh.isPickable = true;
+        if (this.shadowGenerator) {
+          this.shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+  
+      // Update tags
+      Tags.EnableFor(this.enemyMesh);
+      Tags.AddTagsTo(this.enemyMesh, `enemyID:${this.id}`);
+      this.enemyMesh.getChildMeshes().forEach((mesh) => {
+        Tags.EnableFor(mesh);
+        Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
+      });
+  
+      // Setup new hitbox
+      this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
+        height: 2,
+        width: 1.5,
+      }, this.scene);
+      this.hitboxMesh.parent = this.enemyMesh;
+      this.hitboxMesh.position = new Vector3(0, 1, 0);
+      this.hitboxMesh.checkCollisions = false;
+      this.hitboxMesh.isPickable = true;
+      this.hitboxMesh.isVisible = false;
+  
+      const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
+      hitboxMaterial.alpha = 0;
+      this.hitboxMesh.material = hitboxMaterial;
+  
+      Tags.EnableFor(this.hitboxMesh);
+      Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
+      this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
+  
+      // Setup physics with error handling
+      this.setupPhysics();
+      if (!this.physicsController) {
+        console.error(`Failed to setup physics for Enemy ${this.id} after model swap`);
+        return;
+      }
+  
+      // Reinitialize animations
+      this.animationManager.initialize(animationGroups);
+  
+      // Re-setup hover
+      const hoverable: Hoverable = {
+        getMesh: () => this.enemyMesh,
+        getScene: () => this.scene,
+        getHighlightMesh: () => this.enemyMesh,
+      };
+      this.hoverHandler.setupHover(hoverable);
+  
+      // Reapply targeting state
+      if (this.isTargetted) {
+        this.setTargetted(true);
+      }
+  
+      // Resume wandering if previously active
+      if (wasWandering) {
+        this.startWandering();
+      }
+  
+      this.isTransformed = true;
+      console.log(`Enemy ${this.id} model swapped to npc.glb at position`, currentPosition);
+    } catch (error) {
+      console.error(`Failed to swap model to npc for Enemy ${this.id}`, error);
     }
   }
 }

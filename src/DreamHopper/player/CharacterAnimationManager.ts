@@ -1,6 +1,9 @@
-import { AnimationGroup, Scene, Mesh, StandardMaterial, Color3, Vector3, MeshBuilder, EventState, ParticleSystem, Texture, Color4, Observable } from "@babylonjs/core";
+import { AnimationGroup, Scene, Mesh, StandardMaterial, Color3, Vector3, MeshBuilder, EventState, ParticleSystem, Texture, Color4, Observable, Tags } from "@babylonjs/core";
 import { CharacterController } from "./CharacterController";
 import { TargetingSystem } from "../TargetingSystem";
+import { AssetManager } from "../AssetManager";
+import { GameManager } from "../GameManager";
+import { Enemy } from "../enemy/Enemy";
 
 export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];
@@ -14,7 +17,8 @@ export class CharacterAnimationManager {
   constructor(
     private scene: Scene,
     public characterController?: CharacterController,
-    private targetingSystem?: TargetingSystem
+    private targetingSystem?: TargetingSystem,
+    private gameManager?: GameManager
   ) {}
 
   public initialize(animationGroups: AnimationGroup[]): void {
@@ -64,21 +68,21 @@ export class CharacterAnimationManager {
   private triggerFireworks(position: Vector3): void {
     const fireworks = new ParticleSystem("fireworks", 2000, this.scene);
     fireworks.particleTexture = new Texture("./Flare.png", this.scene);
-    fireworks.emitter = position; // Emit at collision point
+    fireworks.emitter = position;
     fireworks.minEmitBox = new Vector3(0, 0, 0);
     fireworks.maxEmitBox = new Vector3(0, 0, 0);
-    fireworks.color1 = new Color4(0.9, 0.2, 1.0, 1.0); // Purple
-    fireworks.color2 = new Color4(0.2, 0.5, 1.0, 1.0); // Blue
-    fireworks.colorDead = new Color4(1.0, 0.8, 0.2, 0.0); // Yellow fade
+    fireworks.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
+    fireworks.color2 = new Color4(0.2, 0.5, 1.0, 1.0);
+    fireworks.colorDead = new Color4(0.0, 0.8, 0.2, 0.0);
     fireworks.minSize = 0.3;
     fireworks.maxSize = 1.0;
     fireworks.minLifeTime = 0.2;
     fireworks.maxLifeTime = 0.5;
     fireworks.emitRate = 1000;
     fireworks.blendMode = ParticleSystem.BLENDMODE_ADD;
-    fireworks.gravity = new Vector3(0, -2.0, 0); // Light downward pull
-    fireworks.direction1 = new Vector3(-5, 2, -5); // Radial spread
-    fireworks.direction2 = new Vector3(5, 5, 5); // Upward and outward
+    fireworks.gravity = new Vector3(0, -2.0, 0);
+    fireworks.direction1 = new Vector3(-5, 2, -5);
+    fireworks.direction2 = new Vector3(5, 5, 5);
     fireworks.minAngularSpeed = -Math.PI;
     fireworks.maxAngularSpeed = Math.PI;
     fireworks.minEmitPower = 2;
@@ -86,7 +90,6 @@ export class CharacterAnimationManager {
     fireworks.updateSpeed = 0.01;
     fireworks.start();
 
-    // Dispose after 2 seconds
     setTimeout(() => {
       fireworks.stop();
       fireworks.dispose();
@@ -191,6 +194,31 @@ export class CharacterAnimationManager {
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
       traveledDistance += moveDistance;
 
+      // Check for intersection with enemy hitboxes
+      const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
+      for (const hitbox of hitboxes) {
+        if (sphere.intersectsMesh(hitbox, true)) {
+          const tags = Tags.GetTags(hitbox);
+          const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
+          if (enemyId) {
+            console.log(`CharacterAnimationManager: Dreambolt hit enemy hitbox, id: ${enemyId}`);
+            const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+            if (enemy) {
+              enemy.swapToNPCModel();
+              console.log(`CharacterAnimationManager: Enemy ${enemyId} model swapped to npc.glb`);
+              this.triggerFireworks(sphere.position.clone());
+              particles.stop();
+              particles.dispose();
+              sphere.dispose();
+              this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
+              return;
+            } else {
+              console.warn(`CharacterAnimationManager: Enemy with id ${enemyId} not found in GameManager`);
+            }
+          }
+        }
+      }
+
       if (targetMesh) {
         targetMesh.computeWorldMatrix(true);
         targetMesh.refreshBoundingInfo();
@@ -244,7 +272,6 @@ export class CharacterAnimationManager {
         this.blendFrameId = null;
         this.isBlending = false;
       }
-      // Play idle animation to reset state
       if (this.getAnimationByName("Idle")) {
         this.getAnimationByName("Idle")!.play(true);
         this.currentAnimationName = "Idle";

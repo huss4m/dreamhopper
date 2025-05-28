@@ -116,13 +116,23 @@ export class Game {
 
       this.highlightLayer = this.sceneCreator.highlightLayer;
       this.targetingSystem = new TargetingSystem(scene);
+
+      
+      this.gameManager = new GameManager(
+        scene,
+        this.assetManager,
+        shadowGenerator,
+        this.highlightLayer,
+        this.targetingSystem
+      );
       this.characterController = new CharacterController(
         scene,
         this.canvas,
         scene.activeCamera as ArcRotateCamera,
         shadowGenerator,
         this.assetManager,
-        this.targetingSystem
+        this.targetingSystem,
+        this.gameManager
       );
 
       const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
@@ -141,13 +151,6 @@ export class Game {
         console.warn("Game: Character mesh not found for shadow generator");
       }
 
-      this.gameManager = new GameManager(
-        scene,
-        this.assetManager,
-        shadowGenerator,
-        this.highlightLayer,
-        this.targetingSystem
-      );
 
       const savedState = this.sceneStates[sceneIndex];
       const npcPositions = savedState.npcPositions || [];
