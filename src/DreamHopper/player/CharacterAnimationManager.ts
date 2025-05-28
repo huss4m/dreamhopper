@@ -95,8 +95,8 @@ export class CharacterAnimationManager {
     boltParticles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
     boltParticles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
     boltParticles.colorDead = new Color4(0, 0, 0.2, 0.0);
-    boltParticles.minSize = 0.3;
-    boltParticles.maxSize = 0.7;
+    boltParticles.minSize = 0.7;
+    boltParticles.maxSize = 1.5;
     boltParticles.minLifeTime = 0.15;
     boltParticles.maxLifeTime = 0.4;
     boltParticles.emitRate = 1200;
