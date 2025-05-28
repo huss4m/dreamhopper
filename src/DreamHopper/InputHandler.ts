@@ -162,6 +162,10 @@ export class InputHandler {
     const character = this.characterController.getCharacter();
     let isMoving = false;
 
+    // Check if Dreambolt is playing and cancel if movement keys are pressed
+    const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
+    const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
+
     // Handle jump (non-continuous action)
     if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
       const jumpBinding = this.keyBindings["SPACE"];
@@ -172,7 +176,7 @@ export class InputHandler {
     }
 
     // Handle castDreambolt (non-continuous action)
-    if (this.keyStates["1"] && !this.wasDreamboltPressed && !this.characterController.isAnimationPlaying("Dreambolt")) {
+    if (this.keyStates["1"] && !this.wasDreamboltPressed && !isDreamboltPlaying) {
       const dreamboltBinding = this.keyBindings["1"];
       this.executeAction(dreamboltBinding);
       this.wasDreamboltPressed = true;
@@ -200,6 +204,15 @@ export class InputHandler {
         if (binding.continuous && binding.key !== "Z+E" && binding.key !== "Z+A" && this.keyStates[binding.key]) {
           activeActions.push(binding);
         }
+      }
+    }
+
+    // Check for movement actions and cancel Dreambolt if necessary
+    if (isDreamboltPlaying) {
+      const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
+      if (hasMovement) {
+        console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
+        this.characterController.animationManager.cancelDreambolt();
       }
     }
 

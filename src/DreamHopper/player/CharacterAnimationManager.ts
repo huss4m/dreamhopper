@@ -9,20 +9,20 @@ export class CharacterAnimationManager {
   private isBlending = false;
   private blendFrameId: number | null = null;
   private dreamboltSpawned = false;
-  public onDreamboltAnimationState = new Observable<{ isPlaying: boolean, progress?: number }>();
+  public onDreamboltAnimationState = new Observable<{ isPlaying: boolean; progress?: number }>();
 
   constructor(
     private scene: Scene,
-    private characterController?: CharacterController,
+    public characterController?: CharacterController,
     private targetingSystem?: TargetingSystem
   ) {}
 
   public initialize(animationGroups: AnimationGroup[]): void {
     this.animationGroups = animationGroups;
-    console.log(`Initializing AnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+    console.log(`CharacterAnimationManager: Initializing with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
-    if (this.animationGroups.length < 6) {
-      console.warn(`Expected at least 6 animation groups, found ${this.animationGroups.length}. Animations may not work as expected.`);
+    if (animationGroups.length < 6) {
+      console.warn(`CharacterAnimationManager: Expected at least 6 animation groups, found ${animationGroups.length}.`);
       return;
     }
 
@@ -30,7 +30,7 @@ export class CharacterAnimationManager {
       this.getAnimationByName("Idle")!.play(true);
       this.currentAnimationName = "Idle";
     } else {
-      console.warn("Idle animation not found");
+      console.warn("CharacterAnimationManager: Idle animation not found");
     }
 
     this.setupJumpDetection();
@@ -44,41 +44,74 @@ export class CharacterAnimationManager {
         this.currentAnimationName = null;
       });
     } else {
-      console.warn("Jump animation not found");
+      console.warn("CharacterAnimationManager: Jump animation not found");
     }
   }
 
   private setupDreamboltDetection(): void {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
     if (dreamboltAnim) {
-      console.log("Dreambolt animation found, monitoring for 85% progress");
+      console.log("CharacterAnimationManager: Dreambolt animation found, monitoring for 50% progress");
       dreamboltAnim.onAnimationGroupEndObservable.add(() => {
         this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
-        console.log("Dreambolt animation ended, notified observers");
+        console.log("CharacterAnimationManager: Dreambolt animation ended");
       });
     } else {
-      console.warn("Dreambolt animation not found");
+      console.warn("CharacterAnimationManager: Dreambolt animation not found");
     }
+  }
+
+  private triggerFireworks(position: Vector3): void {
+    const fireworks = new ParticleSystem("fireworks", 2000, this.scene);
+    fireworks.particleTexture = new Texture("./Flare.png", this.scene);
+    fireworks.emitter = position; // Emit at collision point
+    fireworks.minEmitBox = new Vector3(0, 0, 0);
+    fireworks.maxEmitBox = new Vector3(0, 0, 0);
+    fireworks.color1 = new Color4(0.9, 0.2, 1.0, 1.0); // Purple
+    fireworks.color2 = new Color4(0.2, 0.5, 1.0, 1.0); // Blue
+    fireworks.colorDead = new Color4(1.0, 0.8, 0.2, 0.0); // Yellow fade
+    fireworks.minSize = 0.3;
+    fireworks.maxSize = 1.0;
+    fireworks.minLifeTime = 0.2;
+    fireworks.maxLifeTime = 0.5;
+    fireworks.emitRate = 1000;
+    fireworks.blendMode = ParticleSystem.BLENDMODE_ADD;
+    fireworks.gravity = new Vector3(0, -2.0, 0); // Light downward pull
+    fireworks.direction1 = new Vector3(-5, 2, -5); // Radial spread
+    fireworks.direction2 = new Vector3(5, 5, 5); // Upward and outward
+    fireworks.minAngularSpeed = -Math.PI;
+    fireworks.maxAngularSpeed = Math.PI;
+    fireworks.minEmitPower = 2;
+    fireworks.maxEmitPower = 6;
+    fireworks.updateSpeed = 0.01;
+    fireworks.start();
+
+    // Dispose after 2 seconds
+    setTimeout(() => {
+      fireworks.stop();
+      fireworks.dispose();
+      console.log("CharacterAnimationManager: Fireworks effect disposed");
+    }, 2000);
   }
 
   private spawnDreamboltSphere(): void {
     if (!this.characterController) {
-      console.error("CharacterController not provided to CharacterAnimationManager");
+      console.error("CharacterAnimationManager: CharacterController not initialized");
       return;
     }
 
     const characterMesh = this.characterController.getCharacter().colliderBox;
     if (!characterMesh) {
-      console.error("Character mesh not found");
+      console.error("CharacterAnimationManager: Character mesh not found");
       return;
     }
 
     if (!this.characterController.physicsController) {
-      console.error("PhysicsController not found");
+      console.error("CharacterAnimationManager: PhysicsController not found");
       return;
     }
 
-    console.log("Spawning Dreambolt sphere");
+    console.log("CharacterAnimationManager: Spawning Dreambolt sphere");
 
     const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("dreamboltMat", this.scene);
@@ -87,24 +120,24 @@ export class CharacterAnimationManager {
     sphere.material = material;
     sphere.isVisible = false;
 
-    const boltParticles = new ParticleSystem("boltParticles", 1000, this.scene);
-    boltParticles.particleTexture = new Texture("./Flare.png", this.scene);
-    boltParticles.emitter = sphere;
-    boltParticles.minEmitBox = Vector3.Zero();
-    boltParticles.maxEmitBox = Vector3.Zero();
-    boltParticles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
-    boltParticles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
-    boltParticles.colorDead = new Color4(0, 0, 0.2, 0.0);
-    boltParticles.minSize = 0.7;
-    boltParticles.maxSize = 1.5;
-    boltParticles.minLifeTime = 0.15;
-    boltParticles.maxLifeTime = 0.4;
-    boltParticles.emitRate = 1200;
-    boltParticles.blendMode = ParticleSystem.BLENDMODE_ADD;
-    boltParticles.gravity = Vector3.Zero();
-    boltParticles.direction1 = Vector3.Zero();
-    boltParticles.direction2 = Vector3.Zero();
-    boltParticles.start();
+    const particles = new ParticleSystem("boltParticles", 1000, this.scene);
+    particles.particleTexture = new Texture("./Flare.png", this.scene);
+    particles.emitter = sphere;
+    particles.minEmitBox = Vector3.Zero();
+    particles.maxEmitBox = Vector3.Zero();
+    particles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
+    particles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
+    particles.colorDead = new Color4(0, 0, 0.2, 0.0);
+    particles.minSize = 0.7;
+    particles.maxSize = 1.5;
+    particles.minLifeTime = 0.15;
+    particles.maxLifeTime = 0.4;
+    particles.emitRate = 1200;
+    particles.blendMode = ParticleSystem.BLENDMODE_ADD;
+    particles.gravity = Vector3.Zero();
+    particles.direction1 = Vector3.Zero();
+    particles.direction2 = Vector3.Zero();
+    particles.start();
 
     const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
     const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
@@ -112,7 +145,7 @@ export class CharacterAnimationManager {
     sphere.position = startPos;
     sphere.checkCollisions = true;
 
-    console.log(`Sphere spawned at position: ${sphere.position.toString()}`);
+    console.log(`CharacterAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
 
     let moveDirection: Vector3;
     let targetMesh: Mesh | null = null;
@@ -127,26 +160,25 @@ export class CharacterAnimationManager {
       const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
       const targetPos = targetMesh.getAbsolutePosition();
 
-      console.log(`Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
+      console.log(`CharacterAnimationManager: Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
 
       const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
 
       if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
         adjustedTargetPos.y = targetPos.y + 0.875;
-        console.log(`Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
+        console.log(`CharacterAnimationManager: Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
       }
       moveDirection = adjustedTargetPos.subtract(sphere.position);
       if (moveDirection.lengthSquared() > 0.0001) {
         moveDirection = moveDirection.normalize();
-        console.log(`Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
-       // console.log(`Move direction: ${moveDirection.toString()}`);
+        console.log(`CharacterAnimationManager: Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
       } else {
         moveDirection = forward;
-        console.log(`Target ${target!.getId()} is at same position as sphere, using forward direction`);
+        console.log(`CharacterAnimationManager: Target ${target!.getId()} is at same position as sphere, using forward direction`);
       }
     } else {
       moveDirection = forward;
-      console.log("No target or target mesh not found, moving sphere in character's forward direction");
+      console.log("CharacterAnimationManager: No target or target mesh not found, moving sphere in character's forward direction");
     }
 
     const speed = 10;
@@ -159,54 +191,65 @@ export class CharacterAnimationManager {
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
       traveledDistance += moveDistance;
 
-      //console.log(`Sphere position: ${sphere.position.toString()}, traveled: ${traveledDistance}`);
-
       if (targetMesh) {
         targetMesh.computeWorldMatrix(true);
         targetMesh.refreshBoundingInfo();
         if (sphere.intersectsMesh(targetMesh, true)) {
-          console.log(`Sphere hit target ${this.targetingSystem?.getCurrentTarget()?.getId() || 'unknown'}, disposing`);
+          console.log(`CharacterAnimationManager: Sphere hit target ${this.targetingSystem?.getCurrentTarget()?.getId() || 'unknown'}, triggering fireworks`);
+          this.triggerFireworks(sphere.position.clone());
+          particles.stop();
+          particles.dispose();
           sphere.dispose();
-          boltParticles.stop();
-          boltParticles.dispose();
           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
           return;
         }
         const childMeshes = targetMesh.getChildMeshes(false);
         for (const child of childMeshes) {
           if (child instanceof Mesh && sphere.intersectsMesh(child, true)) {
-            console.log(`Sphere hit target child mesh ${child.name}, disposing`);
+            console.log(`CharacterAnimationManager: Sphere hit target child mesh ${child.name}, triggering fireworks`);
+            this.triggerFireworks(sphere.position.clone());
+            particles.stop();
+            particles.dispose();
             sphere.dispose();
-            boltParticles.stop();
-            boltParticles.dispose();
             this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
             return;
           }
         }
       }
 
-      if (traveledDistance >= maxDistance || sphere.intersectsMesh(characterMesh, false)) {
-        console.log("Sphere disposed: reached max distance or collided with character");
+      if (traveledDistance >= maxDistance) {
+        console.log("CharacterAnimationManager: Sphere reached max distance, triggering fireworks");
+        this.triggerFireworks(sphere.position.clone());
+        particles.stop();
+        particles.dispose();
         sphere.dispose();
-        boltParticles.stop();
-        boltParticles.dispose();
         this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-      } else {
-        const meshes = this.scene.meshes.filter(m => m !== sphere && m !== characterMesh && m.checkCollisions);
-        for (const mesh of meshes) {
-          if (sphere.intersectsMesh(mesh, false)) {
-            console.log(`Sphere collided with ${mesh.name}, disposing`);
-            sphere.dispose();
-            boltParticles.stop();
-            boltParticles.dispose();
-            this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-            break;
-          }
-        }
+        return;
       }
     };
 
     this.scene.onBeforeRenderObservable.add(renderCallback);
+  }
+
+  public cancelDreambolt(): void {
+    const dreamboltAnim = this.getAnimationByName("Dreambolt");
+    if (dreamboltAnim && dreamboltAnim.isPlaying) {
+      console.log("CharacterAnimationManager: Cancelling Dreambolt animation");
+      dreamboltAnim.stop();
+      this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
+      this.dreamboltSpawned = false;
+      this.currentAnimationName = null;
+      if (this.blendFrameId !== null) {
+        cancelAnimationFrame(this.blendFrameId);
+        this.blendFrameId = null;
+        this.isBlending = false;
+      }
+      // Play idle animation to reset state
+      if (this.getAnimationByName("Idle")) {
+        this.getAnimationByName("Idle")!.play(true);
+        this.currentAnimationName = "Idle";
+      }
+    }
   }
 
   public playAnimation(
@@ -217,8 +260,38 @@ export class CharacterAnimationManager {
   ): void {
     const newAnim = this.getAnimationByName(name);
     if (!newAnim) {
-      console.warn(`Animation group '${name}' not found`);
+      console.warn(`CharacterAnimationManager: Animation group '${name}' not found`);
       return;
+    }
+
+    if (name === "Dreambolt") {
+      if (!this.characterController || !this.characterController.physicsController || !this.characterController.getCharacter().colliderBox) {
+        console.warn("CharacterAnimationManager: Cannot cast Dreambolt; missing characterController, physicsController, or colliderBox");
+        return;
+      }
+
+      const characterMesh = this.characterController.getCharacter().colliderBox!;
+      const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
+      const charPos = characterMesh.getAbsolutePosition();
+
+      const target = this.targetingSystem?.getCurrentTarget();
+      if (!target || !target.getMesh()) {
+        console.warn("CharacterAnimationManager: Cannot cast Dreambolt; no target selected or target has no mesh");
+        return;
+      }
+
+      const targetMesh = target.getMesh()!;
+      const targetPos = targetMesh.getAbsolutePosition();
+      const toTarget = targetPos.subtract(charPos).normalize();
+      const dot = Vector3.Dot(forward, toTarget);
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+
+      console.log(`CharacterAnimationManager: Dreambolt target ${target.getId()} angle: ${angle * (180 / Math.PI)} deg`);
+
+      if (angle > Math.PI / 2) {
+        console.warn(`CharacterAnimationManager: Cannot cast Dreambolt; target ${target.getId()} is outside front 180° arc`);
+        return;
+      }
     }
 
     if ((name === "Dreambolt" || name === "Jump") && this.currentAnimationName !== name) {
@@ -277,7 +350,7 @@ export class CharacterAnimationManager {
     if (name === "Dreambolt") {
       this.dreamboltSpawned = false;
       this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0 });
-      console.log("Dreambolt animation started, notified observers");
+      console.log("CharacterAnimationManager: Dreambolt animation started, notified observers");
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -287,14 +360,14 @@ export class CharacterAnimationManager {
           const progress = (currentFrame - from) / (to - from);
           this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress });
           if (progress >= 0.5 && !this.dreamboltSpawned) {
-            console.log("Dreambolt animation reached 85%, spawning sphere");
+            console.log("CharacterAnimationManager: Dreambolt animation reached 50%, spawning sphere");
             this.spawnDreamboltSphere();
             this.dreamboltSpawned = true;
-            this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0.85 });
+            this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0.5 });
             this.scene.onBeforeRenderObservable.remove(observer);
           }
         } else {
-          console.log("Dreambolt animation stopped or no animatables, removing observer");
+          console.log("CharacterAnimationManager: Dreambolt animation stopped or no animatables, removing observer");
           this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
           this.scene.onBeforeRenderObservable.remove(observer);
         }
@@ -325,12 +398,12 @@ export class CharacterAnimationManager {
     const toAnim = this.getAnimationByName(toAnimName);
 
     if (!fromAnim || !toAnim) {
-      console.warn("One or both animations not found for blending");
+      console.warn("CharacterAnimationManager: One or both animations not found for blending");
       return;
     }
 
     if (this.isBlending) {
-      console.warn("Already blending animations");
+      console.warn("CharacterAnimationManager: Already blending animations");
       return;
     }
 
@@ -360,12 +433,12 @@ export class CharacterAnimationManager {
     return anim?.isPlaying || false;
   }
 
-  hasAnimationEnded(name: string): boolean {
+  public hasAnimationEnded(name: string): boolean {
     const anim = this.getAnimationByName(name);
     return anim?.isPlaying === false;
   }
 
-  getAnimationByName(name: string): AnimationGroup | undefined {
+  public getAnimationByName(name: string): AnimationGroup | undefined {
     return this.animationGroups.find(group => group.name === name);
   }
 
@@ -373,6 +446,6 @@ export class CharacterAnimationManager {
     this.animationGroups.forEach(group => group.dispose());
     this.animationGroups = [];
     this.onDreamboltAnimationState.clear();
-    console.log("CharacterAnimationManager disposed");
+    console.log("CharacterAnimationManager: Disposed");
   }
 }
