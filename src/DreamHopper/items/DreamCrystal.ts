@@ -44,7 +44,10 @@ export class DreamCrystal extends Item {
     const centerWorld = boundingBox.centerWorld; // World-space center of mesh
     this.pointLight = new PointLight(`${itemName}_light`, centerWorld, scene);
     this.pointLight.diffuse = new Color3(1, 0.5, 0.8); // Pinkish color
-    this.pointLight.intensity = 50.0; // Balanced intensity
+    this.pointLight.specular = new Color3(1, 0.5, 0.8);
+
+
+    this.pointLight.intensity = 20.0; // Balanced intensity
     this.pointLight.range = 5; // Adjust range
 
     console.log(`Initialized ${itemName}: Mesh Position=${crystalMesh.position.toString()}, Light Position=${centerWorld.toString()}, BoundingBox Center=${centerWorld.toString()}, Visible=${crystalMesh.isVisible}, Enabled=${crystalMesh.isEnabled()}`);
@@ -118,7 +121,8 @@ export class DreamCrystal extends Item {
         this.pointLight.position = centerWorld;
         // Pulse the point light
         this.pulseTime += this.scene.getAnimationRatio() * 0.05;
-        this.pointLight.intensity = 50.0 + Math.sin(this.pulseTime) * 10.0; // Pulse between 40 and 60
+        this.pointLight.intensity = 20.0 + Math.sin(this.pulseTime) * 10.0; // Pulse between 40 and 60
+        
         console.log(`Animating ${this.getName()}: Light Position=${centerWorld.toString()}, Intensity=${this.pointLight.intensity.toFixed(2)}`);
       }
     });
@@ -135,14 +139,39 @@ export class DreamCrystal extends Item {
 
   private collect(): void {
     if (this.isCollected) return;
-
+  
     this.isCollected = true;
-    this.getParentMesh().setEnabled(false);
-    this.getCrystalMesh().isVisible = false; // Hide mesh to remove from glow layer
-    this.pointLight.setEnabled(false); // Disable light
+  
+    // Remove from glow layer before disposing
+    const mesh = this.getCrystalMesh();
+
+  
+ 
+    // Disable rather than dispose immediately
+    const parent = this.getParentMesh();
+    parent.setEnabled(false);
+    mesh.isVisible = false;
+  
+    //
+    this.pointLight.intensity = 0;
+    this.pointLight.range = 0;
+
+
+    //this.pointLight.setEnabled(false);
+    //this.pointLight.dispose();
     this.onCollected.notifyObservers(this);
+     /*
+    // Dispose safely on next frame (optional debounce)
+    setTimeout(() => {
+      parent.dispose();
+      // this.pointLight.dispose(); // Optional: Only if many crystals exist
+    }, 100); // Wait to avoid spike
+  
+    // Optionally: remove animation & collision callbacks if not already auto-managed
     console.log(`${this.getName()} collected!`);
+    */
   }
+  
 
   public getOnCollectedObservable(): Observable<DreamCrystal> {
     return this.onCollected;

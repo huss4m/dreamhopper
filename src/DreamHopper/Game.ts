@@ -35,25 +35,29 @@ export class Game {
   constructor(private canvas: HTMLCanvasElement, environmentType: EnvironmentType = EnvironmentType.FOREST) {
     this.engine = new Engine(canvas, true);
     this.sceneCreator = new SceneCreator(this.engine, canvas, environmentType);
-    this.soundManager = new SoundManager([
+    this.soundManager = SoundManager.getInstance([
       "/music/music1.mp3",
       "/music/music2.mp3",
     ]);
-
-    // Initialize custom loading screen
+  
     this.loadingScreen = new DreamHopperLoadingScreen(this.engine);
     this.engine.loadingScreen = this.loadingScreen;
-
+  
     this.scenes.push(this.sceneCreator.createScene());
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene());
-
+  
     this.sceneStates = [
       { npcPositions: [], enemyPositions: [] },
       { npcPositions: [], enemyPositions: [] },
     ];
-
+  
     this.activeScene = this.scenes[0];
     this.initializationPromise = this.initialize();
+  
+    // Clean up on page refresh
+    window.addEventListener("beforeunload", () => {
+      this.soundManager.dispose();
+    });
   }
 
   private async initialize(): Promise<void> {

@@ -1,21 +1,36 @@
 import { Sound, CreateAudioEngineAsync, CreateStreamingSoundAsync, AudioEngineV2 } from "@babylonjs/core";
 
 export class SoundManager {
+  private static instance: SoundManager | null = null;
   private audioEngine: AudioEngineV2 | null = null;
   private currentSound: any | null = null;
   private songFiles: string[];
   private volume = 0.2;
   private isPlaying = false;
 
-  constructor(songFiles: string[]) {
+  private constructor(songFiles: string[]) {
     if (!songFiles || songFiles.length === 0) {
       throw new Error("SoundManager: At least one song file must be provided");
     }
     this.songFiles = songFiles;
   }
 
+  public static getInstance(songFiles?: string[]): SoundManager {
+    if (!SoundManager.instance) {
+      if (!songFiles) {
+        throw new Error("SoundManager: Song files must be provided for first instance");
+      }
+      SoundManager.instance = new SoundManager(songFiles);
+    }
+    return SoundManager.instance;
+  }
+
   public async initialize(): Promise<void> {
     try {
+      if (this.audioEngine) {
+        this.audioEngine.dispose();
+        this.audioEngine = null;
+      }
       this.audioEngine = await CreateAudioEngineAsync();
       await this.audioEngine.unlockAsync();
       console.log("SoundManager: Audio engine initialized and unlocked");
@@ -29,6 +44,7 @@ export class SoundManager {
   private async playRandomSong(): Promise<void> {
     if (this.currentSound) {
       this.currentSound.stop();
+      this.currentSound.onEndedObservable.clear();
       this.currentSound.dispose();
       this.currentSound = null;
     }
@@ -41,11 +57,11 @@ export class SoundManager {
         `backgroundMusic_${randomIndex}`,
         songUrl
       );
-      this.currentSound.loop = false; // Loop per song disabled; handled by onEnded
+      this.currentSound.loop = false;
       this.currentSound.volume = this.volume;
       this.currentSound.play();
       this.isPlaying = true;
-      console.log(`SoundManager: Playing song ${songUrl}`);
+     // console.log(`SoundManager: Playing song ${songUrl}, instance count: ${this.audioEngine?.audioContext?.sounds.length || 0}`);
 
       this.currentSound.onEndedObservable.addOnce(() => {
         console.log(`SoundManager: Song ${songUrl} ended`);
@@ -76,6 +92,7 @@ export class SoundManager {
   public dispose(): void {
     this.stop();
     if (this.currentSound) {
+      this.currentSound.onEndedObservable.clear();
       this.currentSound.dispose();
       this.currentSound = null;
     }
@@ -83,6 +100,7 @@ export class SoundManager {
       this.audioEngine.dispose();
       this.audioEngine = null;
     }
+    SoundManager.instance = null;
     console.log("SoundManager: Disposed");
   }
 

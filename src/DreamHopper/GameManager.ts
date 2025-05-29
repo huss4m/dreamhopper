@@ -1,4 +1,4 @@
-import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator, Mesh } from "@babylonjs/core";
+import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator, Mesh, Ray } from "@babylonjs/core";
 import { AssetManager } from "./AssetManager";
 import { NPC } from "./npc/NPC";
 import { Enemy } from "./enemy/Enemy";
@@ -105,7 +105,10 @@ export class GameManager {
     const crystalPositions = configData.crystals?.map((pos: { x: number, y: number, z: number }) => 
       new Vector3(pos.x, pos.y, pos.z)) || [];
 
-    const stateToUse: DreamCrystalState = savedState || { positions: crystalPositions, collected: new Array(crystalPositions.length).fill(false) };
+    const stateToUse: DreamCrystalState = savedState || { 
+      positions: crystalPositions, 
+      collected: new Array(crystalPositions.length).fill(false) 
+    };
 
     if (!this.characterMesh) {
       throw new Error("GameManager: Character mesh not provided or not loaded");
@@ -113,13 +116,35 @@ export class GameManager {
 
     console.log("GameManager: Initializing DreamCrystalManager with character mesh:", this.characterMesh.name);
 
+    // Get the ground mesh (named "Plane")
+    const groundMesh = this.scene.getMeshByName("Plane");
+    if (!groundMesh) {
+      console.warn("GameManager: Ground mesh 'Plane' not found, using original y-positions");
+    }
+
+    // Adjust y-positions to be ground height + 1
+    const adjustedPositions = stateToUse.positions.map((pos: Vector3) => {
+      let yPos: number = pos.y; // Fallback to original y-position
+      if (groundMesh) {
+        // Use raycasting to find ground height
+        const ray = new Ray(new Vector3(pos.x, 1000, pos.z), new Vector3(0, -1, 0));
+        const pickInfo = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
+        if (pickInfo?.hit && pickInfo.pickedPoint) {
+          yPos = pickInfo.pickedPoint.y;
+        } else {
+          console.warn(`GameManager: No ground hit for crystal at (${pos.x}, ${pos.z}), using original y: ${pos.y}`);
+        }
+      }
+      return new Vector3(pos.x, yPos + 1, pos.z); // Add 1 unit above ground
+    });
+
     this.dreamCrystalManager = new DreamCrystalManager(
       this.scene,
       this.assetManager.getAssetContainer("dreamCrystal"),
       this.shadowGenerator,
       this.characterMesh
     );
-    this.dreamCrystalManager.initialize(stateToUse.positions, stateToUse.collected);
+    this.dreamCrystalManager.initialize(adjustedPositions, stateToUse.collected);
 
     return this.dreamCrystalManager;
   }

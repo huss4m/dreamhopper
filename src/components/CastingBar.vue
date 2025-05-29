@@ -74,39 +74,89 @@
   </script>
   
   <style scoped>
-  .casting-bar {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
+ .casting-bar {
+  position: fixed;
+  bottom: 20vh;  
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.casting-bar-container {
+  width: 320px;
+  height: 42px;
+  background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+  border: 2px solid #00ccff;
+  border-radius: 20px;
+  box-shadow:
+    0 0 10px rgba(0, 204, 255, 0.4),
+    0 0 20px rgba(0, 204, 255, 0.2) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add a glossy highlight overlay */
+.casting-bar-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  transform: skewX(-20deg);
+  animation: shimmer 2.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -75%;
   }
-  
-  .casting-bar-container {
-    width: 300px;
-    height: 40px;
-    background-color: rgba(0, 0, 0, 0.6);
-    border: 2px solid #ffffff;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    position: relative;
-    overflow: hidden;
+  100% {
+    left: 125%;
   }
-  
-  .casting-bar-progress {
-    height: 100%;
-    background-color: #00ccff;
-    transition: width 0.1s linear;
+}
+
+.casting-bar-progress {
+  height: 100%;
+  background: linear-gradient(to right, #00ccff, #33ffee);
+  box-shadow:
+    0 0 10px rgba(0, 204, 255, 0.5),
+    0 0 25px rgba(0, 204, 255, 0.3);
+  transition: width 0.1s linear;
+  border-radius: 20px 0 0 20px;
+}
+
+.casting-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-family: "Orbitron", "Roboto Condensed", sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 5px #00ccff, 0 0 10px rgba(0, 204, 255, 0.6);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
   }
-  
-  .casting-bar-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #ffffff;
-    font-family: "Roboto Condensed", sans-serif;
-    font-size: 16px;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  50% {
+    opacity: 0.85;
   }
+  100% {
+    opacity: 1;
+  }
+}
+
   </style>

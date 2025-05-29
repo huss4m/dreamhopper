@@ -66,18 +66,25 @@
   
   <style scoped>
   .crystal-counter {
-    position: absolute;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 16px;
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    font-family: "Roboto Condensed", sans-serif;
-    font-size: 16px;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-    z-index: 1000;
-  }
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 30px;
+  background: linear-gradient(135deg, #5a47d1, #1e2a78);
+  border-radius: 16px;
+  border: 1.5px solid #9b85ff;
+  box-shadow: 0 4px 10px rgba(90, 71, 209, 0.5);
+  color: #d9dbff;
+  font-family: "Roboto Condensed", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  text-shadow: 0 0 3px #7365e0;
+  user-select: none;
+  cursor: default;
+  z-index: 1000;
+}
+
   </style>
