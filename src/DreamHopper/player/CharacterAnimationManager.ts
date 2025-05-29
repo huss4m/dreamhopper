@@ -66,36 +66,46 @@ export class CharacterAnimationManager {
   }
 
   private triggerFireworks(position: Vector3): void {
-    const fireworks = new ParticleSystem("fireworks", 2000, this.scene);
+    const fireworks = new ParticleSystem("fairyFireworks", 2000, this.scene);
     fireworks.particleTexture = new Texture("./star_1.png", this.scene);
     fireworks.emitter = position;
     fireworks.minEmitBox = new Vector3(0, 0, 0);
     fireworks.maxEmitBox = new Vector3(0, 0, 0);
-    fireworks.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
-    fireworks.color2 = new Color4(0.2, 0.5, 1.0, 1.0);
-    fireworks.colorDead = new Color4(0.0, 0.8, 0.2, 0.0);
-    fireworks.minSize = 0.3;
-    fireworks.maxSize = 1.0;
-    fireworks.minLifeTime = 0.2;
-    fireworks.maxLifeTime = 0.5;
+  
+    fireworks.color1 = new Color4(1.0, 0.0, 1.0, 1.0);    // vibrant magenta
+    fireworks.color2 = new Color4(0.2, 0.8, 1.0, 1.0);    // bright cyan
+    fireworks.colorDead = new Color4(1.0, 1.0, 0.5, 0.3); // fades to transparent gold
+  
+    fireworks.minSize = 0.15;
+    fireworks.maxSize = 0.5;
+    fireworks.minLifeTime = 2.5;
+    fireworks.maxLifeTime = 4.0;
+  
     fireworks.emitRate = 1000;
     fireworks.blendMode = ParticleSystem.BLENDMODE_ADD;
-    fireworks.gravity = new Vector3(0, -2.0, 0);
-    fireworks.direction1 = new Vector3(-5, 2, -5);
-    fireworks.direction2 = new Vector3(5, 5, 5);
-    fireworks.minAngularSpeed = -Math.PI;
-    fireworks.maxAngularSpeed = Math.PI;
-    fireworks.minEmitPower = 2;
-    fireworks.maxEmitPower = 6;
-    fireworks.updateSpeed = 0.01;
+    fireworks.gravity = new Vector3(0, -0.5, 0); // gentle fall
+  
+    fireworks.direction1 = new Vector3(-1, -1, -1);
+    fireworks.direction2 = new Vector3(1, 1, 1 );
+  
+    fireworks.minAngularSpeed = -Math.PI / 6;
+    fireworks.maxAngularSpeed = Math.PI / 6;
+    fireworks.minEmitPower = 0.5;
+    fireworks.maxEmitPower = 1.2;
+    fireworks.updateSpeed = 0.05;
+  
     fireworks.start();
-
+  
+    // Emit briefly, fade slowly
     setTimeout(() => {
-      fireworks.stop();
-      fireworks.dispose();
-      console.log("CharacterAnimationManager: Fireworks effect disposed");
-    }, 2000);
+      fireworks.stop(); // stop emitting
+      setTimeout(() => {
+        fireworks.dispose();
+        console.log("CharacterAnimationManager: Fireworks effect disposed");
+      }, 5000); // wait for fade
+    }, 1000); // emit for 1s
   }
+    
 
   private spawnDreamboltSphere(): void {
     if (!this.characterController) {
