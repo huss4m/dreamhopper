@@ -1,4 +1,4 @@
-import { Scene, Vector3, CascadedShadowGenerator, AssetContainer, Observable, Mesh } from "@babylonjs/core";
+import { Scene, Vector3, CascadedShadowGenerator, AssetContainer, Observable, Mesh, GlowLayer } from "@babylonjs/core";
 import { DreamCrystal } from "./DreamCrystal";
 
 export interface DreamCrystalState {
@@ -16,12 +16,15 @@ export class DreamCrystalManager {
   private totalCrystals = 0;
   private onAllCrystalsCollected: Observable<void> = new Observable();
   private onCrystalCollectedObservable: Observable<void> = new Observable();
+  private glowLayer: GlowLayer;
 
   constructor(scene: Scene, assetContainer: AssetContainer | undefined, shadowGenerator: CascadedShadowGenerator, playerMesh: Mesh) {
     this.scene = scene;
     this.assetContainer = assetContainer;
     this.shadowGenerator = shadowGenerator;
     this.playerMesh = playerMesh;
+    this.glowLayer = new GlowLayer("crystalGlow", scene);
+    this.glowLayer.intensity = 0.7; // Adjust glow strength
   }
 
   public initialize(positions: Vector3[], collectedStates: boolean[] = []): void {
@@ -39,6 +42,7 @@ export class DreamCrystalManager {
           this.assetContainer,
           this.shadowGenerator,
           this.playerMesh,
+          this.glowLayer,
           position,
           new Vector3(0, 0, 0),
           new Vector3(0.2, 0.2, 0.2)
@@ -47,6 +51,7 @@ export class DreamCrystalManager {
         this.dreamCrystals.push(crystal);
         if (collectedStates[i]) {
           crystal.getParentMesh().setEnabled(false);
+          crystal.getCrystalMesh().isVisible = false;
           this.collectedCrystals++;
         }
       } else {
@@ -88,5 +93,6 @@ export class DreamCrystalManager {
     this.totalCrystals = 0;
     this.onCrystalCollectedObservable.clear();
     this.onAllCrystalsCollected.clear();
+    this.glowLayer.dispose();
   }
 }

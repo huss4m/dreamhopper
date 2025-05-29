@@ -201,6 +201,7 @@ export class Enemy implements Hoverable, Targettable {
 
   public setTargetted(isTargetted: boolean): void {
     this.isTargetted = isTargetted;
+  
     if (this.enemyMesh) {
       this.enemyMesh.refreshBoundingInfo();
       const boundingBox = this.enemyMesh.getBoundingInfo().boundingBox;
@@ -209,21 +210,16 @@ export class Enemy implements Hoverable, Targettable {
         boundingBox.minimumWorld.y + 0.05,
         this.enemyMesh.position.z
       );
-
-      console.log(`Enemy ${this.id} position:`, this.enemyMesh.position);
-      console.log(`Enemy ${this.id} feet position:`, feetPosition);
-      console.log(`Enemy ${this.id} bounding box min:`, boundingBox.minimumWorld);
-      console.log(`Enemy ${this.id} bounding box max:`, boundingBox.maximumWorld);
-
+  
       if (isTargetted) {
-        console.log(`Adding target circle to Enemy ${this.id} at`, feetPosition);
+        // Create target circle
         this.targetCircle = MeshBuilder.CreateDisc(`targetCircle_${this.id}`, {
           radius: 0.5,
           tessellation: 32,
         }, this.scene);
         this.targetCircle.position = feetPosition;
         this.targetCircle.rotation.x = Math.PI / 2;
-
+  
         const textureSize = 512;
         const dynamicTexture = new DynamicTexture(`targetCircleTex_${this.id}`, textureSize, this.scene, true);
         const ctx = dynamicTexture.getContext();
@@ -238,7 +234,7 @@ export class Enemy implements Hoverable, Targettable {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, textureSize, textureSize);
         dynamicTexture.update();
-
+  
         const circleMaterial = new StandardMaterial(`targetCircleMat_${this.id}`, this.scene);
         circleMaterial.diffuseTexture = dynamicTexture;
         circleMaterial.opacityTexture = dynamicTexture;
@@ -246,9 +242,9 @@ export class Enemy implements Hoverable, Targettable {
         this.targetCircle.material = circleMaterial;
         this.targetCircle.isPickable = false;
         this.targetCircle.alwaysSelectAsActiveMesh = true;
-
+  
         const observer = this.scene.onBeforeRenderObservable.add(() => {
-          if (this.targetCircle && this.enemyMesh) {
+          if (this.targetCircle && this.enemyMesh && !this.enemyMesh.isDisposed()) {
             this.enemyMesh.refreshBoundingInfo();
             const updatedFeetPosition = new Vector3(
               this.enemyMesh.position.x,
@@ -259,16 +255,29 @@ export class Enemy implements Hoverable, Targettable {
             this.targetCircle.rotation.y += 0.01;
           }
         });
-
+  
         this.targetCircle.metadata = { observer };
-
-        console.log(`Adding highlight to Enemy ${this.id} and its children`);
-        this.highlightLayer.addMesh(this.enemyMesh, Color3.Red(), true);
-        this.enemyMesh.getChildMeshes().forEach((mesh) => {
-          this.highlightLayer.addMesh(mesh as Mesh, Color3.Red(), true);
-        });
+  
+        // Safely add highlight
+        try {
+            if (this.highlightLayer && !this.enemyMesh.isDisposed()) {
+              // Guard against disposed or broken internal layers
+              if ((this.highlightLayer as any)._thicknessLayer?._engine?._gl) {
+                this.highlightLayer.addMesh(this.enemyMesh, Color3.Red(), true);
+                this.enemyMesh.getChildMeshes().forEach((mesh) => {
+                  if (!mesh.isDisposed() && mesh instanceof Mesh) {
+                    this.highlightLayer.addMesh(mesh, Color3.Red(), true);
+                  }
+                });
+              } else {
+                console.warn("HighlightLayer internals appear to be disposed or invalid.");
+              }
+            }
+          } catch (err) {
+            console.error("Error while applying highlight to enemy:", err);
+          }
       } else {
-        console.log(`Removing target circle from Enemy ${this.id}`);
+        // Cleanup target circle
         if (this.targetCircle) {
           if (this.targetCircle.metadata?.observer) {
             this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
@@ -276,17 +285,22 @@ export class Enemy implements Hoverable, Targettable {
           this.targetCircle.dispose();
           this.targetCircle = null;
         }
-
-        console.log(`Removing highlight from Enemy ${this.id} and its children`);
-        this.highlightLayer.removeMesh(this.enemyMesh);
-        this.enemyMesh.getChildMeshes().forEach((mesh) => {
-          this.highlightLayer.removeMesh(mesh as Mesh);
-        });
+  
+        // Safely remove highlight
+        if (this.highlightLayer && this.enemyMesh && !this.enemyMesh.isDisposed()) {
+          this.highlightLayer.removeMesh(this.enemyMesh);
+          this.enemyMesh.getChildMeshes().forEach((mesh) => {
+            if (!mesh.isDisposed() && mesh instanceof Mesh) {
+              this.highlightLayer.removeMesh(mesh);
+            }
+          });
+        }
       }
     } else {
       console.error(`Cannot set target circle or highlight: Enemy mesh is null for Enemy ${this.id}`);
     }
   }
+  
 
   public getId(): string {
     return this.id;
@@ -408,6 +422,16 @@ export class Enemy implements Hoverable, Targettable {
         this.hitboxMesh = null;
       }
   
+            // Safely remove highlights before disposing old mesh
+        if (this.enemyMesh && this.highlightLayer && !this.enemyMesh.isDisposed()) {
+            this.highlightLayer.removeMesh(this.enemyMesh);
+            this.enemyMesh.getChildMeshes().forEach((mesh) => {
+                if (!mesh.isDisposed() && mesh instanceof Mesh) {
+                  this.highlightLayer.addMesh(mesh, Color3.Red(), true);
+                }
+              });
+        }
+
       if (this.enemyMesh) {
         this.enemyMesh.dispose();
         this.enemyMesh = null;
@@ -434,6 +458,7 @@ export class Enemy implements Hoverable, Targettable {
       this.enemyMesh.position = currentPosition;
       this.enemyMesh.checkCollisions = true;
       this.enemyMesh.isPickable = true;
+      this.enemyMesh.scaling = new Vector3(3,3,3);
   
       // Configure child meshes
       this.enemyMesh.getChildMeshes().forEach((mesh) => {
@@ -489,9 +514,16 @@ export class Enemy implements Hoverable, Targettable {
       };
       this.hoverHandler.setupHover(hoverable);
   
+
+
       // Reapply targeting state
       if (this.isTargetted) {
-        this.setTargetted(true);
+        if (!this.highlightLayer) {
+            console.error(`HighlightLayer is undefined before reapplying targeting for Enemy ${this.id}`);
+            this.isTargetted = false; // Prevent invalid state
+        } else {
+            this.setTargetted(true);
+            }
       }
   
       // Resume wandering if previously active

@@ -1,4 +1,4 @@
-import { Scene, Mesh, Vector3, CascadedShadowGenerator, AssetContainer, Observable, BoundingBox } from "@babylonjs/core";
+import { Scene, Mesh, Vector3, CascadedShadowGenerator, AssetContainer, Observable, BoundingBox, GlowLayer, PointLight, Color3, StandardMaterial } from "@babylonjs/core";
 import { Item } from "./Item";
 
 export class DreamCrystal extends Item {
@@ -6,6 +6,9 @@ export class DreamCrystal extends Item {
   private onCollected: Observable<DreamCrystal> = new Observable();
   private showBoundingBoxes = false;
   private rotationSpeed = 0.02; // Radians per frame
+  private glowLayer: GlowLayer | null;
+  private pointLight: PointLight;
+  private pulseTime = 0;
 
   constructor(
     itemName: string,
@@ -13,17 +16,45 @@ export class DreamCrystal extends Item {
     assetContainer: AssetContainer | undefined,
     shadowGenerator: CascadedShadowGenerator,
     playerMesh: Mesh,
+    glowLayer: GlowLayer | null,
     positionOffset: Vector3 = Vector3.Zero(),
     rotationOffset: Vector3 = Vector3.Zero(),
     scaling: Vector3 = new Vector3(1.5, 1.5, 1.5)
   ) {
     super(itemName, scene, assetContainer, shadowGenerator, positionOffset, rotationOffset, scaling);
+    
+    this.glowLayer = glowLayer;
+    const crystalMesh = this.getCrystalMesh();
+
+    // Setup material with emissive color for glow
+    let material = crystalMesh.material as StandardMaterial;
+    if (!material || !(material instanceof StandardMaterial)) {
+      material = new StandardMaterial(`${itemName}_material`, scene);
+      crystalMesh.material = material;
+    }
+    material.emissiveColor = new Color3(0.5, 0.25, 0.4); // Stronger pinkish emissive for glow
+    material.diffuseColor = new Color3(1, 0.5, 0.8); // Pinkish diffuse
+    material.specularColor = new Color3(0.1, 0.1, 0.1); // Minimize shininess
+    console.log(`Material for ${itemName}: emissiveColor=${material.emissiveColor.toString()}, diffuseColor=${material.diffuseColor.toString()}`);
+
+  
+    // Setup pinkish point light at mesh center
+    crystalMesh.computeWorldMatrix(true); // Ensure matrix is updated
+    const boundingBox = crystalMesh.getBoundingInfo().boundingBox;
+    const centerWorld = boundingBox.centerWorld; // World-space center of mesh
+    this.pointLight = new PointLight(`${itemName}_light`, centerWorld, scene);
+    this.pointLight.diffuse = new Color3(1, 0.5, 0.8); // Pinkish color
+    this.pointLight.intensity = 50.0; // Balanced intensity
+    this.pointLight.range = 5; // Adjust range
+
+    console.log(`Initialized ${itemName}: Mesh Position=${crystalMesh.position.toString()}, Light Position=${centerWorld.toString()}, BoundingBox Center=${centerWorld.toString()}, Visible=${crystalMesh.isVisible}, Enabled=${crystalMesh.isEnabled()}`);
+    
     this.setupCollision(playerMesh);
     this.setupAnimation();
     this.setupBoundingBoxToggle();
   }
 
-  private getCrystalMesh(): Mesh {
+  public getCrystalMesh(): Mesh {
     const parentMesh = this.getParentMesh();
     const childMeshes = parentMesh.getChildMeshes();
     console.log(`Crystal ${this.getName()} child meshes:`, childMeshes.map(m => m.name));
@@ -55,8 +86,6 @@ export class DreamCrystal extends Item {
 
         const crystalBB = crystalMesh.getBoundingInfo()?.boundingBox;
         const playerBB = playerMesh.getBoundingInfo()?.boundingBox;
-       // console.log("Crystal BB:", crystalBB ? { min: crystalBB.minimum.toString(), max: crystalBB.maximum.toString() } : "null");
-       // console.log("Player BB:", playerBB ? { min: playerBB.minimum.toString(), max: playerBB.maximum.toString() } : "null");
 
         crystalMesh.showBoundingBox = this.showBoundingBoxes;
         playerMesh.showBoundingBox = this.showBoundingBoxes;
@@ -81,13 +110,16 @@ export class DreamCrystal extends Item {
     const parentMesh = this.getParentMesh();
     this.scene.registerBeforeRender(() => {
       if (!this.isCollected && parentMesh.isEnabled()) {
-        // Try rotating child mesh
         crystalMesh.rotation.y += this.rotationSpeed;
-        // Fallback: Rotate parent mesh if child rotation isn't visible
         parentMesh.rotation.y += this.rotationSpeed;
-        //console.log(`Animating ${this.getName()}: Child Y=${crystalMesh.rotation.y.toFixed(2)}, Parent Y=${parentMesh.rotation.y.toFixed(2)}, Child Enabled=${crystalMesh.isEnabled()}, Parent Enabled=${parentMesh.isEnabled()}`);
-
-       
+        // Update light position to stay at mesh center
+        crystalMesh.computeWorldMatrix(true);
+        const centerWorld = crystalMesh.getBoundingInfo().boundingBox.centerWorld;
+        this.pointLight.position = centerWorld;
+        // Pulse the point light
+        this.pulseTime += this.scene.getAnimationRatio() * 0.05;
+        this.pointLight.intensity = 50.0 + Math.sin(this.pulseTime) * 10.0; // Pulse between 40 and 60
+        console.log(`Animating ${this.getName()}: Light Position=${centerWorld.toString()}, Intensity=${this.pointLight.intensity.toFixed(2)}`);
       }
     });
   }
@@ -106,6 +138,8 @@ export class DreamCrystal extends Item {
 
     this.isCollected = true;
     this.getParentMesh().setEnabled(false);
+    this.getCrystalMesh().isVisible = false; // Hide mesh to remove from glow layer
+    this.pointLight.setEnabled(false); // Disable light
     this.onCollected.notifyObservers(this);
     console.log(`${this.getName()} collected!`);
   }
@@ -119,6 +153,8 @@ export class DreamCrystal extends Item {
   }
 
   public dispose(): void {
+    this.getCrystalMesh().isVisible = false; // Ensure mesh is hidden
+    this.pointLight.dispose();
     super.dispose();
   }
 }

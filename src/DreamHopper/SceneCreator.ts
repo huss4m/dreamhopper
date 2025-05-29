@@ -25,9 +25,13 @@ export class SceneCreator {
     this.camera = cameraController.getCamera();
     this.environmentCreator = new EnvironmentCreator(this.scene);
     this.highlightLayer = new HighlightLayer("highlightLayer", this.scene);
-    this.initializePhysics();
-    this.createEnvironment(environmentType);
-    
+    // Initialize physics and environment sequentially
+    this.initScene(environmentType);
+  }
+
+  private async initScene(environmentType: EnvironmentType): Promise<void> {
+    await this.initializePhysics();
+    await this.createEnvironment(environmentType);
   }
 
   public createScene(): Scene {
@@ -45,19 +49,17 @@ export class SceneCreator {
   private async initializePhysics(): Promise<void> {
     try {
       const havokInstance = await HavokPhysics();
-      this.physicsPlugin = new HavokPlugin(undefined, havokInstance);
+      this.physicsPlugin = new HavokPlugin(true, havokInstance); // Enable physics impostor
       this.scene.enablePhysics(new Vector3(0, -9.81, 0), this.physicsPlugin);
       this.scene.collisionsEnabled = false;
+      console.log("Havok physics initialized successfully");
     } catch (error) {
       console.error("Failed to initialize Havok physics:", error);
     }
   }
 
-
   private async createEnvironment(environmentType: EnvironmentType): Promise<void> {
     this.environment = this.environmentCreator.createEnvironment(environmentType);
     await this.environment.create();
   }
-
-  
 }

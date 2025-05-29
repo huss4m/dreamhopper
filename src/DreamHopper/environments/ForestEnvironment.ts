@@ -4,6 +4,7 @@ import {
     Vector3,
     SceneLoader,
     CascadedShadowGenerator,
+    ShadowGenerator,
     PBRMaterial,
     PhysicsAggregate,
     PhysicsShapeType,
@@ -16,21 +17,34 @@ import {
     Color4,
     ParticleSystem,
     CubeTexture,
-    AbstractMesh
+    AbstractMesh,
+    Light,
+    Ray,
+    RayHelper,
+    Quaternion,
+    TransformNode,
+    InstancedMesh,
+    Space,
+    Matrix,
+    RenderTargetTexture
 } from "@babylonjs/core";
 import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
 import { Environment } from "../EnvironmentCreator";
+import { Inspector } from "@babylonjs/inspector";
 
 export class ForestEnvironment implements Environment {
     private light: DirectionalLight | null = null;
     private ambientLight: HemisphericLight | null = null;
     private shadowGenerator: CascadedShadowGenerator | null = null;
+    private treeLight: DirectionalLight | null = null;
+    private treeShadowGenerator: ShadowGenerator | null = null;
     private groundMeshes: Mesh[] = [];
     private rock: Mesh | null = null;
     private mistSystem: ParticleSystem | null = null;
     private skybox: Mesh | null = null;
     private envTexture: CubeTexture | null = null;
     private debugMeshes: Mesh[] = [];
+    private treeColliders: Mesh[] = [];
 
     constructor(private scene: Scene) {}
 
@@ -41,7 +55,9 @@ export class ForestEnvironment implements Environment {
         this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
-       // await this.logModelBones();
+        await this.createForest(800);
+
+        //Inspector.Show(this.scene, {});
     }
 
     private async setupSkybox(): Promise<void> {
@@ -58,22 +74,18 @@ export class ForestEnvironment implements Environment {
 
     private setupLighting(): void {
         this.light = new DirectionalLight("sunLight", new Vector3(-0.5, -1, -0.5).normalize(), this.scene);
-        this.light.intensity = 2.5;
-        this.light.position = new Vector3(50, 100, 50);
+        this.light.intensityMode = Light.INTENSITYMODE_ILLUMINANCE;
+        this.light.intensity = 3;
+        this.light.position = new Vector3(12, 25, 12);
 
-        this.ambientLight = new HemisphericLight("ambientLight", new Vector3(0, 1, 0), this.scene);
-        this.ambientLight.intensity = 0.6;
-        this.ambientLight.diffuse = new Color3(0.8, 0.85, 0.9);
-        this.ambientLight.groundColor = new Color3(0.6, 0.65, 0.7);
-
-        this.shadowGenerator = new CascadedShadowGenerator(2048, this.light);
-        this.shadowGenerator.numCascades = 4;
+        this.shadowGenerator = new CascadedShadowGenerator(1024, this.light);
+        this.shadowGenerator.numCascades = 1;
         this.shadowGenerator.lambda = 0.9;
         this.shadowGenerator.autoCalcDepthBounds = true;
         this.shadowGenerator.shadowMaxZ = 1000;
-        this.shadowGenerator.bias = 0.01;
+        this.shadowGenerator.bias = 0.0005;
         this.shadowGenerator.cascadeBlendPercentage = 0.05;
-        this.shadowGenerator.penumbraDarkness = 0.9;
+        this.shadowGenerator.penumbraDarkness = 1.0;
         this.shadowGenerator.stabilizeCascades = true;
     }
 
@@ -86,15 +98,28 @@ export class ForestEnvironment implements Environment {
 
     private async loadGroundMesh(): Promise<void> {
         try {
-            const result = await SceneLoader.ImportMeshAsync("", "./models/", "grass2.glb", this.scene);
+            const result = await SceneLoader.ImportMeshAsync("", "./models/", "map.glb", this.scene);
             const targetPosition = new Vector3(0, 0, 0);
 
             result.meshes.forEach(mesh => {
                 mesh.position = targetPosition;
                 mesh.receiveShadows = true;
                 mesh.isPickable = true;
-                if (mesh instanceof Mesh) {
+
+                if (mesh instanceof Mesh && mesh.name === "Plane") {
                     this.groundMeshes.push(mesh);
+                    if (this.scene.isPhysicsEnabled()) {
+                        try {
+                            new PhysicsAggregate(
+                                mesh,
+                                PhysicsShapeType.MESH,
+                                { mass: 0, restitution: 0.1, friction: 0.8 },
+                                this.scene
+                            );
+                        } catch (physicsError) {
+                            console.error(`Failed to apply physics to ${mesh.name}:`, physicsError);
+                        }
+                    }
                 }
 
                 const allMeshes = mesh.getChildMeshes();
@@ -105,90 +130,30 @@ export class ForestEnvironment implements Environment {
                     child.isPickable = true;
                     child.isVisible = true;
 
-                    if (child.name.toLowerCase().includes("rock") && child.material) {
+                    if (child.material && child.name.includes("Object_6")) {
                         const mat = child.material as PBRMaterial;
-                        child.receiveShadows = true;
-                        mat.albedoColor = new Color3(1, 1, 1);
-                        mat.reflectivityColor = new Color3(0.7, 0.7, 0.7);
-                        mat.microSurface = 0.9;
-                        mat.roughness = 0.5;
-                        mat.metallic = 0.2;
-                        mat.usePhysicalLightFalloff = true;
-                    }
-
-                    if (child.name.toLowerCase().includes("bark") && child.material) {
-                        const mat = child.material as PBRMaterial;
-                        child.receiveShadows = true;
-                        mat.albedoColor = new Color3(1, 1, 1);
-                        mat.reflectivityColor = new Color3(0.7, 0.7, 0.7);
-                        mat.microSurface = 0.9;
-                        mat.roughness = 0.1;
-                        mat.metallic = 0.5;
-                        mat.usePhysicalLightFalloff = true;
-
-                        if (child instanceof Mesh) {
-                            try {
-                                const barkPhysicsConfig: PhysicsConfig = {
-                                    colliderType: ColliderType.Mesh,
-                                    colliderParams: {},
-                                    physicsProps: {
-                                        mass: 0,
-                                        friction: 0.8,
-                                        restitution: 0.1
-                                    }
-                                };
-                                new PhysicsController(this.scene, child, barkPhysicsConfig);
-                            } catch (physicsError) {
-                                console.error(`Failed to apply physics to ${child.name}:`, physicsError);
-                            }
-                        }
-                    }
-
-                    if (child.name.toLowerCase().includes("cluster") && child.material) {
-                        const mat = child.material as PBRMaterial;
-                        mat.forceDepthWrite = true;
+                        mat.needAlphaTesting();
                         mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
                         mat.alphaCutOff = 0.4;
-                        child.receiveShadows = true;
-                        mat.albedoColor = new Color3(1, 1, 1);
-                        mat.environmentIntensity = 3.6;
-                        mat.reflectivityColor = new Color3(0.7, 0.7, 0.7);
-                        mat.microSurface = 0.9;
-                        mat.usePhysicalLightFalloff = true;
+                    }
+
+                    if (child.material && child.name === "Plane") {
+                        const mat = child.material as PBRMaterial;
+                        mat.roughness = 0.85;
+                        mat.metallic = 0;
+                        if (mat.albedoTexture instanceof Texture) {
+                            mat.albedoTexture.uScale = 0.25;
+                            mat.albedoTexture.vScale = 0.25;
+                        }
                     }
 
                     if (this.shadowGenerator) {
                         this.shadowGenerator.addShadowCaster(child);
                     }
-
-                    if (child.name.toLowerCase().includes("ant01")) {
-                        if (child.material instanceof PBRMaterial) {
-                            child.material.metallic = 0;
-                            child.material.roughness = 3;
-                            child.material.specularIntensity = 0;
-                            child.material.environmentIntensity = 0.2;
-                        } else if (child.material instanceof StandardMaterial) {
-                            child.material.specularColor = new Color3(0, 0, 0);
-                            child.material.specularPower = 0;
-
-                        }
-                        if (child instanceof Mesh) {
-                            try {
-                                new PhysicsAggregate(
-                                    child,
-                                    PhysicsShapeType.MESH,
-                                    { mass: 0, restitution: 0, friction: 5.0 },
-                                    this.scene
-                                );
-                            } catch (physicsError) {
-                                console.error(`Failed to apply physics to ${child.name}:`, physicsError);
-                            }
-                        }
-                    }
                 });
             });
         } catch (error) {
-            console.error("Error loading grass2.glb:", error);
+            console.error("Error loading map.glb:", error);
         }
     }
 
@@ -211,20 +176,22 @@ export class ForestEnvironment implements Environment {
             this.shadowGenerator.addShadowCaster(this.rock);
         }
 
-        const rockPhysicsConfig: PhysicsConfig = {
-            colliderType: ColliderType.Sphere,
-            colliderParams: {},
-            physicsProps: {
-                mass: 1,
-                friction: 0.8,
-                restitution: 0.1
-            }
-        };
+        if (this.scene.isPhysicsEnabled()) {
+            const rockPhysicsConfig: PhysicsConfig = {
+                colliderType: ColliderType.Sphere,
+                colliderParams: {},
+                physicsProps: {
+                    mass: 1,
+                    friction: 0.8,
+                    restitution: 0.1
+                }
+            };
 
-        try {
-            new PhysicsController(this.scene, this.rock, rockPhysicsConfig);
-        } catch (physicsError) {
-            console.error("Failed to apply physics to rock:", physicsError);
+            try {
+                new PhysicsController(this.scene, this.rock, rockPhysicsConfig);
+            } catch (physicsError) {
+                console.error("Failed to apply physics to rock:", physicsError);
+            }
         }
     }
 
@@ -247,8 +214,8 @@ export class ForestEnvironment implements Environment {
         this.mistSystem.maxAngularSpeed = 0.1;
         this.mistSystem.minEmitPower = 0.1;
         this.mistSystem.maxEmitPower = 0.3;
-        this.mistSystem.color1 = new Color4(0.8, 0.85, 0.9, 0.1);
-        this.mistSystem.color2 = new Color4(0.9, 0.92, 0.95, 0.05);
+        this.mistSystem.color1 = new Color4(0.8, 0.85, 0.9, 0.2);
+        this.mistSystem.color2 = new Color4(0.9, 0.92, 0.95, 0.1);
         this.mistSystem.colorDead = new Color4(0.8, 0.85, 0.9, 0.0);
         this.mistSystem.start();
     }
@@ -257,26 +224,7 @@ export class ForestEnvironment implements Environment {
         return this.shadowGenerator;
     }
 
-    private async logModelBones(): Promise<void> {
-        try {
-            const result = await SceneLoader.ImportMeshAsync("", "./models/", "guycrig.glb", this.scene);
-            result.meshes.forEach(mesh => {
-                if (mesh instanceof Mesh) {
-                    this.debugMeshes.push(mesh);
-                }
-                if (mesh.skeleton) {
-                    mesh.skeleton.bones.forEach(bone => {
-                        console.log(`Bone name: ${bone.name}`);
-                    });
-                }
-            });
-        } catch (error) {
-            console.error("Error loading guycrig.glb:", error);
-        }
-    }
-
     public dispose(): void {
-        // Dispose ground meshes and their physics aggregates
         this.groundMeshes.forEach(mesh => {
             if (mesh.physicsBody) {
                 mesh.physicsBody.dispose();
@@ -288,7 +236,6 @@ export class ForestEnvironment implements Environment {
         });
         this.groundMeshes = [];
 
-        // Dispose rock and its physics
         if (this.rock) {
             if (this.rock.physicsBody) {
                 this.rock.physicsBody.dispose();
@@ -300,7 +247,6 @@ export class ForestEnvironment implements Environment {
             this.rock = null;
         }
 
-        // Dispose mist particle system
         if (this.mistSystem) {
             if (this.mistSystem.particleTexture) {
                 this.mistSystem.particleTexture.dispose();
@@ -309,7 +255,6 @@ export class ForestEnvironment implements Environment {
             this.mistSystem = null;
         }
 
-        // Dispose skybox and environment texture
         if (this.skybox) {
             if (this.skybox.material) {
                 this.skybox.material.dispose();
@@ -323,7 +268,6 @@ export class ForestEnvironment implements Environment {
         }
         this.scene.environmentTexture = null;
 
-        // Dispose lights
         if (this.light) {
             this.light.dispose();
             this.light = null;
@@ -333,13 +277,11 @@ export class ForestEnvironment implements Environment {
             this.ambientLight = null;
         }
 
-        // Dispose shadow generator
         if (this.shadowGenerator) {
             this.shadowGenerator.dispose();
             this.shadowGenerator = null;
         }
 
-        // Dispose debug meshes from logModelBones
         this.debugMeshes.forEach(mesh => {
             if (mesh.physicsBody) {
                 mesh.physicsBody.dispose();
@@ -351,7 +293,184 @@ export class ForestEnvironment implements Environment {
         });
         this.debugMeshes = [];
 
-        // Disable fog
+        this.treeColliders.forEach(collider => {
+            if (collider.physicsBody) {
+                collider.physicsBody.dispose();
+            }
+            collider.dispose();
+        });
+        this.treeColliders = [];
+
         this.scene.fogEnabled = false;
+    }
+
+    async getGroundInfo(groundMesh: Mesh): Promise<{ minX: number, maxX: number, minZ: number, maxZ: number }> {
+        await groundMesh.refreshBoundingInfo();
+        const boundingBox = groundMesh.getBoundingInfo().boundingBox;
+        return {
+            minX: -200,
+            maxX: 200,
+            minZ: -200,
+            maxZ: 200
+        };
+    }
+
+    getRandomPointOnGround(bounds: { minX: number, maxX: number, minZ: number, maxZ: number }): Vector3 {
+        const x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+        const z = bounds.minZ + Math.random() * (bounds.maxZ - bounds.minZ);
+        return new Vector3(x, 100, z);
+    }
+
+    async createForest(treeCount: number) {
+        if (this.groundMeshes.length === 0) {
+            console.warn("No ground mesh loaded to create forest");
+            return;
+        }
+        const groundMesh = this.groundMeshes[0];
+
+        // Load the tree meshes
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "maple_tree3.glb", this.scene);
+
+        // Find trunk and leaves meshes
+        const trunkMeshes = result.meshes.filter(mesh => mesh.name.includes("Sakura_Sakura_Mat_0")) as Mesh[];
+        const leavesMeshes = result.meshes.filter(mesh => mesh.name.includes("Sakura_Bark001_2K_JPG_Mat_0")) as Mesh[];
+
+        if (trunkMeshes.length === 0 || leavesMeshes.length === 0) {
+            console.warn("Could not find both trunk and leaves meshes");
+            return;
+        }
+
+        // Configure leaves material for shadow casting
+        leavesMeshes.forEach(mesh => {
+            if (mesh.material instanceof PBRMaterial) {
+                const mat = mesh.material as PBRMaterial;
+                mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+                mat.alphaCutOff = 0.3;
+                mat.useAlphaFromAlbedoTexture = true;
+                mat.needAlphaTesting();
+                mat.forceDepthWrite = true;
+                mat.separateCullingPass = true;
+                mat.backFaceCulling = false;
+                mat.usePhysicalLightFalloff = true;
+            }
+        });
+
+        // Merge trunks and leaves separately for instancing
+        const mergedTrunkMesh = Mesh.MergeMeshes(trunkMeshes, true, true, undefined, false, true);
+        const mergedLeavesMesh = Mesh.MergeMeshes(leavesMeshes, true, true, undefined, false, true);
+
+        if (!mergedTrunkMesh || !mergedLeavesMesh) {
+            console.warn("Failed to merge meshes");
+            return;
+        }
+
+        // Get trunk bounding info to determine collider size
+        mergedTrunkMesh.refreshBoundingInfo();
+        const trunkBoundingBox = mergedTrunkMesh.getBoundingInfo().boundingBox;
+        const trunkHeight = trunkBoundingBox.maximumWorld.y - trunkBoundingBox.minimumWorld.y;
+        const trunkDiameter = 4;
+
+        // Hide original individual meshes
+        trunkMeshes.forEach(m => m.setEnabled(false));
+        leavesMeshes.forEach(m => m.setEnabled(false));
+
+        // Make sure merged meshes receive and cast shadows
+        mergedTrunkMesh.receiveShadows = true;
+        mergedLeavesMesh.receiveShadows = true;
+        if (this.shadowGenerator) {
+            this.shadowGenerator.addShadowCaster(mergedTrunkMesh, true);
+            this.shadowGenerator.addShadowCaster(mergedLeavesMesh, true);
+            this.shadowGenerator.transparencyShadow = true;
+            this.shadowGenerator.blurScale = 2;
+            this.shadowGenerator.blurBoxOffset = 2;
+            this.shadowGenerator.useContactHardeningShadow = true;
+        }
+
+        // Get ground bounds for random positioning
+        const bounds = await this.getGroundInfo(groundMesh);
+
+        // Prepare arrays for thin instance matrices
+        const trunkMatrices: Float32Array = new Float32Array(treeCount * 16);
+        const leavesMatrices: Float32Array = new Float32Array(treeCount * 16);
+
+        for (let i = 0; i < treeCount; i++) {
+            const x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+            const z = bounds.minZ + Math.random() * (bounds.maxZ - bounds.minZ);
+
+            const ray = new Ray(new Vector3(x, 100, z), Vector3.Down(), 200);
+            const hit = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
+
+            let position = new Vector3(x, 1, z);
+            let rotation = Quaternion.Identity();
+
+            if (hit && hit.pickedPoint && hit.getNormal) {
+                position = hit.pickedPoint;
+                const normal = hit.getNormal(true) || Vector3.Up();
+                const up = Vector3.Up();
+                const axis = Vector3.Cross(up, normal);
+                const angle = Math.acos(Vector3.Dot(up, normal));
+                if (axis.lengthSquared() > 0) {
+                    rotation = Quaternion.RotationAxis(axis.normalize(), angle);
+                }
+            } else {
+                console.warn(`No terrain hit for tree ${i} at (${x}, ${z})`);
+            }
+
+            // Add random Y rotation (yaw)
+            const randomYaw = Math.random() * Math.PI * 2;
+            const yawRotation = Quaternion.RotationAxis(Vector3.Up(), randomYaw);
+            rotation = yawRotation.multiply(rotation);
+
+            // Add slight random rotation to leaves for organic shadows
+            const leafRandomTilt = Quaternion.RotationAxis(Vector3.Forward(), (Math.random() - 0.5) * 0.1);
+            const leafRotation = leafRandomTilt.multiply(rotation);
+
+            // Random scale between 0.4 and 0.8
+            const scaleValue = 0.4 + Math.random() * (0.8 - 0.4);
+            const scale = new Vector3(scaleValue, scaleValue, scaleValue);
+
+            // Compose transformation matrices
+            const trunkMatrix = Matrix.Compose(scale, rotation, position);
+            const leavesMatrix = Matrix.Compose(scale, leafRotation, position);
+
+            trunkMatrix.copyToArray(trunkMatrices, i * 16);
+            leavesMatrix.copyToArray(leavesMatrices, i * 16);
+
+            // Create physics collider (cylinder) for the tree trunk
+            if (this.scene.isPhysicsEnabled()) {
+                const collider = MeshBuilder.CreateCylinder(
+                    `treeCollider${i}`,
+                    { height: trunkHeight * scaleValue, diameter: trunkDiameter * scaleValue },
+                    this.scene
+                );
+                collider.position = position;
+                collider.rotationQuaternion = rotation;
+                collider.isVisible = false;
+                collider.isPickable = false;
+
+                try {
+                    new PhysicsAggregate(
+                        collider,
+                        PhysicsShapeType.CYLINDER,
+                        { mass: 0, restitution: 0.1, friction: 0.8 },
+                        this.scene
+                    );
+                    this.treeColliders.push(collider);
+                } catch (physicsError) {
+                    console.error(`Failed to apply physics to tree collider ${i}:`, physicsError);
+                    collider.dispose();
+                }
+            }
+        }
+
+        // Set thin instances on merged meshes
+        mergedTrunkMesh.thinInstanceSetBuffer("matrix", trunkMatrices, 16, true);
+        mergedLeavesMesh.thinInstanceSetBuffer("matrix", leavesMatrices, 16, true);
+
+        // Set thin instances count
+        mergedTrunkMesh.thinInstanceCount = treeCount;
+        mergedLeavesMesh.thinInstanceCount = treeCount;
+
+        console.log(`Created forest with ${treeCount} trees using thin instances and physics colliders.`);
     }
 }

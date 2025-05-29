@@ -67,7 +67,7 @@ export class CharacterAnimationManager {
 
   private triggerFireworks(position: Vector3): void {
     const fireworks = new ParticleSystem("fireworks", 2000, this.scene);
-    fireworks.particleTexture = new Texture("./Flare.png", this.scene);
+    fireworks.particleTexture = new Texture("./star_1.png", this.scene);
     fireworks.emitter = position;
     fireworks.minEmitBox = new Vector3(0, 0, 0);
     fireworks.maxEmitBox = new Vector3(0, 0, 0);
