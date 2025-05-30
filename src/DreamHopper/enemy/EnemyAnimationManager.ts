@@ -10,7 +10,7 @@ export class EnemyAnimationManager {
   private nightmareBoltSpawned = false;
   private lastProgress = 0;
   private loopCount = 0;
-  private lastBoltTime = 0;
+  private lastBoltTime = 0; 
   public onNightmareBoltAnimationState = new Observable<{ isRunning: boolean; progress?: number }>();
 
   constructor(
@@ -163,6 +163,23 @@ export class EnemyAnimationManager {
         } else {
           console.error("EnemyAnimationManager: Player instance not found");
         }
+
+
+        /*
+          // Apply knockback impulse
+          const physicsController = characterController!.physicsController;
+          if (physicsController && physicsController.getPhysicsAggregate()) {
+            const aggregate = physicsController.getPhysicsAggregate()!;
+            const knockbackMagnitude = 2000; // Adjust for desired knockback strength
+            const knockbackDirection = moveDirection.scale(1); // Use bolt's movement direction
+            const impulse = knockbackDirection.scale(knockbackMagnitude);
+            const impulsePoint = hitboxMesh.getAbsolutePosition(); // Apply at hitbox center
+            aggregate.body.applyImpulse(impulse, impulsePoint);
+            console.log(`EnemyAnimationManager: Applied knockback impulse: ${impulse.toString()} at ${impulsePoint.toString()}`);
+          }else {
+            console.error("EnemyAnimationManager: PhysicsController or PhysicsAggregate not found");
+          }*/
+        
         particles.stop();
         particles.dispose();
         sphere.dispose();

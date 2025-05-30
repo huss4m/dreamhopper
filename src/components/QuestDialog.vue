@@ -4,10 +4,10 @@
         <h2>{{ quest ? quest.getTitle() : "No Quest" }}</h2>
         <p>{{ dialogText }}</p>
         <div class="buttons">
-          <button v-if="quest && quest.getState().status === 'available'" @click="$emit('accept')">Accept</button>
-          <button v-if="quest && quest.getState().status === 'available'" @click="$emit('deny')">Deny</button>
-          <button v-if="quest && quest.getState().status === 'completed'" @click="$emit('turnIn')">Turn In</button>
-          <button @click="$emit('close')">Close</button>
+          <button v-if="quest && quest.getState().status === 'available'" @click="$emit('accept')">Accepter</button>
+          <button v-if="quest && quest.getState().status === 'available'" @click="$emit('deny')">Refuser</button>
+          <button v-if="quest && quest.getState().status === 'completed'" @click="$emit('turnIn')">Rendre</button>
+          <button @click="$emit('close')">Quitter</button>
         </div>
       </div>
     </div>

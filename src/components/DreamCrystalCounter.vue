@@ -1,6 +1,6 @@
 <template>
     <div class="crystal-counter">
-      Dream Crystals: {{ collectedCrystals }}/{{ totalCrystals }}
+      Fragments de rêve: {{ collectedCrystals }}/{{ totalCrystals }}
     </div>
   </template>
   

@@ -2,7 +2,7 @@
     <div v-if="isVisible" class="casting-bar">
       <div class="casting-bar-container">
         <div class="casting-bar-progress" :style="{ width: `${progress}%` }"></div>
-        <span class="casting-bar-text">Casting Dreambolt</span>
+        <span class="casting-bar-text">Trait de rêve</span>
       </div>
     </div>
   </template>
