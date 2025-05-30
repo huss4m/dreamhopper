@@ -7,13 +7,14 @@ export interface DreamCrystalState {
 }
 
 export class DreamCrystalManager {
+  
   private scene: Scene;
   private assetContainer: AssetContainer | undefined;
   private shadowGenerator: CascadedShadowGenerator;
   private playerMesh: Mesh;
   private dreamCrystals: DreamCrystal[] = [];
   private collectedCrystals = 0;
-  private totalCrystals = 0;
+  public totalCrystals = 0;
   private onAllCrystalsCollected: Observable<void> = new Observable();
   private onCrystalCollectedObservable: Observable<void> = new Observable();
   private glowLayer: GlowLayer;

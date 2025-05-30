@@ -139,11 +139,11 @@ export class Enemy implements Hoverable, Targettable {
       this.hoverHandler.setupHover(hoverable);
 
       // Debug pointer events
-      this.scene.onPointerObservable.add((info) => {
+      /*this.scene.onPointerObservable.add((info) => {
         if (info.type === 1 && info.pickInfo?.pickedMesh) {
           console.log(`Pointer hit: ${info.pickInfo.pickedMesh.name}`);
         }
-      });
+      });*/
     } catch (error) {
       console.error(`Failed to load character for Enemy ${this.id}`, error);
     }
@@ -227,10 +227,10 @@ export class Enemy implements Hoverable, Targettable {
           textureSize / 2, textureSize / 2, 0,
           textureSize / 2, textureSize / 2, textureSize / 2
         );
-        gradient.addColorStop(0.2, "rgba(0, 255, 0, 0)");
-        gradient.addColorStop(0.8, "rgba(0, 255, 0, 0.4)");
-        gradient.addColorStop(0.95, "rgba(0, 255, 0, 0.8)");
-        gradient.addColorStop(1, "rgba(0, 255, 0, 1)");
+        gradient.addColorStop(0.2, "rgba(255, 0, 0, 0)");
+        gradient.addColorStop(0.8, "rgba(255, 0, 0, 0.4)");
+        gradient.addColorStop(0.95, "rgba(255, 0, 0, 0.8)");
+        gradient.addColorStop(1, "rgba(255, 0, 0, 1)");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, textureSize, textureSize);
         dynamicTexture.update();

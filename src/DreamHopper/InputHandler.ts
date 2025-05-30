@@ -8,6 +8,7 @@ import {
 import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
 import { EnvironmentType } from "./EnvironmentCreator";
+import { NPC } from "./npc/NPC";
 
 interface KeyAction {
   key: string;
@@ -15,7 +16,7 @@ interface KeyAction {
   continuous?: boolean;
   animation?: {
     name: string;
-    loop?: number;
+    loop?: number; // Fixed to number to match AnimationData
     speed?: number;
     endFrame?: number;
   };
@@ -30,7 +31,6 @@ export class InputHandler {
   private wasDreamboltPressed = false;
   private wasSheathePressed = false;
   private wasQuestDialogPressed = false;
-  private game: Game;
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
   private lastDialogTargetId: string | null = null;
@@ -39,10 +39,8 @@ export class InputHandler {
     private scene: Scene,
     private characterController: CharacterController,
     private canvas: HTMLCanvasElement,
-    game: Game
-  ) {
-    this.game = game;
-  }
+    private game: Game
+  ) {}
 
   public async init(): Promise<boolean> {
     try {
@@ -55,7 +53,7 @@ export class InputHandler {
       this.isInitialized = true;
       return true;
     } catch (error) {
-      console.error('Error loading keybindings:', error);
+      console.error('InputHandler: Error loading keybindings:', error);
       this.keyBindings["T"] = { key: "T", action: "openQuestDialog" };
       console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
       return false;
@@ -71,7 +69,7 @@ export class InputHandler {
     this.scene.onKeyboardObservable.add((kbInfo) => {
       const key = kbInfo.event.key.toUpperCase();
       const isDown = kbInfo.type === KeyboardEventTypes.KEYDOWN;
-      console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
+      //console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
       }
@@ -171,8 +169,10 @@ export class InputHandler {
                 this.game.toggleQuestDialog();
                 if (this.game.getShowQuestDialog()) {
                   this.lastDialogTargetId = targetingSystem.getCurrentTarget()?.getId() || null;
+                  console.log(`InputHandler: Dialog opened for NPC ID: ${this.lastDialogTargetId}`);
                 } else {
                   this.lastDialogTargetId = null;
+                  console.log("InputHandler: Dialog closed or not opened");
                 }
               } else {
                 console.log(`InputHandler: Cannot toggle quest dialog; NPC too far (distance: ${distance.toFixed(2)} units)`);
@@ -191,13 +191,13 @@ export class InputHandler {
   public update(): void {
     if (!this.isInitialized) return;
 
-    console.log('InputHandler: keyStates:', this.keyStates);
     const character = this.characterController.getCharacter();
     let isMoving = false;
 
     const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
     const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
 
+    // Check if dialog should close
     if (this.game.getShowQuestDialog() && this.lastDialogTargetId) {
       const targetingSystem = this.game.getTargetingSystem();
       const currentTarget = targetingSystem.getCurrentTarget();
@@ -223,9 +223,10 @@ export class InputHandler {
       }
     }
 
+    // Handle key actions
     if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
       const jumpBinding = this.keyBindings["SPACE"];
-      this.executeAction(jumpBinding);
+      if (jumpBinding) this.executeAction(jumpBinding);
       this.wasSpacePressed = true;
     } else if (!this.keyStates[" "]) {
       this.wasSpacePressed = false;
@@ -233,7 +234,7 @@ export class InputHandler {
 
     if (this.keyStates["1"] && !this.wasDreamboltPressed && !isDreamboltPlaying) {
       const dreamboltBinding = this.keyBindings["1"];
-      this.executeAction(dreamboltBinding);
+      if (dreamboltBinding) this.executeAction(dreamboltBinding);
       this.wasDreamboltPressed = true;
     } else if (!this.keyStates["1"]) {
       this.wasDreamboltPressed = false;
@@ -241,7 +242,7 @@ export class InputHandler {
 
     if (this.keyStates["W"] && !this.wasSheathePressed) {
       const sheatheBinding = this.keyBindings["W"];
-      this.executeAction(sheatheBinding);
+      if (sheatheBinding) this.executeAction(sheatheBinding);
       this.wasSheathePressed = true;
     } else if (!this.keyStates["W"]) {
       this.wasSheathePressed = false;
@@ -250,7 +251,7 @@ export class InputHandler {
     if (this.keyStates["T"] && !this.wasQuestDialogPressed) {
       console.log("InputHandler: T key pressed, executing openQuestDialog");
       const questDialogBinding = this.keyBindings["T"];
-      this.executeAction(questDialogBinding);
+      if (questDialogBinding) this.executeAction(questDialogBinding);
       this.wasQuestDialogPressed = true;
     } else if (!this.keyStates["T"]) {
       this.wasQuestDialogPressed = false;
@@ -263,7 +264,7 @@ export class InputHandler {
       activeActions.push(this.keyBindings["Z_A"]);
     } else {
       for (const binding of Object.values(this.keyBindings)) {
-        if (binding.continuous && binding.key !== "Z+E" && binding.key !== "Z+A" && this.keyStates[binding.key]) {
+        if (binding.continuous && binding.key !== "Z_E" && binding.key !== "Z_A" && this.keyStates[binding.key]) {
           activeActions.push(binding);
         }
       }
@@ -282,7 +283,7 @@ export class InputHandler {
       isMoving = true;
     }
 
-    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !this.characterController.isAnimationPlaying("Dreambolt")) {
+    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !isDreamboltPlaying) {
       this.characterController.playIdleAnimation();
       if (!this.characterController.physicsController?.isJumping) {
         this.characterController.moveForward(0);

@@ -3,16 +3,24 @@
     <canvas ref="canvas"></canvas>
     <CastingBar v-if="animationManager" :animation-manager="animationManager" />
     <DreamCrystalCounter v-if="dreamCrystalManager" :dream-crystal-manager="dreamCrystalManager" />
-    <QuestDialog v-if="showQuestDialog" @accept="handleAccept" @deny="handleDeny" />
+    <QuestDialog
+      :visible="dialogState.visible"
+      :quest="dialogState.quest"
+      @accept="handleAccept"
+      @deny="handleDeny"
+      @close="handleClose"
+      :key="dialogState.questKey" 
+    />
   </main>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from "vue";
+import { defineComponent, ref, onMounted, onUnmounted, reactive, watch } from "vue";
 import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
 import DreamCrystalCounter from "./DreamCrystalCounter.vue";
 import QuestDialog from "./QuestDialog.vue";
+import { Quest } from "@/DreamHopper/npc/Quest";
 
 export default defineComponent({
   name: "DreamHopper",
@@ -21,22 +29,34 @@ export default defineComponent({
     const canvas = ref<HTMLCanvasElement | null>(null);
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
-    const showQuestDialog = ref(false);
     let gameInstance: Game | null = null;
 
+    // Reactive state for dialog
+    const dialogState = reactive({
+      visible: false,
+      quest: null as Quest | null,
+      questKey: 0, // For forcing re-render
+    });
+
     const handleAccept = () => {
-      console.log("Quest accepted!");
-      showQuestDialog.value = false;
+      console.log("DreamHopper: Quest accepted!");
       if (gameInstance) {
-        gameInstance.toggleQuestDialog(); // Sync with Game state
+        gameInstance.handleQuestAccept();
+        dialogState.questKey++; // Update key to force re-render
       }
     };
 
     const handleDeny = () => {
-      console.log("Quest denied!");
-      showQuestDialog.value = false;
+      console.log("DreamHopper: Quest denied!");
       if (gameInstance) {
-        gameInstance.toggleQuestDialog(); // Sync with Game state
+        gameInstance.handleQuestDeny();
+      }
+    };
+
+    const handleClose = () => {
+      console.log("DreamHopper: Quest dialog closed!");
+      if (gameInstance) {
+        gameInstance.handleQuestClose();
       }
     };
 
@@ -47,16 +67,37 @@ export default defineComponent({
         animationManager.value = gameInstance.getAnimationManager();
         dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
 
+        // Initialize dialog state
+        dialogState.visible = gameInstance.getShowQuestDialog();
+        dialogState.quest = gameInstance.getCurrentQuest();
+        console.log(`DreamHopper: Initial dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
+
         // Subscribe to quest dialog toggle events
         gameInstance.getOnQuestDialogToggled().add((isVisible) => {
-          showQuestDialog.value = isVisible;
+          console.log(`DreamHopper: Quest dialog toggled to ${isVisible}`);
+          dialogState.visible = isVisible;
+          dialogState.quest = gameInstance!.getCurrentQuest();
+          dialogState.questKey++; // Update key to force re-render
+          console.log(`DreamHopper: Updated dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
         });
       }
     });
 
+    // Watch quest status changes
+    watch(
+      () => dialogState.quest?.getState().status,
+      (newStatus) => {
+        if (newStatus) {
+          console.log(`DreamHopper: Quest status changed to ${newStatus}`);
+          dialogState.questKey++; // Force re-render
+        }
+      }
+    );
+
     onUnmounted(() => {
       if (gameInstance) {
         gameInstance.dispose();
+        gameInstance = null;
       }
     });
 
@@ -64,9 +105,10 @@ export default defineComponent({
       canvas,
       animationManager,
       dreamCrystalManager,
-      showQuestDialog,
+      dialogState,
       handleAccept,
       handleDeny,
+      handleClose,
     };
   },
 });

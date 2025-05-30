@@ -2,10 +2,10 @@
 {
     "id": "quest1",
     "title": "The Lost Crystals",
-    "description": "Adventurer, the Hollow Caverns hold 3 Dream Crystals. Retrieve them to restore light to our village!",
-    "inProgressText": "You’ve accepted the quest. Collect 3 Dream Crystals from the Hollow Caverns.",
-    "completedText": "Incredible! You’ve collected the 3 Dream Crystals and saved our village!",
-    "requiredCrystals": 3
+    "description": "Adventurer, the Hollow Caverns hold 2 Dream Crystals. Retrieve them to restore light to our village!",
+    "inProgressText": "You’ve accepted the quest. Collect 2 Dream Crystals from the Hollow Caverns.",
+    "completedText": "Incredible! You’ve collected the 2 Dream Crystals and saved our village!",
+    "requiredCrystals": 2
   },
   {
     "id": "quest2",

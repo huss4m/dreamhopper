@@ -51,7 +51,7 @@ export class CharacterController {
     this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem, gameManager);
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
-    this.player = new Player(scene, assetManager, shadowGenerator);
+    this.player = new Player(scene, assetManager, shadowGenerator, this.gameManager.game);
     this.initialize();
   }
 

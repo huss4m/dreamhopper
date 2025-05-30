@@ -5,13 +5,15 @@ import { Enemy } from "./enemy/Enemy";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { TargetingSystem } from "./TargetingSystem";
 import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
-import { Game } from "./Game"; // Import Game
+import { Game } from "./Game";
+import { Quest, QuestState } from "./npc/Quest";
 
 export class GameManager {
   private npcs: NPC[] = [];
   private enemies: Enemy[] = [];
   private dreamCrystalManager: DreamCrystalManager | null = null;
   private characterMesh: Mesh | null = null;
+  private quests: Quest[] = [];
 
   constructor(
     private scene: Scene,
@@ -19,7 +21,7 @@ export class GameManager {
     private shadowGenerator: CascadedShadowGenerator,
     private highlightLayer: HighlightLayer,
     private targetingSystem: TargetingSystem,
-    private game: Game // Add Game instance
+    public game: Game
   ) {}
 
   public setCharacterMesh(mesh: Mesh): void {
@@ -27,15 +29,27 @@ export class GameManager {
     this.characterMesh = mesh;
   }
 
-  async initializeNPCs(savedPositions?: Vector3[]): Promise<NPC[]> {
+  public async initializeNPCs(savedPositions?: Vector3[], savedQuestStates?: QuestState[]): Promise<NPC[]> {
     const configData = await this.assetManager.loadJson("./game_config.json");
     const npcPositions = configData.npcs?.map((pos: { x: number, y: number, z: number }) => 
       new Vector3(pos.x, pos.y, pos.z)) || [];
 
+    const questData = await this.assetManager.loadJson("./quests/quests.json");
+    console.log("GameManager: Loaded quests:", questData);
+    this.quests = questData.map((q: any) => new Quest(
+      q.id,
+      q.title,
+      q.description,
+      q.inProgressText,
+      q.completedText,
+      q.requiredCrystals
+    ));
+
     const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;
 
-    this.npcs = positionsToUse.map((position: Vector3, index: number) => 
-      new NPC(
+    this.npcs = positionsToUse.map((position: Vector3, index: number) => {
+      const quest = this.quests[index] || null;
+      const npc = new NPC(
         this.scene,
         "npc",
         this.assetManager,
@@ -43,9 +57,18 @@ export class GameManager {
         position,
         this.highlightLayer,
         this.targetingSystem,
-        this.game // Pass Game instance
-      )
-    );
+        this.game,
+        quest
+      );
+      console.log(`GameManager: NPC ${index} assigned quest ${quest?.getId() || 'none'}`);
+      if (quest && savedQuestStates) {
+        const state = savedQuestStates.find(s => s.id === quest.getId());
+        if (state) {
+          quest.setState(state);
+        }
+      }
+      return npc;
+    });
 
     this.npcs.forEach((npc, index) => {
       const npcMesh = npc.getMesh();
@@ -179,6 +202,12 @@ export class GameManager {
     return this.dreamCrystalManager.getState();
   }
 
+  getQuestStates(): QuestState[] {
+    return this.npcs
+      .map(npc => npc.getQuest()?.getState())
+      .filter((state): state is QuestState => state !== null);
+  }
+
   dispose(): void {
     this.npcs.forEach(npc => npc.dispose());
     this.enemies.forEach(enemy => enemy.dispose());
@@ -187,5 +216,6 @@ export class GameManager {
     this.enemies = [];
     this.dreamCrystalManager = null;
     this.characterMesh = null;
+    this.quests = [];
   }
 }

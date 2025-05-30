@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Mesh, Observable } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable } from "@babylonjs/core";
 import { SceneCreator } from "./SceneCreator";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -11,10 +11,13 @@ import { SoundManager } from "./SoundManager";
 import { DreamHopperLoadingScreen } from "./DreamHopperLoadingScreen";
 import { Targettable } from "./Targettable";
 import { CharacterAnimationManager } from "./player/CharacterAnimationManager";
+import { Quest, QuestState } from "./npc/Quest";
+import { NPC } from "./npc/NPC";
 
 export interface SceneState {
   npcPositions?: Vector3[];
   enemyPositions?: Vector3[];
+  questStates?: QuestState[];
 }
 
 export class Game {
@@ -35,6 +38,7 @@ export class Game {
   private loadingScreen: DreamHopperLoadingScreen;
   private showQuestDialog = false;
   private onQuestDialogToggled = new Observable<boolean>();
+  private currentQuest: Quest | null = null;
 
   constructor(private canvas: HTMLCanvasElement, environmentType: EnvironmentType = EnvironmentType.FOREST) {
     this.engine = new Engine(canvas, true);
@@ -51,8 +55,8 @@ export class Game {
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene());
 
     this.sceneStates = [
-      { npcPositions: [], enemyPositions: [] },
-      { npcPositions: [], enemyPositions: [] },
+      { npcPositions: [], enemyPositions: [], questStates: [] },
+      { npcPositions: [], enemyPositions: [], questStates: [] },
     ];
 
     this.activeScene = this.scenes[0];
@@ -79,7 +83,7 @@ export class Game {
       this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
       this.gameManager.getDreamCrystalManager().getOnAllCrystalsCollected().add(() => {
-        console.log("All DreamCrystals collected! You win!");
+        console.log("Game: All DreamCrystals collected! You win!");
       });
 
       this.engine.runRenderLoop(() => {
@@ -129,13 +133,15 @@ export class Game {
         shadowGenerator,
         this.highlightLayer,
         this.targetingSystem,
-        this // Pass Game instance
+        this
       );
 
       const savedState = this.sceneStates[sceneIndex];
-      await this.gameManager.initializeNPCs(savedState.npcPositions);
+      await this.gameManager.initializeNPCs(savedState.npcPositions, savedState.questStates);
+      console.log("Game: NPCs initialized");
       onStepComplete();
       await this.gameManager.initializeEnemies(savedState.enemyPositions);
+      console.log("Game: Enemies initialized");
       onStepComplete();
 
       this.characterController = new CharacterController(
@@ -145,7 +151,8 @@ export class Game {
         shadowGenerator,
         this.assetManager,
         this.targetingSystem,
-        this.gameManager
+        this.gameManager,
+        
       );
 
       const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
@@ -166,18 +173,29 @@ export class Game {
       }
 
       await this.gameManager.initializeDreamCrystals();
+      console.log("Game: DreamCrystals initialized");
       onStepComplete();
 
       const player = this.characterController.getPlayer();
       const crystalState = this.gameManager.getDreamCrystalManager().getState();
-      player.setTotalCrystals(crystalState.positions.length);
+      const totalCrystals = this.gameManager.getDreamCrystalManager().totalCrystals;
+      console.log(`Game: Crystal state:`, crystalState.collected, `positions:`, crystalState.positions.length, `totalCrystals:`, totalCrystals);
+      player.setTotalCrystals(totalCrystals);
       player.resetCrystalCount();
       crystalState.collected.forEach((collected, i) => {
-        if (collected) player.incrementCrystalCount();
+        if (collected) {
+          player.incrementCrystalCount();
+          console.log(`Game: Crystal ${i} collected during initialization`);
+        }
       });
-      this.gameManager.getDreamCrystalManager().getOnAllCrystalsCollected().add(() => {
+      this.gameManager.getDreamCrystalManager().getOnCrystalCollectedObservable().add((index) => {
         player.incrementCrystalCount();
+        console.log(`Game: Crystal ${index} collected, player crystals: ${player.getCollectedCrystals()}/${player.getTotalCrystals()}`);
       });
+
+      if (savedState.questStates) {
+        player.setQuestState(savedState.questStates);
+      }
 
       this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
       const initSuccess = await this.inputHandler.init();
@@ -218,6 +236,7 @@ export class Game {
           this.sceneStates[currentIndex] = {
             npcPositions: this.gameManager.getNPCPositions(),
             enemyPositions: this.gameManager.getEnemyPositions(),
+            questStates: this.gameManager.getQuestStates()
           };
         }
       }
@@ -227,6 +246,7 @@ export class Game {
       this.targetingSystem?.dispose();
       this.assetManager?.dispose();
       this.showQuestDialog = false;
+      this.currentQuest = null;
       this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
 
       this.engine.displayLoadingUI();
@@ -289,14 +309,54 @@ export class Game {
     return this.gameManager.getDreamCrystalManager();
   }
 
+  public getGameManager(): GameManager {
+    return this.gameManager;
+  }
+
   public toggleQuestDialog(): void {
-    this.showQuestDialog = !this.showQuestDialog;
-    console.log(`Game: Quest dialog toggled to ${this.showQuestDialog}`);
-    this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
+    const target = this.getAnimationTarget();
+    if (target instanceof NPC) {
+      const npcQuest = target.getQuest();
+      if (npcQuest && this.characterController) {
+        const player = this.characterController.getPlayer();
+        const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests()].find(q => q.getId() === npcQuest.getId());
+        this.currentQuest = playerQuest || npcQuest; // Prefer playerQuest
+        console.log(`Game: Set currentQuest to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}, playerQuest: ${playerQuest ? playerQuest.getState().status : 'none'}, npcQuest: ${npcQuest.getState().status}`);
+        this.showQuestDialog = !this.showQuestDialog;
+        console.log(`Game: Quest dialog toggled to ${this.showQuestDialog} for quest ${this.currentQuest.getId()}`);
+        this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
+        if (this.showQuestDialog) {
+          target.rotateToFacePlayer();
+        }
+      } else {
+        console.log("Game: Cannot toggle quest dialog; NPC has no quest");
+        this.showQuestDialog = false;
+        this.currentQuest = null;
+        this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
+      }
+    } else {
+      console.log("Game: Cannot toggle quest dialog; target is not an NPC");
+      this.showQuestDialog = false;
+      this.currentQuest = null;
+      this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
+    }
   }
 
   public getShowQuestDialog(): boolean {
     return this.showQuestDialog;
+  }
+
+  public getCurrentQuest(): Quest | null {
+    if (this.currentQuest && this.characterController) {
+      const player = this.characterController.getPlayer();
+      const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests()].find(q => q.getId() === this.currentQuest!.getId());
+      if (playerQuest) {
+        this.currentQuest = playerQuest;
+        console.log(`Game: getCurrentQuest updated to playerQuest ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
+      }
+    }
+    console.log(`Game: getCurrentQuest returning ${this.currentQuest?.getId() ?? "null"}, status: ${this.currentQuest?.getState().status ?? "none"}`);
+    return this.currentQuest;
   }
 
   public getOnQuestDialogToggled(): Observable<boolean> {
@@ -305,6 +365,37 @@ export class Game {
 
   public getTargetingSystem(): TargetingSystem {
     return this.targetingSystem;
+  }
+
+  public handleQuestAccept(): void {
+    if (this.currentQuest && this.characterController) {
+      const player = this.characterController.getPlayer();
+      player.acceptQuest(this.currentQuest);
+      this.gameManager.getNPCs().forEach(npc => {
+        if (npc.getQuest()?.getId() === this.currentQuest!.getId()) {
+          const playerQuest = player.getActiveQuests().find(q => q.getId() === this.currentQuest!.getId());
+          if (playerQuest) {
+            npc.setQuest(playerQuest);
+            console.log(`Game: Updated NPC quest ${this.currentQuest!.getId()} to status: ${playerQuest.getState().status}`);
+          }
+          npc.updateQuestMarker();
+        }
+      });
+      this.currentQuest = player.getActiveQuests().find(q => q.getId() === this.currentQuest!.getId()) || this.currentQuest;
+      console.log(`Game: Updated currentQuest after accept to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
+      this.showQuestDialog = false;
+      this.onQuestDialogToggled.notifyObservers(false);
+    }
+  }
+
+  public handleQuestDeny(): void {
+    this.showQuestDialog = false;
+    this.onQuestDialogToggled.notifyObservers(false);
+  }
+
+  public handleQuestClose(): void {
+    this.showQuestDialog = false;
+    this.onQuestDialogToggled.notifyObservers(false);
   }
 
   public waitForInitialization(): Promise<void> {
