@@ -6,6 +6,7 @@
         <div class="buttons">
           <button v-if="quest && quest.getState().status === 'available'" @click="$emit('accept')">Accept</button>
           <button v-if="quest && quest.getState().status === 'available'" @click="$emit('deny')">Deny</button>
+          <button v-if="quest && quest.getState().status === 'completed'" @click="$emit('turnIn')">Turn In</button>
           <button @click="$emit('close')">Close</button>
         </div>
       </div>
@@ -29,7 +30,7 @@
         default: null,
       },
     },
-    emits: ["accept", "deny", "close"],
+    emits: ["accept", "deny", "close", "turnIn"], // Added turnIn
     setup(props) {
       console.log("QuestDialog: Mounted with props:", {
         visible: props.visible,
@@ -62,9 +63,12 @@
         } else if (state.status === "inProgress") {
           text = props.quest.getInProgressText();
           console.log(`QuestDialog: Using inProgressText: ${text}`);
-        } else {
+        } else if (state.status === "completed") {
           text = props.quest.getCompletedText();
           console.log(`QuestDialog: Using completedText: ${text}`);
+        } else if (state.status === "turnedIn") {
+          text = props.quest.getTurnedInText() || "Thank you for completing the quest!";
+          console.log(`QuestDialog: Using turnedInText: ${text}`);
         }
         return text;
       });

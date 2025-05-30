@@ -1,6 +1,6 @@
 export interface QuestState {
     id: string;
-    status: "available" | "inProgress" | "completed";
+    status: "available" | "inProgress" | "completed" | "turnedIn"; // Added turnedIn
     collectedCrystals: number;
     isCompleted?: boolean;
   }
@@ -14,7 +14,8 @@ export interface QuestState {
       public description: string,
       public inProgressText: string,
       public completedText: string,
-      public requiredCrystals: number
+      public requiredCrystals: number,
+      public turnedInText: string // Added turnedInText
     ) {
       this.state = {
         id: this.id,
@@ -44,6 +45,10 @@ export interface QuestState {
       return this.completedText || "Quest completed! Thank you for collecting the crystals.";
     }
   
+    public getTurnedInText(): string { // Added getTurnedInText
+      return this.turnedInText || "Thank you for completing the quest!";
+    }
+  
     public getRequiredCrystals(): number {
       return this.requiredCrystals;
     }
@@ -55,7 +60,7 @@ export interface QuestState {
     public setState(state: QuestState): void {
       console.log(`Quest ${this.id}: Setting state to`, state);
       this.state = { ...state };
-      if (this.state.status === "completed") {
+      if (this.state.status === "completed" || this.state.status === "turnedIn") { // Updated to include turnedIn
         this.state.isCompleted = true;
       }
     }
@@ -73,6 +78,14 @@ export interface QuestState {
       console.log(`Quest ${this.id}: Completed`);
     }
   
+    public turnIn(): void { // Added turnIn
+      if (this.state.status === "completed") {
+        this.state.status = "turnedIn";
+        this.state.isCompleted = true;
+        console.log(`Quest ${this.id}: Turned in`);
+      }
+    }
+  
     public updateProgress(collectedCrystals: number): void {
       if (this.state.status === "inProgress") {
         this.state.collectedCrystals = collectedCrystals;
@@ -84,7 +97,8 @@ export interface QuestState {
     }
   
     public isCompletedStatus(): boolean {
-      return this.state.status === "completed" || (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0);
+      return this.state.status === "completed" || this.state.status === "turnedIn" || // Updated to include turnedIn
+             (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0);
     }
   
     public isTakenStatus(): boolean {

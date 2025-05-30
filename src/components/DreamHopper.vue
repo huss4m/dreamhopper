@@ -9,6 +9,7 @@
       @accept="handleAccept"
       @deny="handleDeny"
       @close="handleClose"
+      @turnIn="handleTurnIn" 
       :key="dialogState.questKey" 
     />
   </main>
@@ -57,6 +58,14 @@ export default defineComponent({
       console.log("DreamHopper: Quest dialog closed!");
       if (gameInstance) {
         gameInstance.handleQuestClose();
+      }
+    };
+
+    const handleTurnIn = () => { // Added handleTurnIn
+      console.log("DreamHopper: Quest turned in!");
+      if (gameInstance) {
+        gameInstance.handleQuestTurnIn();
+        dialogState.questKey++; // Update key to force re-render
       }
     };
 
@@ -109,6 +118,7 @@ export default defineComponent({
       handleAccept,
       handleDeny,
       handleClose,
+      handleTurnIn, // Added to return
     };
   },
 });

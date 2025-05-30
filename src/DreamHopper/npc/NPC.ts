@@ -294,7 +294,7 @@ export class NPC implements Hoverable, Targettable {
     console.log(`NPC ${this.id}: Updating quest marker, quest=${this.quest.getId()}, status=${state.status}`);
     if (state.status === "completed") {
       this.setQuestMarker("completed");
-    } else if (state.status === "inProgress") {
+    } else if (state.status === "inProgress" || state.status === "turnedIn") { // Added turnedIn
       this.setQuestMarker(null);
     } else {
       this.setQuestMarker("available");

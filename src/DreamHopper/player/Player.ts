@@ -10,6 +10,7 @@ export class Player {
   private totalCrystals = 0;
   private activeQuests: Quest[] = [];
   private completedQuests: Quest[] = [];
+  private turnedInQuests: Quest[] = []; // Added turnedInQuests
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
@@ -101,11 +102,12 @@ export class Player {
 
   public acceptQuest(quest: Quest): void {
     if (!this.activeQuests.some(q => q.getId() === quest.getId()) && 
-        !this.completedQuests.some(q => q.getId() === quest.getId())) {
+        !this.completedQuests.some(q => q.getId() === quest.getId()) &&
+        !this.turnedInQuests.some(q => q.getId() === quest.getId())) { // Added turnedInQuests check
       quest.accept();
       this.activeQuests.push(quest);
       console.log(`Player: Accepted quest ${quest.getId()}`);
-      this.updateNPCQuest(quest); // Sync NPC on accept
+      this.updateNPCQuest(quest);
     }
   }
 
@@ -127,12 +129,26 @@ export class Player {
     }
   }
 
+  public turnInQuest(quest: Quest): void { // Added turnInQuest
+    if (quest.getState().status === "completed") {
+      quest.turnIn();
+      this.completedQuests = this.completedQuests.filter(q => q.getId() !== quest.getId());
+      this.turnedInQuests.push(quest);
+      console.log(`Player: Turned in quest ${quest.getId()}`);
+      this.updateNPCQuest(quest);
+    }
+  }
+
   public getActiveQuests(): Quest[] {
     return [...this.activeQuests];
   }
 
   public getCompletedQuests(): Quest[] {
     return [...this.completedQuests];
+  }
+
+  public getTurnedInQuests(): Quest[] { // Added getTurnedInQuests
+    return [...this.turnedInQuests];
   }
 
   private checkQuestCompletion(): void {
@@ -181,22 +197,24 @@ export class Player {
   public getQuestState(): QuestState[] {
     return [
       ...this.activeQuests.map(q => q.getState()),
-      ...this.completedQuests.map(q => q.getState())
+      ...this.completedQuests.map(q => q.getState()),
+      ...this.turnedInQuests.map(q => q.getState()) // Added turnedInQuests
     ];
   }
 
   public setQuestState(states: QuestState[]): void {
     states.forEach(state => {
-      const quest = [...this.activeQuests, ...this.completedQuests].find(q => q.getId() === state.id);
+      const quest = [...this.activeQuests, ...this.completedQuests, ...this.turnedInQuests].find(q => q.getId() === state.id); // Added turnedInQuests
       if (quest) {
         quest.setState(state);
         if (state.status === "completed" && this.activeQuests.includes(quest)) {
-          this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
+          this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.id);
           this.completedQuests.push(quest);
           this.updateNPCQuest(quest);
-        } else if (state.status !== "completed" && this.completedQuests.includes(quest)) {
-          this.completedQuests = this.completedQuests.filter(q => q.getId() !== quest.getId());
-          this.activeQuests.push(quest);
+        } else if (state.status === "turnedIn" && this.completedQuests.includes(quest)) { // Added turnedIn handling
+          this.completedQuests = this.completedQuests.filter(q => q.getId() !== quest.id);
+          this.turnedInQuests.push(quest);
+          this.updateNPCQuest(quest);
         }
       }
     });

@@ -398,6 +398,27 @@ export class Game {
     this.onQuestDialogToggled.notifyObservers(false);
   }
 
+  public handleQuestTurnIn(): void {
+    if (this.currentQuest && this.characterController) {
+      const player = this.characterController.getPlayer();
+      player.turnInQuest(this.currentQuest);
+      this.gameManager.getNPCs().forEach(npc => {
+        if (npc.getQuest()?.getId() === this.currentQuest!.getId()) {
+          const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === this.currentQuest!.getId());
+          if (playerQuest) {
+            npc.setQuest(playerQuest);
+            console.log(`Game: Updated NPC quest ${this.currentQuest!.getId()} to status: ${playerQuest.getState().status}`);
+            npc.updateQuestMarker();
+          }
+        }
+      });
+      this.currentQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === this.currentQuest!.getId()) || this.currentQuest;
+      console.log(`Game: Updated currentQuest after turn-in to ${this.currentQuest!.getId()}, status: ${this.currentQuest!.getState().status}`);
+      this.showQuestDialog = false;
+      this.onQuestDialogToggled.notifyObservers(false);
+    }
+  }
+
   public waitForInitialization(): Promise<void> {
     return this.initializationPromise;
   }

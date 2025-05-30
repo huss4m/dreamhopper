@@ -42,7 +42,8 @@ export class GameManager {
       q.description,
       q.inProgressText,
       q.completedText,
-      q.requiredCrystals
+      q.requiredCrystals,
+      q.turnedInText || "Thank you for completing the quest!" // Added turnedInText
     ));
 
     const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;
