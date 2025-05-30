@@ -182,6 +182,36 @@ export class EnemyAnimationManager {
         
         particles.stop();
         particles.dispose();
+
+
+
+        
+
+// Create a dark purple arcane-style explosion effect
+const explosion = new ParticleSystem("nightmareExplosion", 100, this.scene);
+explosion.particleTexture = new Texture("./Flare.png", this.scene);
+explosion.emitter = sphere.position.clone();
+explosion.minEmitBox = new Vector3(-0.2, -0.2, -0.2);
+explosion.maxEmitBox = new Vector3(0.2, 0.2, 0.2);
+explosion.color1 = new Color4(0.4, 0.0, 0.6, 1.0); // deep violet
+explosion.color2 = new Color4(0.6, 0.1, 0.8, 0.8); // brighter purple
+explosion.colorDead = new Color4(0.2, 0.0, 0.3, 0.0); // fades to transparent dark
+explosion.minSize = 0.4;
+explosion.maxSize = 1.2;
+explosion.minLifeTime = 0.2;
+explosion.maxLifeTime = 0.5;
+explosion.emitRate = 1000;
+explosion.blendMode = ParticleSystem.BLENDMODE_ADD;
+explosion.gravity = Vector3.Zero();
+explosion.direction1 = new Vector3(-1, -1, -1);
+explosion.direction2 = new Vector3(1, 1, 1);
+explosion.minAngularSpeed = 0;
+explosion.maxAngularSpeed = Math.PI;
+explosion.targetStopDuration = 0.1;
+explosion.disposeOnStop = true;
+explosion.manualEmitCount = 50; // Quick burst
+explosion.start();
+
         sphere.dispose();
         this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
         return;
