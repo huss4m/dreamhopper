@@ -172,7 +172,7 @@ export class EnemyPhysicsController {
       try {
         const y = physicsAggregate.body.getLinearVelocity().y;
         physicsAggregate.body.setLinearVelocity(new Vector3(0, y, 0));
-        console.log("EnemyPhysicsController: All movement stopped");
+        // console.log("EnemyPhysicsController: All movement stopped");
       } catch (e) {
         console.warn("stopAllMovement: failed to reset velocity");
       }

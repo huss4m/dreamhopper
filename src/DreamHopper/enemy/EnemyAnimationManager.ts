@@ -21,7 +21,7 @@ export class EnemyAnimationManager {
 
   public initialize(animationGroups: AnimationGroup[]): void {
     this.animationGroups = animationGroups;
-    console.log(`Initializing EnemyAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+    // console.log(`Initializing EnemyAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
     const idleAnim = this.getAnimationByName("Idle");
     if (idleAnim) {
@@ -37,10 +37,10 @@ export class EnemyAnimationManager {
   private setupNightmareBoltDetection(): void {
     const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
     if (nightmareBoltAnim) {
-      console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
+      // console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
       nightmareBoltAnim.onAnimationGroupEndObservable.add(() => {
         this.onNightmareBoltAnimationState.notifyObservers({ isRunning: false });
-        console.log(`EnemyAnimationManager: NightmareBolt animation ended, loopCount=${this.loopCount}`);
+        // console.log(`EnemyAnimationManager: NightmareBolt animation ended, loopCount=${this.loopCount}`);
       });
     } else {
       console.warn("EnemyAnimationManager: NightmareBolt animation not found");
@@ -49,7 +49,7 @@ export class EnemyAnimationManager {
 
   private spawnNightmareBoltSphere(): void {
     if (Date.now() - this.lastBoltTime < 2000) {
-      console.log("EnemyAnimationManager: NightmareBolt on cooldown");
+      // console.log("EnemyAnimationManager: NightmareBolt on cooldown");
       return;
     }
     this.lastBoltTime = Date.now();
@@ -77,9 +77,9 @@ export class EnemyAnimationManager {
       console.error("EnemyAnimationManager: Player hitbox mesh not found");
       return;
     }
-    console.log(`EnemyAnimationManager: Found player hitbox: ${hitboxMesh.name}, position: ${hitboxMesh.getAbsolutePosition().toString()}`);
+    // console.log(`EnemyAnimationManager: Found player hitbox: ${hitboxMesh.name}, position: ${hitboxMesh.getAbsolutePosition().toString()}`);
 
-    console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
+    // console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
 
     const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("nightmareBoltMat", this.scene);
@@ -113,7 +113,7 @@ export class EnemyAnimationManager {
     sphere.position = startPos;
     sphere.checkCollisions = true;
 
-    console.log(`EnemyAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
+    // console.log(`EnemyAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
 
     // Use hitbox for targeting
     hitboxMesh.computeWorldMatrix(true);
@@ -123,20 +123,20 @@ export class EnemyAnimationManager {
     const hitboxPos = hitboxMesh.getAbsolutePosition();
     const adjustedPlayerPos = new Vector3(hitboxPos.x, hitboxCenterY, hitboxPos.z);
 
-    console.log(`EnemyAnimationManager: Player hitbox bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${hitboxCenterY}`);
+    // console.log(`EnemyAnimationManager: Player hitbox bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${hitboxCenterY}`);
 
     if (hitboxCenterY - boundingBox.minimumWorld.y < 0.5) {
       adjustedPlayerPos.y = hitboxPos.y + 0.875;
-      console.log(`EnemyAnimationManager: Warning: Player hitbox midpoint too low, using fallback y=${adjustedPlayerPos.y}`);
+      // console.log(`EnemyAnimationManager: Warning: Player hitbox midpoint too low, using fallback y=${adjustedPlayerPos.y}`);
     }
 
     let moveDirection = adjustedPlayerPos.subtract(sphere.position);
     if (moveDirection.lengthSquared() > 0.0001) {
       moveDirection = moveDirection.normalize();
-      console.log(`EnemyAnimationManager: Moving sphere toward player hitbox at adjusted position: ${adjustedPlayerPos.toString()}`);
+      // console.log(`EnemyAnimationManager: Moving sphere toward player hitbox at adjusted position: ${adjustedPlayerPos.toString()}`);
     } else {
       moveDirection = forward;
-      console.log("EnemyAnimationManager: Player hitbox at same position as sphere, using forward direction");
+      // console.log("EnemyAnimationManager: Player hitbox at same position as sphere, using forward direction");
     }
 
     const speed = 10;
@@ -146,20 +146,20 @@ export class EnemyAnimationManager {
       const moveDistance = speed * deltaTime;
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
 
-      console.log(`EnemyAnimationManager: Sphere position: ${sphere.position.toString()}, Hitbox position: ${hitboxMesh.getAbsolutePosition().toString()}`);
+      // console.log(`EnemyAnimationManager: Sphere position: ${sphere.position.toString()}, Hitbox position: ${hitboxMesh.getAbsolutePosition().toString()}`);
 
       if (sphere.intersectsMesh(hitboxMesh, true)) {
-        console.log("EnemyAnimationManager: NightmareBolt hit player hitbox");
-        console.log("EnemyAnimationManager: Game instance exists:", !!this.game);
+        // console.log("EnemyAnimationManager: NightmareBolt hit player hitbox");
+        // console.log("EnemyAnimationManager: Game instance exists:", !!this.game);
         const characterController = this.game?.getCharacterController();
-        console.log("EnemyAnimationManager: CharacterController exists:", !!characterController);
+        // console.log("EnemyAnimationManager: CharacterController exists:", !!characterController);
         const player = characterController?.getPlayer();
-        console.log("EnemyAnimationManager: Player instance exists:", !!player);
+        // console.log("EnemyAnimationManager: Player instance exists:", !!player);
         if (player) {
           const currentHP = player.getCurrentHP();
-          console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
+          // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
           player.setHP(currentHP - 10);
-          console.log(`EnemyAnimationManager: Applied 10 damage to player, new HP: ${player.getCurrentHP()}`);
+          // console.log(`EnemyAnimationManager: Applied 10 damage to player, new HP: ${player.getCurrentHP()}`);
         } else {
           console.error("EnemyAnimationManager: Player instance not found");
         }
@@ -176,7 +176,7 @@ export class EnemyAnimationManager {
           particles.dispose();
           sphere.dispose();
           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-          console.log("EnemyAnimationManager: NightmareBolt timed out");
+          // console.log("EnemyAnimationManager: NightmareBolt timed out");
         }
       }, 5000);
     };
@@ -245,7 +245,7 @@ export class EnemyAnimationManager {
       this.loopCount = 0;
       this.nightmareBoltSpawned = false;
       this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress: 0 });
-      console.log("EnemyAnimationManager: NightmareBolt animation started, loopCount=0, notified observers");
+      // console.log("EnemyAnimationManager: NightmareBolt animation started, loopCount=0, notified observers");
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -257,21 +257,21 @@ export class EnemyAnimationManager {
           if (progress < this.lastProgress && this.lastProgress > 0.9) {
             this.loopCount++;
             this.nightmareBoltSpawned = false;
-            console.log(`EnemyAnimationManager: Detected NightmareBolt animation loop reset, loopCount=${this.loopCount}, resetting nightmareBoltSpawned`);
+            // console.log(`EnemyAnimationManager: Detected NightmareBolt animation loop reset, loopCount=${this.loopCount}, resetting nightmareBoltSpawned`);
           }
           this.lastProgress = progress;
 
-          console.log(`EnemyAnimationManager: NightmareBolt progress=${progress.toFixed(2)}, frame=${currentFrame}, nightmareBoltSpawned=${this.nightmareBoltSpawned}, loopCount=${this.loopCount}`);
+          // console.log(`EnemyAnimationManager: NightmareBolt progress=${progress.toFixed(2)}, frame=${currentFrame}, nightmareBoltSpawned=${this.nightmareBoltSpawned}, loopCount=${this.loopCount}`);
 
           this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress });
           if (progress >= 0.5 && !this.nightmareBoltSpawned) {
-            console.log(`EnemyAnimationManager: NightmareBolt animation reached 50%, spawning sphere, loopCount=${this.loopCount}`);
+            // console.log(`EnemyAnimationManager: NightmareBolt animation reached 50%, spawning sphere, loopCount=${this.loopCount}`);
             this.spawnNightmareBoltSphere();
             this.nightmareBoltSpawned = true;
             this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress: 0.5 });
           }
         } else {
-          console.log("EnemyAnimationManager: NightmareBolt animation stopped or no animatables, removing observer");
+          // console.log("EnemyAnimationManager: NightmareBolt animation stopped or no animatables, removing observer");
           this.onNightmareBoltAnimationState.notifyObservers({ isRunning: false });
           this.scene.onBeforeRenderObservable.remove(observer);
         }
@@ -312,6 +312,6 @@ export class EnemyAnimationManager {
     this.animationGroups.forEach(group => group.dispose());
     this.animationGroups = [];
     this.onNightmareBoltAnimationState.clear();
-    console.log("EnemyAnimationManager: Disposed");
+    // // console.log("EnemyAnimationManager: Disposed");
   }
 }
