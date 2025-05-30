@@ -2,7 +2,7 @@ import { ILoadingScreen, Engine } from "@babylonjs/core";
 
 export class DreamHopperLoadingScreen implements ILoadingScreen {
   loadingUIBackgroundColor = "rgba(0, 0, 20, 0.9)"; // Deep blue, semi-transparent
-  loadingUIText = "Entering the Dream Realm...";
+  loadingUIText = "Vous entrez dans le monde des rêves...";
   private loadingDiv: HTMLDivElement | null = null;
   private progressBar: HTMLDivElement | null = null;
   private progressText: HTMLDivElement | null = null;
@@ -38,7 +38,7 @@ export class DreamHopperLoadingScreen implements ILoadingScreen {
 
     // Add spinning crystal image
     const crystalImg = document.createElement("img");
-    crystalImg.src = "https://i.imgur.com/3y5fZ7D.png"; // Placeholder crystal image
+    crystalImg.src = "https://i.imgur.com/9qok91i.png"; // Placeholder crystal image
     crystalImg.style.width = "100px";
     crystalImg.style.height = "100px";
     crystalImg.style.animation = "spin 4s linear infinite, pulse 2s ease-in-out infinite";
@@ -52,6 +52,15 @@ export class DreamHopperLoadingScreen implements ILoadingScreen {
     textDiv.style.fontWeight = "700";
     textDiv.style.textShadow = "0 0 10px rgba(147, 63, 219, 0.8)"; // Purple glow
     loadingDiv.appendChild(textDiv);
+
+    // Add small help text
+    const helpTextDiv = document.createElement("div");
+    helpTextDiv.textContent = "Cliquez sur le canvas avec la souris si le chargement se bloque!";
+    helpTextDiv.style.fontSize = "14px";
+    helpTextDiv.style.fontWeight = "400";
+    helpTextDiv.style.marginTop = "10px";
+    helpTextDiv.style.opacity = "0.8";
+    loadingDiv.appendChild(helpTextDiv);
 
     // Add progress bar container
     const progressContainer = document.createElement("div");
