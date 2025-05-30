@@ -3,10 +3,7 @@
     <canvas ref="canvas"></canvas>
     <CastingBar v-if="animationManager" :animation-manager="animationManager" />
     <DreamCrystalCounter v-if="dreamCrystalManager" :dream-crystal-manager="dreamCrystalManager" />
-
-    <!-- 
-    -->
-   
+    <QuestDialog v-if="showQuestDialog" @accept="handleAccept" @deny="handleDeny" />
   </main>
 </template>
 
@@ -15,36 +12,51 @@ import { defineComponent, ref, onMounted } from "vue";
 import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
 import DreamCrystalCounter from "./DreamCrystalCounter.vue";
+import QuestDialog from "./QuestDialog.vue";
 
 export default defineComponent({
   name: "DreamHopper",
-  components: { CastingBar, DreamCrystalCounter },
+  components: { CastingBar, DreamCrystalCounter, QuestDialog },
   setup() {
     const canvas = ref<HTMLCanvasElement | null>(null);
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
+    const showQuestDialog = ref(false);
+
+    const handleAccept = () => {
+      console.log("Quest accepted!");
+      showQuestDialog.value = false;
+    };
+
+    const handleDeny = () => {
+      console.log("Quest denied!");
+      showQuestDialog.value = false;
+    };
 
     onMounted(async () => {
-      if (canvas.value) {
-        const game = new Game(canvas.value);
-        await game.waitForInitialization();
-        animationManager.value = game.getAnimationManager();
-        dreamCrystalManager.value = game.getDreamCrystalManager();
-        console.log("DreamHopper: animationManager set:", animationManager.value);
-        console.log("DreamHopper: dreamCrystalManager set:", dreamCrystalManager.value);
-        if (!animationManager.value) {
-          console.error("DreamHopper: Failed to get animationManager after initialization");
-        }
-        if (!dreamCrystalManager.value) {
-          console.error("DreamHopper: Failed to get dreamCrystalManager after initialization");
-        }
-      }
-    });
+  if (canvas.value) {
+    const game = new Game(canvas.value);
+    await game.waitForInitialization();
+    animationManager.value = game.getAnimationManager();
+    dreamCrystalManager.value = game.getDreamCrystalManager();
 
-    return { canvas, animationManager, dreamCrystalManager };
+    // Show quest dialog *after* game is ready
+    showQuestDialog.value = true;
+  }
+});
+
+    return {
+      canvas,
+      animationManager,
+      dreamCrystalManager,
+      showQuestDialog,
+      handleAccept,
+      handleDeny,
+    };
   },
 });
 </script>
+
 
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&family=Roboto:wght@100;700&display=swap");
