@@ -67,54 +67,46 @@
   <style scoped>
 .crystal-counter {
   position: fixed;
-  top: 5vh;
+  top: 30px; /* Match Luma bar */
   left: 50%;
-  transform: translateX(-50%);
-  padding: 18px 40px;
-  background: rgba(135, 206, 250, 0.85); /* baby blue, slightly transparent */
-  border-radius: 24px;
-  border: 2.5px solid rgba(100, 180, 255, 0.8);
+  transform: translateX(-50%); /* Center horizontally only */
+  padding: 12px 30px; /* Match Luma bar’s vertical padding */
+  background: linear-gradient(135deg, #5e3a9c 0%, #b56bf7 100%);
+  border-radius: 15px;
+  border: 2px solid #e0c4ff;
   box-shadow:
-    0 0 30px rgba(100, 180, 255, 0.9),
-    0 0 60px rgba(135, 206, 250, 0.7),
-    inset 0 0 20px rgba(180, 220, 255, 0.5);
-  color: #e0f7ff;
-  font-family: "Roboto Condensed", sans-serif;
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  text-shadow:
-    0 0 12px rgba(180, 210, 255, 1),
-    0 0 20px rgba(150, 190, 255, 0.8);
-  user-select: none;
-  cursor: default;
+    0 0 20px rgba(181, 107, 247, 0.6),
+    0 0 40px rgba(181, 107, 247, 0.4),
+    inset 0 0 10px rgba(255, 255, 255, 0.1);
+  color: #f5e9ff;
+  font-family: "Quicksand", sans-serif;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 1.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  animation: pulsePurple 4s ease-in-out infinite;
   z-index: 1000;
-  backdrop-filter: blur(10px);
-  animation:
-    dreamyPulseBlue 5s ease-in-out infinite,
-    floatUpDown 6s ease-in-out infinite;
   max-width: 90vw;
   text-align: center;
-  position: fixed;
 }
 
-@keyframes dreamyPulseBlue {
+
+@keyframes pulsePurple {
   0%, 100% {
     box-shadow:
-      0 0 30px rgba(100, 180, 255, 0.9),
-      0 0 60px rgba(135, 206, 250, 0.7),
-      inset 0 0 20px rgba(180, 220, 255, 0.5);
-    color: #e0f7ff;
+      0 0 20px rgba(181, 107, 247, 0.6),
+      0 0 40px rgba(181, 107, 247, 0.4),
+      inset 0 0 10px rgba(255, 255, 255, 0.1);
   }
   50% {
     box-shadow:
-      0 0 50px rgba(150, 210, 255, 1),
-      0 0 80px rgba(180, 230, 255, 0.85),
-      inset 0 0 30px rgba(210, 240, 255, 0.6);
-    color: #f0fbff;
+      0 0 30px rgba(204, 128, 255, 0.7),
+      0 0 60px rgba(214, 160, 255, 0.5),
+      inset 0 0 15px rgba(255, 255, 255, 0.15);
   }
 }
+
 
 
   </style>

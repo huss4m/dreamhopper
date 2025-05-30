@@ -25,6 +25,7 @@ export class Enemy implements Hoverable, Targettable {
   private isAggroed = false;
   private isAttacking = false;
   private behaviorObserver: any = null;
+  private isNPC = false;
 
   isTargetted = false;
   isTransformed = false;
@@ -51,7 +52,7 @@ export class Enemy implements Hoverable, Targettable {
     this.shadowGenerator = shadowGenerator;
     this.position = position;
     this.game = game;
-    this.animationManager = new EnemyAnimationManager(this.scene, this.game, this); // Pass game and this
+    this.animationManager = new EnemyAnimationManager(this.scene, this.game, this);
 
     this.hoverConfig = {
       highlightColor: Color3.Yellow(),
@@ -71,6 +72,11 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   private setupBehavior(): void {
+    if (this.isNPC) {
+      console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+      return;
+    }
+
     this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
       if (!this.enemyMesh || !this.physicsController) return;
 
@@ -84,12 +90,10 @@ export class Enemy implements Hoverable, Targettable {
       console.log(`Enemy ${this.id}: Distance to player = ${distanceToPlayer}`);
 
       if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
-        // Enter aggro state
         this.isAggroed = true;
         this.physicsController.stopAllMovement();
         console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer}`);
       } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
-        // Exit aggro state
         this.isAggroed = false;
         this.isAttacking = false;
         this.startWandering();
@@ -98,7 +102,6 @@ export class Enemy implements Hoverable, Targettable {
 
       if (this.isAggroed) {
         if (distanceToPlayer <= this.attackRange) {
-          // In attack range, stop movement, rotate to face player, and attack
           this.physicsController.stopAllMovement();
           const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
           this.physicsController.orientToForwardDirection(directionToPlayer);
@@ -109,7 +112,6 @@ export class Enemy implements Hoverable, Targettable {
             console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer}), playing ${animationName}, facing player`);
           }
         } else {
-          // Chase player
           this.isAttacking = false;
           this.moveTo(playerMesh.position);
           this.animationManager.playAnimation("Run");
@@ -214,6 +216,7 @@ export class Enemy implements Hoverable, Targettable {
     this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
+    console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
   }
 
   private duplicate(container: AssetContainer, position: Vector3) {
@@ -443,6 +446,7 @@ export class Enemy implements Hoverable, Targettable {
         this.physicsController.stopAllMovement();
         this.physicsController.dispose();
         this.physicsController = null;
+        console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
       }
 
       if (this.targetCircle) {
@@ -526,10 +530,6 @@ export class Enemy implements Hoverable, Targettable {
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
 
       this.setupPhysics();
-      if (!this.physicsController) {
-        console.error(`Failed to setup physics for Enemy ${this.id} after model swap`);
-        return;
-      }
 
       this.animationManager.initialize(animationGroups);
 
@@ -549,13 +549,24 @@ export class Enemy implements Hoverable, Targettable {
         }
       }
 
+      // Set NPC state
+      this.isNPC = true;
+      this.isAggroed = false;
+      this.isAttacking = false;
+
+      // Play appropriate animation
       if (wasWandering) {
-        this.startWandering();
+        this.physicsController!.startWandering();
+        this.animationManager.playAnimation("Run", 1.0, undefined, undefined, true);
+        console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
+      } else {
+        this.physicsController!.stopAllMovement();
+        this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
+        console.log(`Enemy ${this.id}: Set to Idle as NPC`);
       }
 
       this.isTransformed = true;
-      this.setupBehavior();
-      console.log(`Enemy ${this.id} model swapped to npc.glb at position`, currentPosition);
+      console.log(`Enemy ${this.id} model swapped to plushUnicorn at position`, currentPosition);
     } catch (error) {
       console.error(`Failed to swap model to npc for Enemy ${this.id}`, error);
     }

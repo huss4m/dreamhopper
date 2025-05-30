@@ -1,8 +1,8 @@
 <template>
-    <div class="hp-bar">
-      <div class="hp-label">HP: {{ currentHP }}/{{ maxHP }}</div>
-      <div class="hp-bar-container">
-        <div class="hp-bar-fill" :style="{ width: hpPercentage + '%' }"></div>
+    <div class="vital-bar">
+      <div class="vital-label">🌟 Luma: {{ currentHP }}/{{ maxHP }}</div>
+      <div class="vital-bar-container">
+        <div class="vital-bar-fill" :style="{ width: hpPercentage + '%' }"></div>
       </div>
     </div>
   </template>
@@ -11,7 +11,7 @@
   import { defineComponent, computed } from "vue";
   
   export default defineComponent({
-    name: "HPBar",
+    name: "VitalBar",
     props: {
       currentHP: {
         type: Number,
@@ -24,7 +24,7 @@
     },
     setup(props) {
       const hpPercentage = computed(() => {
-        return (props.currentHP / props.maxHP) * 100;
+        return Math.max(0, Math.min(100, (props.currentHP / props.maxHP) * 100));
       });
   
       return {
@@ -35,35 +35,42 @@
   </script>
   
   <style scoped>
-  .hp-bar {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 200px;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    font-family: "Roboto", sans-serif;
-    color: #fff;
+  .vital-bar {
+  position: fixed; /* Changed from absolute */
+  top: 30px;
+  left: 30px;
+  width: 520px;
+  padding: 12px;
+  background: linear-gradient(135deg, #3a2f7d 0%, #6c3fbf 100%);
+  border: 2px solid #d8b4fe;
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(108, 63, 191, 0.5);
+  font-family: "Quicksand", sans-serif;
+  color: #ffffff;
+  z-index: 1000; /* Ensure it's on top */
+}
+
+  .vital-label {
+    font-size: 16px;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #fdfcfe;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
   
-  .hp-label {
-    font-size: 14px;
-    margin-bottom: 5px;
-  }
-  
-  .hp-bar-container {
+  .vital-bar-container {
     width: 100%;
-    height: 20px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
+    height: 24px;
+    background-color: #1f1c3a;
+    border-radius: 12px;
     overflow: hidden;
+    border: 1px solid #ffffff33;
   }
   
-  .hp-bar-fill {
+  .vital-bar-fill {
     height: 100%;
-    background-color: #ff4d4d; /* Red for HP */
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
+    transition: width 0.4s ease;
   }
   </style>
+  
