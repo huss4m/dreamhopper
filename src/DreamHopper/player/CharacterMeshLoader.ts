@@ -68,7 +68,7 @@ export class CharacterMeshLoader {
           this.hitboxMesh.position = new Vector3(0, 1, 0); // Center at torso
           this.hitboxMesh.checkCollisions = false;
           this.hitboxMesh.isPickable = true;
-          this.hitboxMesh.isVisible = true; // Visible for debugging
+          this.hitboxMesh.isVisible = false; 
     
           const hitboxMaterial = new StandardMaterial("player_hitbox_mat", this.scene);
           hitboxMaterial.alpha = 0.5; // Semi-transparent

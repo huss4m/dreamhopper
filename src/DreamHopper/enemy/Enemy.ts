@@ -415,9 +415,11 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   public startWandering(maxDistance = 10): void {
-    if (this.physicsController) {
-      this.physicsController.startWandering(maxDistance);
+    if (!this.physicsController) {
+      console.warn(`Enemy ${this.id}: Cannot start wandering, physicsController is null`);
+      return;
     }
+    this.physicsController.startWandering(maxDistance);
     this.animationManager.playAnimation("Run");
   }
 
@@ -428,12 +430,18 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   public async swapToNPCModel(): Promise<void> {
+    if (this.isTransformed) {
+      console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
+      return;
+    }
+
     if (!this.assetManager) {
       console.error(`Cannot swap model: AssetManager is not defined for Enemy ${this.id}`);
       return;
     }
   
     try {
+      console.log(`Enemy ${this.id}: Attempting to swap to NPC, isTransformed: ${this.isTransformed}`);
       const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
       const wasWandering = this.isAggroed ? false : true;
 
@@ -493,12 +501,12 @@ export class Enemy implements Hoverable, Targettable {
 
       this.enemyMesh.position = currentPosition;
       this.enemyMesh.checkCollisions = true;
-      this.enemyMesh.isPickable = true;
+      this.enemyMesh.isPickable = false; // Make unicorn model non-pickable
       this.enemyMesh.scaling = new Vector3(3, 3, 3);
 
       this.enemyMesh.getChildMeshes().forEach((mesh) => {
         mesh.checkCollisions = true;
-        mesh.isPickable = true;
+        mesh.isPickable = false; // Make child meshes non-pickable
         if (this.shadowGenerator) {
           this.shadowGenerator.addShadowCaster(mesh);
         }
@@ -512,11 +520,11 @@ export class Enemy implements Hoverable, Targettable {
       });
 
       this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
-        height: 2,
-        width: 1.5,
+        height: 0.4, // 5x smaller than 2
+        width: 0.3,  // 5x smaller than 1.5
       }, this.scene);
       this.hitboxMesh.parent = this.enemyMesh;
-      this.hitboxMesh.position = new Vector3(0, 1, 0);
+      this.hitboxMesh.position = new Vector3(0, 0.2, 0); // Adjusted for smaller height
       this.hitboxMesh.checkCollisions = false;
       this.hitboxMesh.isPickable = true;
       this.hitboxMesh.isVisible = false;
@@ -526,7 +534,9 @@ export class Enemy implements Hoverable, Targettable {
       this.hitboxMesh.material = hitboxMaterial;
 
       Tags.EnableFor(this.hitboxMesh);
-      Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
+      //Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
+      console.log(`Enemy ${this.id}: Unicorn hitbox created, height: 0.4, width: 0.3, isPickable: ${this.hitboxMesh.isPickable}, mesh isPickable: ${this.enemyMesh.isPickable}`);
+
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
 
       this.setupPhysics();
@@ -534,7 +544,7 @@ export class Enemy implements Hoverable, Targettable {
       this.animationManager.initialize(animationGroups);
 
       const hoverable: Hoverable = {
-        getMesh: () => this.enemyMesh,
+        getMesh: () => this.hitboxMesh, // Use hitbox for hovering
         getScene: () => this.scene,
         getHighlightMesh: () => this.enemyMesh,
       };
@@ -553,19 +563,19 @@ export class Enemy implements Hoverable, Targettable {
       this.isNPC = true;
       this.isAggroed = false;
       this.isAttacking = false;
+      this.isTransformed = true;
 
-      // Play appropriate animation
+      // Play appropriate animation (default to Idle)
+      this.physicsController!.stopAllMovement();
+      this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
+      console.log(`Enemy ${this.id}: Set to Idle as NPC`);
+
       if (wasWandering) {
         this.physicsController!.startWandering();
         this.animationManager.playAnimation("Run", 1.0, undefined, undefined, true);
         console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
-      } else {
-        this.physicsController!.stopAllMovement();
-        this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-        console.log(`Enemy ${this.id}: Set to Idle as NPC`);
       }
 
-      this.isTransformed = true;
       console.log(`Enemy ${this.id} model swapped to plushUnicorn at position`, currentPosition);
     } catch (error) {
       console.error(`Failed to swap model to npc for Enemy ${this.id}`, error);

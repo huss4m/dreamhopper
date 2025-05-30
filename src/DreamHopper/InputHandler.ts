@@ -16,7 +16,7 @@ interface KeyAction {
   continuous?: boolean;
   animation?: {
     name: string;
-    loop?: number; // Fixed to number to match AnimationData
+    loop?: number;
     speed?: number;
     endFrame?: number;
   };
@@ -67,8 +67,14 @@ export class InputHandler {
   private setupKeyboardControls(): void {
     this.scene.actionManager = new ActionManager(this.scene);
     this.scene.onKeyboardObservable.add((kbInfo) => {
-      const key = kbInfo.event.key.toUpperCase();
+      let key = kbInfo.event.key.toUpperCase();
       const isDown = kbInfo.type === KeyboardEventTypes.KEYDOWN;
+
+      // Normalize '&' to '1' for caps lock agnostic behavior
+      if (key === '&') {
+        key = '1';
+      }
+
       //console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
@@ -232,11 +238,11 @@ export class InputHandler {
       this.wasSpacePressed = false;
     }
 
-    if (this.keyStates["1"] && !this.wasDreamboltPressed && !isDreamboltPlaying) {
-      const dreamboltBinding = this.keyBindings["1"];
+    if ((this.keyStates["1"] || this.keyStates["&"]) && !this.wasDreamboltPressed && !isDreamboltPlaying) {
+      const dreamboltBinding = this.keyBindings["1"] || this.keyBindings["&"];
       if (dreamboltBinding) this.executeAction(dreamboltBinding);
       this.wasDreamboltPressed = true;
-    } else if (!this.keyStates["1"]) {
+    } else if (!this.keyStates["1"] && !this.keyStates["&"]) {
       this.wasDreamboltPressed = false;
     }
 
@@ -258,13 +264,17 @@ export class InputHandler {
     }
 
     const activeActions: KeyAction[] = [];
-    if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
+    if (this.keyStates["W"] && this.keyStates["D"] && this.keyBindings["W_D"]) {
+      activeActions.push(this.keyBindings["W_D"]);
+    } else if (this.keyStates["W"] && this.keyStates["A"] && this.keyBindings["W_A"]) {
+      activeActions.push(this.keyBindings["W_A"]);
+    } else if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
       activeActions.push(this.keyBindings["Z_E"]);
     } else if (this.keyStates["Z"] && this.keyStates["A"] && this.keyBindings["Z_A"]) {
       activeActions.push(this.keyBindings["Z_A"]);
     } else {
       for (const binding of Object.values(this.keyBindings)) {
-        if (binding.continuous && binding.key !== "Z_E" && binding.key !== "Z_A" && this.keyStates[binding.key]) {
+        if (binding.continuous && !["W_D", "W_A", "Z_E", "Z_A"].includes(binding.key) && this.keyStates[binding.key]) {
           activeActions.push(binding);
         }
       }

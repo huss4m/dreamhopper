@@ -1,6 +1,6 @@
 <template>
     <div class="vital-bar">
-      <div class="vital-label">🌟 Luma: {{ currentHP }}/{{ maxHP }}</div>
+      <div class="vital-label">🌟 Essence: {{ currentHP }}/{{ maxHP }}</div>
       <div class="vital-bar-container">
         <div class="vital-bar-fill" :style="{ width: hpPercentage + '%' }"></div>
       </div>
