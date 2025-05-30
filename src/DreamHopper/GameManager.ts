@@ -5,6 +5,7 @@ import { Enemy } from "./enemy/Enemy";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { TargetingSystem } from "./TargetingSystem";
 import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
+import { Game } from "./Game"; // Import Game
 
 export class GameManager {
   private npcs: NPC[] = [];
@@ -17,7 +18,8 @@ export class GameManager {
     private assetManager: AssetManager,
     private shadowGenerator: CascadedShadowGenerator,
     private highlightLayer: HighlightLayer,
-    private targetingSystem: TargetingSystem
+    private targetingSystem: TargetingSystem,
+    private game: Game // Add Game instance
   ) {}
 
   public setCharacterMesh(mesh: Mesh): void {
@@ -40,7 +42,8 @@ export class GameManager {
         this.shadowGenerator,
         position,
         this.highlightLayer,
-        this.targetingSystem
+        this.targetingSystem,
+        this.game // Pass Game instance
       )
     );
 
@@ -116,17 +119,14 @@ export class GameManager {
 
     console.log("GameManager: Initializing DreamCrystalManager with character mesh:", this.characterMesh.name);
 
-    // Get the ground mesh (named "Plane")
     const groundMesh = this.scene.getMeshByName("Plane");
     if (!groundMesh) {
       console.warn("GameManager: Ground mesh 'Plane' not found, using original y-positions");
     }
 
-    // Adjust y-positions to be ground height + 1
     const adjustedPositions = stateToUse.positions.map((pos: Vector3) => {
-      let yPos: number = pos.y; // Fallback to original y-position
+      let yPos: number = pos.y;
       if (groundMesh) {
-        // Use raycasting to find ground height
         const ray = new Ray(new Vector3(pos.x, 1000, pos.z), new Vector3(0, -1, 0));
         const pickInfo = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
         if (pickInfo?.hit && pickInfo.pickedPoint) {
@@ -135,7 +135,7 @@ export class GameManager {
           console.warn(`GameManager: No ground hit for crystal at (${pos.x}, ${pos.z}), using original y: ${pos.y}`);
         }
       }
-      return new Vector3(pos.x, yPos + 1, pos.z); // Add 1 unit above ground
+      return new Vector3(pos.x, yPos + 1, pos.z);
     });
 
     this.dreamCrystalManager = new DreamCrystalManager(

@@ -33,7 +33,7 @@ export class InputHandler {
   private game: Game;
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
-  private lastDialogTargetId: string | null = null; // Track NPC for open dialog
+  private lastDialogTargetId: string | null = null;
 
   constructor(
     private scene: Scene,
@@ -198,7 +198,6 @@ export class InputHandler {
     const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
     const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
 
-    // Check distance for auto-untoggle
     if (this.game.getShowQuestDialog() && this.lastDialogTargetId) {
       const targetingSystem = this.game.getTargetingSystem();
       const currentTarget = targetingSystem.getCurrentTarget();

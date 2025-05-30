@@ -128,7 +128,8 @@ export class Game {
         this.assetManager,
         shadowGenerator,
         this.highlightLayer,
-        this.targetingSystem
+        this.targetingSystem,
+        this // Pass Game instance
       );
 
       const savedState = this.sceneStates[sceneIndex];
@@ -260,6 +261,10 @@ export class Game {
     }
   }
 
+  public getCharacterController(): CharacterController | null {
+    return this.characterController;
+  }
+
   public getAnimationTarget(): Targettable | null {
     if (!this.characterController) {
       console.warn("Game: CharacterController not initialized");
@@ -268,8 +273,6 @@ export class Game {
     return this.characterController.getCurrentTarget();
   }
 
-
-  
   public getAnimationManager(): CharacterAnimationManager | null {
     if (!this.characterController) {
       console.warn("Game: CharacterController not initialized");
@@ -277,7 +280,6 @@ export class Game {
     }
     return this.characterController.animationManager;
   }
-
 
   public getDreamCrystalManager() {
     if (!this.gameManager) {

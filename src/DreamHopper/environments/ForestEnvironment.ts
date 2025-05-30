@@ -53,7 +53,7 @@ export class ForestEnvironment implements Environment {
         this.setupLighting();
         this.setupFog();
         await this.loadGroundMesh();
-        this.createRock();
+        //this.createRock();
         this.createMistParticles();
         await this.setupSkybox();
         await this.createForest(800);

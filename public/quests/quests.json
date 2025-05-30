@@ -1,0 +1,18 @@
+[
+{
+    "id": "quest1",
+    "title": "The Lost Crystals",
+    "description": "Adventurer, the Hollow Caverns hold 3 Dream Crystals. Retrieve them to restore light to our village!",
+    "inProgressText": "You’ve accepted the quest. Collect 3 Dream Crystals from the Hollow Caverns.",
+    "completedText": "Incredible! You’ve collected the 3 Dream Crystals and saved our village!",
+    "requiredCrystals": 3
+  },
+  {
+    "id": "quest2",
+    "title": "The Forest Spirit",
+    "description": "The Forest Spirit requests 2 Dream Crystals to renew its strength. Will you help?",
+    "inProgressText": "Keep searching for 2 Dream Crystals to aid the Forest Spirit.",
+    "completedText": "The Forest Spirit is restored, thanks to your 2 Dream Crystals!",
+    "requiredCrystals": 2
+  }
+]

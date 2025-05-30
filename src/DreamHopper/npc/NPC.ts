@@ -1,4 +1,4 @@
-import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion, Animation } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
 import { Hoverable, HoverHandler, HoverConfig } from "../HoverableSystem";
@@ -8,25 +8,27 @@ import { v4 as uuidv4 } from 'uuid';
 import { NPCPhysicsController, PhysicsConfig } from "./NPCPhysicsController";
 import { ColliderType } from "../PhysicsController";
 import { NPCAnimationManager } from "./NPCAnimationManager";
+import { Game } from "../Game";
 
 export class NPC implements Hoverable, Targettable {
-  private id: string; // Unique identifier for the NPC
+  private id: string;
   private npcMesh: Mesh | null = null;
   private npcSkeleton: Skeleton | null = null;
   private animationManager: NPCAnimationManager;
   private physicsController: NPCPhysicsController | null = null;
   private hoverHandler: HoverHandler;
-  private targetCircle: Mesh | null = null; // Mesh for the gradient disc
-  private questMarker: Sprite | null = null; // Sprite for the quest marker
-  private questMarkerObserver: any | null = null; // Store the render loop observer
+  private targetCircle: Mesh | null = null;
+  private questMarker: Sprite | null = null;
+  private questMarkerObserver: any | null = null;
+  private dialogToggleObserver: any | null = null;
 
   isTargetted = false;
 
   assetManager!: AssetManager;
   shadowGenerator!: CascadedShadowGenerator;
   highlightLayer: HighlightLayer;
-  static availableSpriteManager: SpriteManager | null = null; // SpriteManager for "available" marker
-  static completedSpriteManager: SpriteManager | null = null; // SpriteManager for "completed" marker
+  static availableSpriteManager: SpriteManager | null = null;
+  static completedSpriteManager: SpriteManager | null = null;
   position: Vector3;
 
   constructor(
@@ -36,16 +38,16 @@ export class NPC implements Hoverable, Targettable {
     shadowGenerator: CascadedShadowGenerator,
     position: Vector3,
     highlightLayer: HighlightLayer,
-    targetingSystem: TargetingSystem
+    targetingSystem: TargetingSystem,
+    private game: Game
   ) {
-    this.id = uuidv4(); // Generate a unique ID for the NPC
+    this.id = uuidv4();
     this.highlightLayer = highlightLayer;
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
     this.position = position;
     this.animationManager = new NPCAnimationManager(this.scene);
 
-    // Initialize hover handler
     const hoverConfig: HoverConfig = {
       highlightColor: Color3.Yellow(),
       customCursorUrl: "./images/cursorTargetAlly.png",
@@ -56,11 +58,45 @@ export class NPC implements Hoverable, Targettable {
     };
     this.hoverHandler = new HoverHandler(this.scene, this.highlightLayer, hoverConfig);
 
-    // Automatically register with TargetingSystem
     targetingSystem.registerTarget(this);
 
+    this.dialogToggleObserver = this.game.getOnQuestDialogToggled().add((isVisible) => {
+      if (isVisible && this.game.getTargetingSystem().getCurrentTarget()?.getId() === this.id) {
+        this.rotateToFacePlayer();
+      }
+    });
+
     this.loadCharacter(name, position);
-    //this.startWandering();
+  }
+
+  private rotateToFacePlayer(): void {
+    if (!this.npcMesh) {
+      console.error(`Cannot rotate NPC ${this.id}: Mesh is null`);
+      return;
+    }
+
+    if (!this.physicsController) {
+      console.error(`Cannot rotate NPC ${this.id}: Physics controller is null`);
+      return;
+    }
+
+    const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
+    if (!playerMesh) {
+      console.error(`Cannot rotate NPC ${this.id}: Player mesh not found`);
+      return;
+    }
+
+    const direction = playerMesh.position.subtract(this.npcMesh.position);
+    direction.y = 0; // Restrict to XZ plane
+    if (direction.lengthSquared() < 0.01) {
+      console.log(`NPC ${this.id}: Player too close, skipping rotation`);
+      return;
+    }
+
+    // Use physics controller to rotate (compatible with physics engine)
+    this.physicsController.orientToForwardDirection(direction);
+
+    console.log(`NPC ${this.id}: Rotated to face player`);
   }
 
   public async loadCharacter(name: string, position: Vector3): Promise<void> {
@@ -79,7 +115,6 @@ export class NPC implements Hoverable, Targettable {
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
 
-      // Apply material properties and ensure collisions for all meshes
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
         if (mat) {
@@ -89,16 +124,14 @@ export class NPC implements Hoverable, Targettable {
           mat.reflectivityColor = new Color3(0.3, 0.3, 0.3);
           mat.microSurface = 0.8;
         }
-        mesh.checkCollisions = true; // Ensure child meshes support collisions
+        mesh.checkCollisions = true;
       });
 
-      // Add to shadow generator
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
       }
 
-      // Enable and add tags to root mesh and all child meshes
       Tags.EnableFor(this.npcMesh);
       Tags.AddTagsTo(this.npcMesh, `npcID:${this.id}`);
       this.npcMesh.getChildMeshes().forEach((mesh) => {
@@ -106,13 +139,8 @@ export class NPC implements Hoverable, Targettable {
         Tags.AddTagsTo(mesh, `npcID:${this.id}`);
       });
 
-      // Initialize physics
       this.setupPhysics();
-
-      // Initialize animations
       this.animationManager.initialize(animationGroups);
-
-      // Setup hover
       this.hoverHandler.setupHover(this);
     } catch (error) {
       console.error(`Failed to load character for NPC ID: ${this.id}`, error);
@@ -159,7 +187,7 @@ export class NPC implements Hoverable, Targettable {
 
     entries.rootNodes[0].getChildMeshes().forEach((mesh: AbstractMesh) => {
       mesh.setEnabled(true);
-      mesh.isPickable = true; // Ensure child meshes are pickable
+      mesh.isPickable = true;
     });
 
     entries.animationGroups.forEach((animGroup) => {
@@ -172,7 +200,6 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public setQuestMarker(markerType: "available" | "completed" | null): void {
-    // Dispose of any existing quest marker to avoid duplicates
     if (this.questMarker) {
       if (this.questMarkerObserver) {
         this.scene.onBeforeRenderObservable.remove(this.questMarkerObserver);
@@ -187,14 +214,13 @@ export class NPC implements Hoverable, Targettable {
     }
 
     try {
-      // Select the appropriate SpriteManager based on markerType
       let spriteManager: SpriteManager | null = null;
       if (markerType === "available") {
         if (!NPC.availableSpriteManager) {
           NPC.availableSpriteManager = new SpriteManager(
             `availableSpriteManager_${this.id}`,
             "./images/exclamation.png",
-            10, // Max capacity for sprites
+            10,
             { width: 512, height: 512 },
             this.scene
           );
@@ -205,7 +231,7 @@ export class NPC implements Hoverable, Targettable {
           NPC.completedSpriteManager = new SpriteManager(
             `completedSpriteManager_${this.id}`,
             "./images/question.png",
-            10, // Max capacity for sprites
+            10,
             { width: 512, height: 512 },
             this.scene
           );
@@ -218,27 +244,21 @@ export class NPC implements Hoverable, Targettable {
         return;
       }
 
-      // Create a new sprite for the quest marker
       this.questMarker = new Sprite(`questMarker_${this.id}`, spriteManager);
-      this.questMarker.width = 1; // Adjust size in world units
+      this.questMarker.width = 1;
       this.questMarker.height = 1;
       this.questMarker.isPickable = false;
 
-      // Compute the NPC's bounding box in world space
       this.npcMesh.refreshBoundingInfo();
       const boundingBox = this.npcMesh.getBoundingInfo().boundingBox;
-
-      // Calculate the head position in world space
       const headPosition = new Vector3(
         this.npcMesh.position.x,
-        boundingBox.maximumWorld.y + 3, // Offset above head
+        boundingBox.maximumWorld.y + 3,
         this.npcMesh.position.z
       );
 
-      // Position the sprite
       this.questMarker.position = headPosition;
 
-      // Update sprite position in render loop
       this.questMarkerObserver = this.scene.onBeforeRenderObservable.add(() => {
         if (this.questMarker && this.npcMesh) {
           this.npcMesh.refreshBoundingInfo();
@@ -251,7 +271,6 @@ export class NPC implements Hoverable, Targettable {
           this.questMarker.position = updatedHeadPosition;
         }
       });
-
     } catch (error) {
       console.error(`Failed to set quest marker sprite for NPC ID: ${this.id}`, error);
     }
@@ -260,12 +279,11 @@ export class NPC implements Hoverable, Targettable {
   public setTargetted(isTargetted: boolean): void {
     this.isTargetted = isTargetted;
     if (this.npcMesh) {
-      // Compute bounding box to find the NPC's feet
       this.npcMesh.refreshBoundingInfo();
       const boundingBox = this.npcMesh.getBoundingInfo().boundingBox;
       const feetPosition = new Vector3(
         this.npcMesh.position.x,
-        boundingBox.minimumWorld.y + 0.05, // Increased offset to prevent clipping
+        boundingBox.minimumWorld.y + 0.05,
         this.npcMesh.position.z
       );
 
@@ -274,43 +292,38 @@ export class NPC implements Hoverable, Targettable {
       console.log(`NPC ${this.id} bounding box min:`, boundingBox.minimumWorld);
       console.log(`NPC ${this.id} bounding box max:`, boundingBox.maximumWorld);
 
-      // Create or remove the target circle
       if (isTargetted) {
         console.log(`Adding target circle to NPC ${this.id} at`, feetPosition);
-        // Create a disc mesh for the gradient circle
         this.targetCircle = MeshBuilder.CreateDisc(`targetCircle_${this.id}`, {
-          radius: 0.5, // Adjust radius as needed
+          radius: 0.5,
           tessellation: 32,
         }, this.scene);
         this.targetCircle.position = feetPosition;
         this.targetCircle.rotation.x = Math.PI / 2;
 
-        // Create a dynamic texture for the gradient with border
         const textureSize = 512;
         const dynamicTexture = new DynamicTexture(`targetCircleTex_${this.id}`, textureSize, this.scene, true);
         const ctx = dynamicTexture.getContext();
         const gradient = ctx.createRadialGradient(
-          textureSize / 2, textureSize / 2, 0, // Center, inner radius
-          textureSize / 2, textureSize / 2, textureSize / 2 // Center, outer radius
+          textureSize / 2, textureSize / 2, 0,
+          textureSize / 2, textureSize / 2, textureSize / 2
         );
-        gradient.addColorStop(0.2, "rgba(0, 255, 0, 0)"); // Transparent center
-        gradient.addColorStop(0.8, "rgba(0, 255, 0, 0.4)"); // Gradient green
-        gradient.addColorStop(0.95, "rgba(0, 255, 0, 0.8)"); // Near edge
-        gradient.addColorStop(1, "rgba(0, 255, 0, 1)"); // Solid green border
+        gradient.addColorStop(0.2, "rgba(0, 255, 0, 0)");
+        gradient.addColorStop(0.8, "rgba(0, 255, 0, 0.4)");
+        gradient.addColorStop(0.95, "rgba(0, 255, 0, 0.8)");
+        gradient.addColorStop(1, "rgba(0, 255, 0, 1)");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, textureSize, textureSize);
         dynamicTexture.update();
 
-        // Apply material with gradient texture
         const circleMaterial = new StandardMaterial(`targetCircleMat_${this.id}`, this.scene);
         circleMaterial.diffuseTexture = dynamicTexture;
-        circleMaterial.opacityTexture = dynamicTexture; // Use texture for transparency
-        circleMaterial.backFaceCulling = false; // Ensure visibility from all angles
+        circleMaterial.opacityTexture = dynamicTexture;
+        circleMaterial.backFaceCulling = false;
         this.targetCircle.material = circleMaterial;
         this.targetCircle.isPickable = false;
-        this.targetCircle.alwaysSelectAsActiveMesh = true; // Force render on top to prevent clipping
+        this.targetCircle.alwaysSelectAsActiveMesh = true;
 
-        // Update circle position in render loop
         const observer = this.scene.onBeforeRenderObservable.add(() => {
           if (this.targetCircle && this.npcMesh) {
             this.npcMesh.refreshBoundingInfo();
@@ -320,15 +333,12 @@ export class NPC implements Hoverable, Targettable {
               this.npcMesh.position.z
             );
             this.targetCircle.position = updatedFeetPosition;
-            // Add subtle rotation for visual flair
             this.targetCircle.rotation.y += 0.01;
           }
         });
 
-        // Store observer to remove it later
         this.targetCircle.metadata = { observer };
 
-        // Keep HighlightLayer code for reference
         console.log(`Adding highlight to NPC ${this.id} and its children`);
         this.highlightLayer.addMesh(this.npcMesh, Color3.Red(), true);
         this.npcMesh.getChildMeshes().forEach((mesh) => {
@@ -344,7 +354,6 @@ export class NPC implements Hoverable, Targettable {
           this.targetCircle = null;
         }
 
-        // Keep HighlightLayer code for reference
         console.log(`Removing highlight from NPC ${this.id} and its children`);
         this.highlightLayer.removeMesh(this.npcMesh);
         this.npcMesh.getChildMeshes().forEach((mesh) => {
@@ -397,6 +406,11 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public dispose(): void {
+    if (this.dialogToggleObserver) {
+      this.game.getOnQuestDialogToggled().remove(this.dialogToggleObserver);
+      this.dialogToggleObserver = null;
+    }
+
     if (this.physicsController) {
       this.physicsController.dispose();
       this.physicsController = null;
@@ -419,7 +433,6 @@ export class NPC implements Hoverable, Targettable {
       this.questMarker = null;
     }
 
-    // Clean up SpriteManagers if no other NPCs are using them
     if (NPC.availableSpriteManager && NPC.availableSpriteManager.sprites.length === 0) {
       NPC.availableSpriteManager.dispose();
       NPC.availableSpriteManager = null;
