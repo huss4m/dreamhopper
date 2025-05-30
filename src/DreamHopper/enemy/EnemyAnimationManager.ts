@@ -139,7 +139,7 @@ export class EnemyAnimationManager {
       // console.log("EnemyAnimationManager: Player hitbox at same position as sphere, using forward direction");
     }
 
-    const speed = 10;
+    const speed = 20;
 
     const renderCallback = () => {
       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
