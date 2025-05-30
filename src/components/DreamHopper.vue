@@ -9,8 +9,13 @@
       @accept="handleAccept"
       @deny="handleDeny"
       @close="handleClose"
-      @turnIn="handleTurnIn" 
-      :key="dialogState.questKey" 
+      @turnIn="handleTurnIn"
+      :key="dialogState.questKey"
+    />
+    <HPBar
+      v-if="playerHP"
+      :current-h-p="playerHP.currentHP"
+      :max-h-p="playerHP.maxHP"
     />
   </main>
 </template>
@@ -21,29 +26,30 @@ import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
 import DreamCrystalCounter from "./DreamCrystalCounter.vue";
 import QuestDialog from "./QuestDialog.vue";
+import HPBar from "./HPBar.vue"; // Added import
 import { Quest } from "@/DreamHopper/npc/Quest";
 
 export default defineComponent({
   name: "DreamHopper",
-  components: { CastingBar, DreamCrystalCounter, QuestDialog },
+  components: { CastingBar, DreamCrystalCounter, QuestDialog, HPBar }, // Added HPBar
   setup() {
     const canvas = ref<HTMLCanvasElement | null>(null);
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
+    const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null); // Added playerHP
     let gameInstance: Game | null = null;
 
-    // Reactive state for dialog
     const dialogState = reactive({
       visible: false,
       quest: null as Quest | null,
-      questKey: 0, // For forcing re-render
+      questKey: 0,
     });
 
     const handleAccept = () => {
       console.log("DreamHopper: Quest accepted!");
       if (gameInstance) {
         gameInstance.handleQuestAccept();
-        dialogState.questKey++; // Update key to force re-render
+        dialogState.questKey++;
       }
     };
 
@@ -61,11 +67,11 @@ export default defineComponent({
       }
     };
 
-    const handleTurnIn = () => { // Added handleTurnIn
+    const handleTurnIn = () => {
       console.log("DreamHopper: Quest turned in!");
       if (gameInstance) {
         gameInstance.handleQuestTurnIn();
-        dialogState.questKey++; // Update key to force re-render
+        dialogState.questKey++;
       }
     };
 
@@ -75,30 +81,39 @@ export default defineComponent({
         await gameInstance.waitForInitialization();
         animationManager.value = gameInstance.getAnimationManager();
         dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
+        playerHP.value = gameInstance.getPlayerHP(); // Initialize HP
 
-        // Initialize dialog state
         dialogState.visible = gameInstance.getShowQuestDialog();
         dialogState.quest = gameInstance.getCurrentQuest();
         console.log(`DreamHopper: Initial dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
 
-        // Subscribe to quest dialog toggle events
         gameInstance.getOnQuestDialogToggled().add((isVisible) => {
           console.log(`DreamHopper: Quest dialog toggled to ${isVisible}`);
           dialogState.visible = isVisible;
           dialogState.quest = gameInstance!.getCurrentQuest();
-          dialogState.questKey++; // Update key to force re-render
+          dialogState.questKey++;
           console.log(`DreamHopper: Updated dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
+        });
+
+        // Poll HP changes (temporary until events are added)
+        const hpInterval = setInterval(() => {
+          if (gameInstance) {
+            playerHP.value = gameInstance.getPlayerHP();
+          }
+        }, 500);
+
+        onUnmounted(() => {
+          clearInterval(hpInterval);
         });
       }
     });
 
-    // Watch quest status changes
     watch(
       () => dialogState.quest?.getState().status,
       (newStatus) => {
         if (newStatus) {
           console.log(`DreamHopper: Quest status changed to ${newStatus}`);
-          dialogState.questKey++; // Force re-render
+          dialogState.questKey++;
         }
       }
     );
@@ -115,10 +130,11 @@ export default defineComponent({
       animationManager,
       dreamCrystalManager,
       dialogState,
+      playerHP, // Added to return
       handleAccept,
       handleDeny,
       handleClose,
-      handleTurnIn, // Added to return
+      handleTurnIn,
     };
   },
 });

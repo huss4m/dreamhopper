@@ -6,6 +6,7 @@ export class EnemyPhysicsController {
   private scene: Scene;
   private mesh: Mesh;
   private wanderObserver: any | null = null;
+  private moveToObserver: any | null = null; // Added to track moveTo observer
 
   constructor(scene: Scene, mesh: Mesh, physicsConfig: PhysicsConfig) {
     this.scene = scene;
@@ -44,18 +45,25 @@ export class EnemyPhysicsController {
   public moveTo(position: Vector3): void {
     const physicsAggregate = this.physicsController?.getPhysicsAggregate();
     if (!this.mesh || !physicsAggregate) return;
-  
-    const observer = this.scene.onBeforeRenderObservable.add(() => {
+
+    // Remove existing moveTo observer if any
+    if (this.moveToObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.moveToObserver);
+      this.moveToObserver = null;
+    }
+
+    this.moveToObserver = this.scene.onBeforeRenderObservable.add(() => {
       const aggregate = this.physicsController?.getPhysicsAggregate();
       if (!aggregate) {
-        this.scene.onBeforeRenderObservable.remove(observer);
+        this.scene.onBeforeRenderObservable.remove(this.moveToObserver);
+        this.moveToObserver = null;
         return;
       }
-  
+
       const currentPosition = this.mesh.position.clone();
       const direction = position.subtract(currentPosition);
       const distanceToTarget = direction.length();
-  
+
       if (distanceToTarget > 0.1) {
         this.orientToForwardDirection(direction);
         const velocity = direction.normalize().scale(2);
@@ -63,7 +71,8 @@ export class EnemyPhysicsController {
           velocity.y = aggregate.body.getLinearVelocity().y;
         } catch (e) {
           console.warn("moveTo: failed to access body.getLinearVelocity, removing observer");
-          this.scene.onBeforeRenderObservable.remove(observer);
+          this.scene.onBeforeRenderObservable.remove(this.moveToObserver);
+          this.moveToObserver = null;
           return;
         }
         aggregate.body.setLinearVelocity(velocity);
@@ -74,11 +83,11 @@ export class EnemyPhysicsController {
         } catch (e) {
           console.warn("moveTo (end): failed to reset velocity");
         }
-        this.scene.onBeforeRenderObservable.remove(observer);
+        this.scene.onBeforeRenderObservable.remove(this.moveToObserver);
+        this.moveToObserver = null;
       }
     });
   }
-  
 
   public startWandering(maxDistance = 10): void {
     if (!this.mesh || !this.physicsController) {
@@ -98,32 +107,31 @@ export class EnemyPhysicsController {
     };
 
     this.wanderObserver = this.scene.onBeforeRenderObservable.add(() => {
-        if (!this.physicsController) {
-          this.stopWandering(); // ← retire l'observer
-          return;
-        }
-      
-        const physicsAggregate = this.physicsController.getPhysicsAggregate();
-        if (!physicsAggregate) {
-          console.warn("Physics aggregate is null. Stopping wandering.");
-          this.stopWandering();
-          return;
-        }
-      
-        let velocity: Vector3;
-        try {
-          velocity = physicsAggregate.body.getLinearVelocity();
-        } catch (err) {
-          console.warn("Physics body is null or disposed. Stopping wandering.");
-          this.stopWandering();
-          return;
-        }
-      
-        if (velocity.lengthSquared() < 0.01) {
-          moveToNextTarget();
-        }
-      });
-      
+      if (!this.physicsController) {
+        this.stopWandering();
+        return;
+      }
+
+      const physicsAggregate = this.physicsController.getPhysicsAggregate();
+      if (!physicsAggregate) {
+        console.warn("Physics aggregate is null. Stopping wandering.");
+        this.stopWandering();
+        return;
+      }
+
+      let velocity: Vector3;
+      try {
+        velocity = physicsAggregate.body.getLinearVelocity();
+      } catch (err) {
+        console.warn("Physics body is null or disposed. Stopping wandering.");
+        this.stopWandering();
+        return;
+      }
+
+      if (velocity.lengthSquared() < 0.01) {
+        moveToNextTarget();
+      }
+    });
 
     moveToNextTarget();
   }
@@ -136,7 +144,38 @@ export class EnemyPhysicsController {
 
     const physicsAggregate = this.physicsController.getPhysicsAggregate();
     if (physicsAggregate) {
-      physicsAggregate.body.setLinearVelocity(new Vector3(0, physicsAggregate.body.getLinearVelocity().y, 0));
+      try {
+        const y = physicsAggregate.body.getLinearVelocity().y;
+        physicsAggregate.body.setLinearVelocity(new Vector3(0, y, 0));
+      } catch (e) {
+        console.warn("stopWandering: failed to reset velocity");
+      }
+    }
+  }
+
+  public stopAllMovement(): void { // Added method
+    // Stop wandering
+    if (this.wanderObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.wanderObserver);
+      this.wanderObserver = null;
+    }
+
+    // Stop moveTo
+    if (this.moveToObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.moveToObserver);
+      this.moveToObserver = null;
+    }
+
+    // Zero horizontal velocity
+    const physicsAggregate = this.physicsController.getPhysicsAggregate();
+    if (physicsAggregate) {
+      try {
+        const y = physicsAggregate.body.getLinearVelocity().y;
+        physicsAggregate.body.setLinearVelocity(new Vector3(0, y, 0));
+        console.log("EnemyPhysicsController: All movement stopped");
+      } catch (e) {
+        console.warn("stopAllMovement: failed to reset velocity");
+      }
     }
   }
 
@@ -145,7 +184,7 @@ export class EnemyPhysicsController {
   }
 
   public dispose(): void {
-    this.stopWandering();
+    this.stopAllMovement(); // Updated to use stopAllMovement
     this.physicsController.dispose();
   }
 }

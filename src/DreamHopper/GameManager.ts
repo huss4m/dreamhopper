@@ -104,7 +104,8 @@ export class GameManager {
         this.shadowGenerator,
         position,
         this.highlightLayer,
-        this.targetingSystem
+        this.targetingSystem,
+        this.game
       )
     );
 

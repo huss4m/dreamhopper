@@ -359,6 +359,15 @@ export class Game {
     return this.currentQuest;
   }
 
+  public getPlayerHP(): { currentHP: number; maxHP: number } {
+    if (!this.characterController) {
+      console.warn("Game: CharacterController not initialized");
+      return { currentHP: 0, maxHP: 0 };
+    }
+    const player = this.characterController.getPlayer();
+    return { currentHP: player.getCurrentHP(), maxHP: player.getMaxHP() };
+  }
+
   public getOnQuestDialogToggled(): Observable<boolean> {
     return this.onQuestDialogToggled;
   }
