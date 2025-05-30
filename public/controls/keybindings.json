@@ -64,6 +64,10 @@
       "key": "W",
       "continuous": false,
       "action": "toggleSheathe"
+    },
+    "T": {
+      "key": "T",
+      "action": "openQuestDialog"
     }
   }
 }

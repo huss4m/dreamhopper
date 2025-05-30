@@ -4,7 +4,6 @@ import {
   Vector3,
   CascadedShadowGenerator,
   TransformNode,
-  PhysicsMotionType,
   ParticleSystem,
   Texture,
   MeshBuilder,
@@ -21,7 +20,8 @@ import { CharacterMeshLoader } from "./CharacterMeshLoader";
 import { Character } from "../types";
 import { Player } from "./Player";
 import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager"; // Added import
+import { GameManager } from "../GameManager";
+import { Targettable } from "../Targettable";
 
 interface AnimationData {
   name: string;
@@ -45,10 +45,10 @@ export class CharacterController {
     shadowGenerator: CascadedShadowGenerator,
     assetManager: AssetManager,
     private targetingSystem: TargetingSystem,
-    private gameManager: GameManager // Added parameter
+    private gameManager: GameManager
   ) {
     this.scene.collisionsEnabled = true;
-    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem, gameManager); // Pass gameManager
+    this.animationManager = new CharacterAnimationManager(scene, this, targetingSystem, gameManager);
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
     this.player = new Player(scene, assetManager, shadowGenerator);
@@ -93,7 +93,6 @@ export class CharacterController {
 
       await this.updateSwordAttachment();
 
-      // Setup particle system and listen for Dreambolt animation state
       this.setupParticleSystem();
       this.animationManager.onDreamboltAnimationState.add(({ isPlaying }) => {
         if (this.particleSystem) {
@@ -132,6 +131,10 @@ export class CharacterController {
       ? new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3)
       : new Vector3(Math.PI, 0, 0);
     this.updateSwordAttachment();
+  }
+
+  public getCurrentTarget(): Targettable | null {
+    return this.targetingSystem.getCurrentTarget();
   }
 
   private playAnimationWithData(animationData?: AnimationData): void {
@@ -257,9 +260,9 @@ export class CharacterController {
       }
 
       const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.1 }, this.scene);
-      dummyMesh.isVisible = false; // Hide emitter mesh
+      dummyMesh.isVisible = false;
       dummyMesh.parent = handBone.getTransformNode();
-      dummyMesh.position = new Vector3(0, 0, 0); // Center on hand
+      dummyMesh.position = new Vector3(0, 0, 0);
 
       particleSystem.emitter = dummyMesh;
       particleSystem.minEmitBox = new Vector3(-0.1, -0.1, -0.1);
@@ -280,7 +283,7 @@ export class CharacterController {
       particleSystem.colorDead = new Color4(0, 0, 0.2, 0.0);
       particleSystem.minLifeTime = 0.5;
       particleSystem.maxLifeTime = 0.9;
-      return particleSystem; // Do not start here
+      return particleSystem;
     };
 
     this.particleSystem = {

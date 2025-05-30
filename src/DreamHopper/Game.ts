@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Mesh } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Mesh, Observable } from "@babylonjs/core";
 import { SceneCreator } from "./SceneCreator";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -9,6 +9,8 @@ import { EnvironmentType } from "./EnvironmentCreator";
 import { GameManager } from "./GameManager";
 import { SoundManager } from "./SoundManager";
 import { DreamHopperLoadingScreen } from "./DreamHopperLoadingScreen";
+import { Targettable } from "./Targettable";
+import { CharacterAnimationManager } from "./player/CharacterAnimationManager";
 
 export interface SceneState {
   npcPositions?: Vector3[];
@@ -31,6 +33,8 @@ export class Game {
   private initializationPromise: Promise<void>;
   private isInitialized = false;
   private loadingScreen: DreamHopperLoadingScreen;
+  private showQuestDialog = false;
+  private onQuestDialogToggled = new Observable<boolean>();
 
   constructor(private canvas: HTMLCanvasElement, environmentType: EnvironmentType = EnvironmentType.FOREST) {
     this.engine = new Engine(canvas, true);
@@ -39,22 +43,21 @@ export class Game {
       "/music/music1.mp3",
       "/music/music2.mp3",
     ]);
-  
+
     this.loadingScreen = new DreamHopperLoadingScreen(this.engine);
     this.engine.loadingScreen = this.loadingScreen;
-  
+
     this.scenes.push(this.sceneCreator.createScene());
     this.scenes.push(new SceneCreator(this.engine, canvas, EnvironmentType.DESERT).createScene());
-  
+
     this.sceneStates = [
       { npcPositions: [], enemyPositions: [] },
       { npcPositions: [], enemyPositions: [] },
     ];
-  
+
     this.activeScene = this.scenes[0];
     this.initializationPromise = this.initialize();
-  
-    // Clean up on page refresh
+
     window.addEventListener("beforeunload", () => {
       this.soundManager.dispose();
     });
@@ -62,10 +65,7 @@ export class Game {
 
   private async initialize(): Promise<void> {
     try {
-      // Show the loading screen
       this.engine.displayLoadingUI();
-
-      // Track progress (5 async steps: assets, NPCs, enemies, crystals, sound)
       const totalSteps = 5;
       let currentStep = 0;
 
@@ -95,8 +95,6 @@ export class Game {
 
       this.isInitialized = true;
       console.log("Game initialized");
-
-      // Hide the loading screen
       this.engine.hideLoadingUI();
     } catch (error) {
       console.error("Game: Initialization failed:", error);
@@ -183,7 +181,7 @@ export class Game {
       this.inputHandler = new InputHandler(scene, this.characterController, this.canvas, this);
       const initSuccess = await this.inputHandler.init();
       if (!initSuccess) {
-        console.warn("Game: InputHandler using fallback keybindings");
+        console.warn("Game: InputHandler failed to initialize, using fallback keybindings");
       }
     } catch (error) {
       console.error("Game: Scene components initialization failed:", error);
@@ -227,11 +225,10 @@ export class Game {
       this.characterController?.dispose();
       this.targetingSystem?.dispose();
       this.assetManager?.dispose();
+      this.showQuestDialog = false;
+      this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
 
-      // Show loading screen
       this.engine.displayLoadingUI();
-
-      // Track progress (4 steps: scene creation, components, sound, final setup)
       const totalSteps = 4;
       let currentStep = 0;
 
@@ -255,8 +252,6 @@ export class Game {
       this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
       console.log(`Game: Switched to ${environmentType} scene`);
-
-      // Hide loading screen
       this.engine.hideLoadingUI();
     } catch (error) {
       console.error("Game: Scene switch failed:", error);
@@ -265,13 +260,24 @@ export class Game {
     }
   }
 
-  public getAnimationManager() {
+  public getAnimationTarget(): Targettable | null {
     if (!this.characterController) {
-      console.warn("Game: CharacterController not initialized yet");
+      console.warn("Game: CharacterController not initialized");
+      return null;
+    }
+    return this.characterController.getCurrentTarget();
+  }
+
+
+  
+  public getAnimationManager(): CharacterAnimationManager | null {
+    if (!this.characterController) {
+      console.warn("Game: CharacterController not initialized");
       return null;
     }
     return this.characterController.animationManager;
   }
+
 
   public getDreamCrystalManager() {
     if (!this.gameManager) {
@@ -279,6 +285,24 @@ export class Game {
       return null;
     }
     return this.gameManager.getDreamCrystalManager();
+  }
+
+  public toggleQuestDialog(): void {
+    this.showQuestDialog = !this.showQuestDialog;
+    console.log(`Game: Quest dialog toggled to ${this.showQuestDialog}`);
+    this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
+  }
+
+  public getShowQuestDialog(): boolean {
+    return this.showQuestDialog;
+  }
+
+  public getOnQuestDialogToggled(): Observable<boolean> {
+    return this.onQuestDialogToggled;
+  }
+
+  public getTargetingSystem(): TargetingSystem {
+    return this.targetingSystem;
   }
 
   public waitForInitialization(): Promise<void> {
@@ -293,6 +317,7 @@ export class Game {
       this.assetManager?.dispose();
       this.soundManager.dispose();
       this.scenes.forEach(scene => scene.dispose());
+      this.onQuestDialogToggled.clear();
       this.engine.dispose();
       console.log("Game: Disposed");
     } catch (error) {

@@ -26,24 +26,32 @@ export class TargetingSystem {
     return this.currentTarget;
   }
 
+  public isNPCTarget(): boolean {
+    if (!this.currentTarget) return false;
+    const targetId = this.currentTarget.getId();
+    const mesh = this.currentTarget.getMesh();
+    if (mesh) {
+      const tags = Tags.GetTags(mesh) || "";
+      return tags.includes(`npcID:${targetId}`);
+    }
+    return false;
+  }
+
   private setupTargeting(): void {
     this.pointerObserver = this.scene.onPointerObservable.add((pointerInfo) => {
       const camera = this.scene.activeCamera as ArcRotateCamera;
 
       if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0) {
-        // Store camera angles on click
         if (camera) {
           this.startAlpha = camera.alpha;
           this.startBeta = camera.beta;
         }
         this.selectedNewTarget = false;
 
-        // Handle target selection
         if (pointerInfo.pickInfo?.hit && pointerInfo.pickInfo.pickedMesh) {
           let mesh = pointerInfo.pickInfo.pickedMesh;
           let targetId: string | undefined;
 
-          // Check mesh and parents for npcID or enemyID tag
           while (mesh && !targetId) {
             const tags = Tags.GetTags(mesh);
             if (tags) {
@@ -56,6 +64,7 @@ export class TargetingSystem {
           }
 
           if (targetId && this.targetMap[targetId]) {
+            console.log("TargetingSystem: Selected target", targetId, this.targetMap[targetId]);
             const selectedTarget = this.targetMap[targetId];
             if (this.currentTarget !== selectedTarget) {
               if (this.currentTarget) {
@@ -70,21 +79,17 @@ export class TargetingSystem {
             return;
           }
         }
-        // No untargeting on POINTERDOWN; wait for POINTERUP
       } else if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 0) {
-        // Handle untargeting on release
         if (!this.selectedNewTarget && this.currentTarget && camera) {
           const deltaAlpha = this.startAlpha !== null ? Math.abs(camera.alpha - this.startAlpha) : 0;
           const deltaBeta = this.startBeta !== null ? Math.abs(camera.beta - this.startBeta) : 0;
 
-          // Untarget only if camera didn't pan significantly
           if (deltaAlpha < this.angleThreshold && deltaBeta < this.angleThreshold) {
             this.currentTarget.setTargetted(false);
             console.log("TargetingSystem: Untargeting target due to click without panning", this.currentTarget.getId());
             this.currentTarget = null;
           }
         }
-        // Reset state
         this.startAlpha = null;
         this.startBeta = null;
         this.selectedNewTarget = false;

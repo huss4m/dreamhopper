@@ -216,10 +216,10 @@ export class ForestEnvironment implements Environment {
         this.mistSystem.minEmitPower = 0.1;
         this.mistSystem.maxEmitPower = 0.3;
          // Soft dreamy pink colors with subtle transparency
-    this.mistSystem.color1 = new Color4(1.0, 0.75, 0.85, 0.18);   // light pink, semi-transparent
-    this.mistSystem.color2 = new Color4(1.0, 0.85, 0.9, 0.1);    // even lighter pink, more transparent
-    this.mistSystem.colorDead = new Color4(1.0, 0.75, 0.85, 0.0); // fade out to fully transparent
-
+         this.mistSystem.addColorGradient(0, new Color4(1.0, 0.75, 0.85, 0.0));  // start transparent
+         this.mistSystem.addColorGradient(0.3, new Color4(1.0, 0.75, 0.85, 0.18)); // fade in
+         this.mistSystem.addColorGradient(0.7, new Color4(1.0, 0.85, 0.9, 0.1));  // soft middle
+         this.mistSystem.addColorGradient(1.0, new Color4(1.0, 0.75, 0.85, 0.0)); // fade out
         this.mistSystem.start();
     }
 

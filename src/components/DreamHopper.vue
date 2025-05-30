@@ -8,7 +8,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from "vue";
+import { defineComponent, ref, onMounted, onUnmounted } from "vue";
 import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
 import DreamCrystalCounter from "./DreamCrystalCounter.vue";
@@ -22,28 +22,43 @@ export default defineComponent({
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
     const showQuestDialog = ref(false);
+    let gameInstance: Game | null = null;
 
     const handleAccept = () => {
       console.log("Quest accepted!");
       showQuestDialog.value = false;
+      if (gameInstance) {
+        gameInstance.toggleQuestDialog(); // Sync with Game state
+      }
     };
 
     const handleDeny = () => {
       console.log("Quest denied!");
       showQuestDialog.value = false;
+      if (gameInstance) {
+        gameInstance.toggleQuestDialog(); // Sync with Game state
+      }
     };
 
     onMounted(async () => {
-  if (canvas.value) {
-    const game = new Game(canvas.value);
-    await game.waitForInitialization();
-    animationManager.value = game.getAnimationManager();
-    dreamCrystalManager.value = game.getDreamCrystalManager();
+      if (canvas.value) {
+        gameInstance = new Game(canvas.value);
+        await gameInstance.waitForInitialization();
+        animationManager.value = gameInstance.getAnimationManager();
+        dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
 
-    // Show quest dialog *after* game is ready
-    showQuestDialog.value = true;
-  }
-});
+        // Subscribe to quest dialog toggle events
+        gameInstance.getOnQuestDialogToggled().add((isVisible) => {
+          showQuestDialog.value = isVisible;
+        });
+      }
+    });
+
+    onUnmounted(() => {
+      if (gameInstance) {
+        gameInstance.dispose();
+      }
+    });
 
     return {
       canvas,
@@ -56,7 +71,6 @@ export default defineComponent({
   },
 });
 </script>
-
 
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&family=Roboto:wght@100;700&display=swap");

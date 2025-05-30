@@ -29,9 +29,11 @@ export class InputHandler {
   private wasSpacePressed = false;
   private wasDreamboltPressed = false;
   private wasSheathePressed = false;
+  private wasQuestDialogPressed = false;
   private game: Game;
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
+  private lastDialogTargetId: string | null = null; // Track NPC for open dialog
 
   constructor(
     private scene: Scene,
@@ -47,12 +49,15 @@ export class InputHandler {
       const response = await fetch('./controls/keybindings.json');
       if (!response.ok) throw new Error(`Failed to load keybindings: ${response.status}`);
       this.keyBindings = (await response.json()).bindings;
+      console.log('InputHandler: Loaded keybindings:', this.keyBindings);
       this.setupKeyboardControls();
       this.setupPointerControls();
       this.isInitialized = true;
       return true;
     } catch (error) {
       console.error('Error loading keybindings:', error);
+      this.keyBindings["T"] = { key: "T", action: "openQuestDialog" };
+      console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
       return false;
     }
   }
@@ -66,7 +71,7 @@ export class InputHandler {
     this.scene.onKeyboardObservable.add((kbInfo) => {
       const key = kbInfo.event.key.toUpperCase();
       const isDown = kbInfo.type === KeyboardEventTypes.KEYDOWN;
-
+      console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
       }
@@ -153,20 +158,72 @@ export class InputHandler {
           this.characterController.toggleSheathe();
         }
         break;
+      case "openQuestDialog":
+        if (!this.wasQuestDialogPressed) {
+          const targetingSystem = this.game.getTargetingSystem();
+          if (targetingSystem.isNPCTarget()) {
+            const playerMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+            const npcMesh = targetingSystem.getCurrentTarget()?.getMesh();
+            if (playerMesh && npcMesh) {
+              const distance = Vector3.Distance(playerMesh.position, npcMesh.position);
+              if (distance <= 5) {
+                console.log(`InputHandler: Toggling quest dialog for NPC (distance: ${distance.toFixed(2)} units)`);
+                this.game.toggleQuestDialog();
+                if (this.game.getShowQuestDialog()) {
+                  this.lastDialogTargetId = targetingSystem.getCurrentTarget()?.getId() || null;
+                } else {
+                  this.lastDialogTargetId = null;
+                }
+              } else {
+                console.log(`InputHandler: Cannot toggle quest dialog; NPC too far (distance: ${distance.toFixed(2)} units)`);
+              }
+            } else {
+              console.log("InputHandler: Cannot toggle quest dialog; player or NPC mesh not found");
+            }
+          } else {
+            console.log("InputHandler: Cannot toggle quest dialog; no NPC targeted");
+          }
+        }
+        break;
     }
   }
 
   public update(): void {
     if (!this.isInitialized) return;
 
+    console.log('InputHandler: keyStates:', this.keyStates);
     const character = this.characterController.getCharacter();
     let isMoving = false;
 
-    // Check if Dreambolt is playing and cancel if movement keys are pressed
     const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
     const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
 
-    // Handle jump (non-continuous action)
+    // Check distance for auto-untoggle
+    if (this.game.getShowQuestDialog() && this.lastDialogTargetId) {
+      const targetingSystem = this.game.getTargetingSystem();
+      const currentTarget = targetingSystem.getCurrentTarget();
+      const playerMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+      const npcMesh = currentTarget?.getMesh();
+
+      if (
+        !targetingSystem.isNPCTarget() ||
+        currentTarget?.getId() !== this.lastDialogTargetId ||
+        !playerMesh ||
+        !npcMesh
+      ) {
+        console.log("InputHandler: Closing quest dialog; NPC no longer targeted or meshes unavailable");
+        this.game.toggleQuestDialog();
+        this.lastDialogTargetId = null;
+      } else {
+        const distance = Vector3.Distance(playerMesh.position, npcMesh.position);
+        if (distance > 5) {
+          console.log(`InputHandler: Closing quest dialog; player too far from NPC (distance: ${distance.toFixed(2)} units)`);
+          this.game.toggleQuestDialog();
+          this.lastDialogTargetId = null;
+        }
+      }
+    }
+
     if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
       const jumpBinding = this.keyBindings["SPACE"];
       this.executeAction(jumpBinding);
@@ -175,7 +232,6 @@ export class InputHandler {
       this.wasSpacePressed = false;
     }
 
-    // Handle castDreambolt (non-continuous action)
     if (this.keyStates["1"] && !this.wasDreamboltPressed && !isDreamboltPlaying) {
       const dreamboltBinding = this.keyBindings["1"];
       this.executeAction(dreamboltBinding);
@@ -184,7 +240,6 @@ export class InputHandler {
       this.wasDreamboltPressed = false;
     }
 
-    // Handle toggle sheathe (non-continuous action)
     if (this.keyStates["W"] && !this.wasSheathePressed) {
       const sheatheBinding = this.keyBindings["W"];
       this.executeAction(sheatheBinding);
@@ -193,7 +248,15 @@ export class InputHandler {
       this.wasSheathePressed = false;
     }
 
-    // Collect all active continuous actions
+    if (this.keyStates["T"] && !this.wasQuestDialogPressed) {
+      console.log("InputHandler: T key pressed, executing openQuestDialog");
+      const questDialogBinding = this.keyBindings["T"];
+      this.executeAction(questDialogBinding);
+      this.wasQuestDialogPressed = true;
+    } else if (!this.keyStates["T"]) {
+      this.wasQuestDialogPressed = false;
+    }
+
     const activeActions: KeyAction[] = [];
     if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
       activeActions.push(this.keyBindings["Z_E"]);
@@ -207,7 +270,6 @@ export class InputHandler {
       }
     }
 
-    // Check for movement actions and cancel Dreambolt if necessary
     if (isDreamboltPlaying) {
       const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
       if (hasMovement) {
@@ -216,13 +278,11 @@ export class InputHandler {
       }
     }
 
-    // Execute all active continuous actions
     for (const binding of activeActions) {
       this.executeAction(binding);
       isMoving = true;
     }
 
-    // Idle state: only if not moving, not jumping, and not playing Dreambolt
     if (!isMoving && !this.keyStates[" "] && !character.isJumping && !this.characterController.isAnimationPlaying("Dreambolt")) {
       this.characterController.playIdleAnimation();
       if (!this.characterController.physicsController?.isJumping) {
@@ -230,7 +290,6 @@ export class InputHandler {
       }
     }
 
-    // Mouse-based camera sync
     if (this.isRightMouseDown) {
       this.characterController.syncRotationWithCamera();
     }
