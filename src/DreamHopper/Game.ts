@@ -44,8 +44,8 @@ export class Game {
     this.engine = new Engine(canvas, true);
     this.sceneCreator = new SceneCreator(this.engine, canvas, environmentType);
     this.soundManager = SoundManager.getInstance([
-      "/music/music1.mp3",
-      "/music/music2.mp3",
+      "./music/music1.mp3",
+      "./music/music2.mp3",
     ]);
 
     this.loadingScreen = new DreamHopperLoadingScreen(this.engine);
