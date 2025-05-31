@@ -439,6 +439,10 @@ export class CharacterAnimationManager {
     return this.animationGroups.find(group => group.name === name);
   }
 
+
+  public getAnimationGroups() {
+    return this.animationGroups;
+  }
   public dispose(): void {
     this.animationGroups.forEach(group => group.dispose());
     this.animationGroups = [];

@@ -1,4 +1,4 @@
-import { Scene, CascadedShadowGenerator, Vector3 } from "@babylonjs/core";
+import { Scene, CascadedShadowGenerator, Vector3, Observable } from "@babylonjs/core";
 import { AssetManager } from "../AssetManager";
 import { Item } from "../items/Item";
 import { Quest, QuestState } from "../npc/Quest";
@@ -11,8 +11,10 @@ export class Player {
   private activeQuests: Quest[] = [];
   private completedQuests: Quest[] = [];
   private turnedInQuests: Quest[] = [];
-  private maxHP = 100; // Added maxHP
-  private currentHP = 100; // Added currentHP
+  private maxHP = 100;
+  private currentHP = 100;
+  private isDead = false; // Added isDead state
+  public onDeathObservable = new Observable<void>(); // Added observable for death event
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
@@ -39,19 +41,33 @@ export class Player {
     ));
   }
 
-  public getMaxHP(): number { // Added getMaxHP
+  public getMaxHP(): number {
     return this.maxHP;
   }
 
-  public getCurrentHP(): number { // Added getCurrentHP
+  public getCurrentHP(): number {
     return this.currentHP;
   }
 
-  public setHP(hp: number): void { // Added setHP
+  public isPlayerDead(): boolean { // Added method to check isDead
+    return this.isDead;
+  }
+
+  public setHP(hp: number): void {
     this.currentHP = Math.max(0, Math.min(hp, this.maxHP));
     console.log(`Player: HP updated to ${this.currentHP}/${this.maxHP}`);
-    if (this.currentHP === 0) {
-      console.log("Player: HP reached 0!");
+    if (this.currentHP === 0 && !this.isDead) {
+      this.isDead = true;
+      console.log("Player is Dead!");
+      this.onDeathObservable.notifyObservers(); // Notify death event
+      // Trigger death animation via CharacterController
+      const characterController = this.game?.getCharacterController();
+      if (characterController) {
+        // Assuming CharacterController has a method to play animations
+        characterController.playDeathAnimation();
+      } else {
+        console.warn("Player: Cannot play Death animation, CharacterController not found");
+      }
     }
   }
 
@@ -236,5 +252,15 @@ export class Player {
         }
       }
     });
+  }
+
+  public dispose(): void { // Added dispose method to clean up
+    this.onDeathObservable.clear();
+    this.inventory.forEach(item => item.dispose());
+    this.inventory = [];
+    this.activeQuests = [];
+    this.completedQuests = [];
+    this.turnedInQuests = [];
+    console.log("Player: Disposed");
   }
 }

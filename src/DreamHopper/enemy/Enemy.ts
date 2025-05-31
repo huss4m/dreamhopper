@@ -71,7 +71,7 @@ export class Enemy implements Hoverable, Targettable {
     this.setupBehavior();
   }
 
-  private setupBehavior(): void {
+   private setupBehavior(): void {
     if (this.isNPC) {
       // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
       return;
@@ -83,6 +83,19 @@ export class Enemy implements Hoverable, Targettable {
       const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
       if (!playerMesh) {
         console.warn(`Enemy ${this.id}: Player mesh not found`);
+        return;
+      }
+
+      // Check if player is dead
+      const player = this.game.getCharacterController()?.getPlayer();
+      if (player?.isPlayerDead()) {
+        if (this.isAggroed || this.isAttacking) {
+          this.isAggroed = false;
+          this.isAttacking = false;
+          this.physicsController.stopAllMovement();
+          this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
+          console.log(`Enemy ${this.id}: Player is dead, stopping attack and switching to Idle`);
+        }
         return;
       }
 

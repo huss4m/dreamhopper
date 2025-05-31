@@ -159,6 +159,7 @@ export class EnemyAnimationManager {
           const currentHP = player.getCurrentHP();
           // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
           player.setHP(currentHP - 10);
+          
           // console.log(`EnemyAnimationManager: Applied 10 damage to player, new HP: ${player.getCurrentHP()}`);
         } else {
           console.error("EnemyAnimationManager: Player instance not found");

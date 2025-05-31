@@ -249,7 +249,7 @@ if (pbr.albedoTexture instanceof Texture) {
             }
 
 
-            pbr.environmentIntensity = 4;
+           // pbr.environmentIntensity = 4;
 
     //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
 
