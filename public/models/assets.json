@@ -81,7 +81,17 @@
       "name": "plushUnicorn",
       "rootUrl": "./models/",
       "filename": "plush_unicorn.glb"
-    }
+    },
 
+    {
+      "name": "map",
+      "rootUrl": "./models/",
+      "filename": "map.glb"
+    },
+    {
+      "name": "mapleTree",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3.glb"
+    }
   ]
   

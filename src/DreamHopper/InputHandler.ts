@@ -7,8 +7,7 @@ import {
 } from "@babylonjs/core";
 import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
-import { EnvironmentType } from "./EnvironmentCreator";
-import { NPC } from "./npc/NPC";
+
 
 interface KeyAction {
   key: string;
@@ -137,9 +136,7 @@ export class InputHandler {
           this.characterController.jump(binding.animation);
         }
         break;
-      case "switchScene":
-        this.game.switchScene(EnvironmentType.DESERT);
-        break;
+   
       case "moveDiagonallyRight":
         this.characterController.physicsController!.isDiagonal = true;
         if (!this.characterController.physicsController?.isJumping) {
