@@ -17,6 +17,10 @@
       :current-h-p="playerHP.currentHP"
       :max-h-p="playerHP.maxHP"
     />
+    <DeathScreen
+      :visible="isDeathScreenVisible"
+      @restart="handleRestart"
+    />
   </main>
 </template>
 
@@ -25,18 +29,21 @@ import { defineComponent, ref, onMounted, onUnmounted, reactive, watch } from "v
 import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
 import DreamCrystalCounter from "./DreamCrystalCounter.vue";
+import DeathScreen from "./DeathScreen.vue";
 import QuestDialog from "./QuestDialog.vue";
-import HPBar from "./HPBar.vue"; // Added import
+import HPBar from "./HPBar.vue";
 import { Quest } from "@/DreamHopper/npc/Quest";
+import { Vector3 } from "@babylonjs/core";
 
 export default defineComponent({
   name: "DreamHopper",
-  components: { CastingBar, DreamCrystalCounter, QuestDialog, HPBar }, // Added HPBar
+  components: { CastingBar, DreamCrystalCounter, QuestDialog, HPBar, DeathScreen },
   setup() {
     const canvas = ref<HTMLCanvasElement | null>(null);
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
-    const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null); // Added playerHP
+    const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null);
+    const isDeathScreenVisible = ref(false);
     let gameInstance: Game | null = null;
 
     const dialogState = reactive({
@@ -75,13 +82,36 @@ export default defineComponent({
       }
     };
 
+    const handleRestart = () => {
+      console.log("DreamHopper: Restarting game");
+      if (gameInstance) {
+        const player = gameInstance.getCharacterController()?.getPlayer();
+        if (player) {
+          // Reset player state
+          player.reset(); // Use the new reset method
+          // Reset player position
+          const characterMesh = gameInstance.getCharacterController()?.characterMeshLoader.getCharacterMesh();
+          if (characterMesh) {
+            characterMesh.position = new Vector3(5, 5, 0); // Respawn at initial position
+          }
+          // Resume idle animation
+          gameInstance.getCharacterController()?.playIdleAnimation();
+          gameInstance.getCharacterController()!.animationManager.stopAllAnimations();
+          console.log(gameInstance.getCharacterController()!.animationManager.getAnimationGroups().map(g => ({ name: g.name, isPlaying: g.isPlaying })));
+          // Hide death screen
+          isDeathScreenVisible.value = false;
+          console.log("DreamHopper: Player respawned, death screen hidden");
+        }
+      }
+    };
+
     onMounted(async () => {
       if (canvas.value) {
         gameInstance = new Game(canvas.value);
         await gameInstance.waitForInitialization();
         animationManager.value = gameInstance.getAnimationManager();
         dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
-        playerHP.value = gameInstance.getPlayerHP(); // Initialize HP
+        playerHP.value = gameInstance.getPlayerHP();
 
         dialogState.visible = gameInstance.getShowQuestDialog();
         dialogState.quest = gameInstance.getCurrentQuest();
@@ -94,6 +124,15 @@ export default defineComponent({
           dialogState.questKey++;
           console.log(`DreamHopper: Updated dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
         });
+
+        // Subscribe to player death
+        const player = gameInstance.getCharacterController()?.getPlayer();
+        if (player) {
+          player.onDeathObservable.add(() => {
+            console.log("DreamHopper: Player died, showing death screen");
+            isDeathScreenVisible.value = true;
+          });
+        }
 
         // Poll HP changes (temporary until events are added)
         const hpInterval = setInterval(() => {
@@ -130,11 +169,13 @@ export default defineComponent({
       animationManager,
       dreamCrystalManager,
       dialogState,
-      playerHP, // Added to return
+      playerHP,
+      isDeathScreenVisible,
       handleAccept,
       handleDeny,
       handleClose,
       handleTurnIn,
+      handleRestart,
     };
   },
 });
@@ -196,6 +237,4 @@ canvas {
   border: 2px solid #ffcc00;
   box-shadow: 0 0 10px #ffcc00;
 }
-
-
 </style>

@@ -13,8 +13,8 @@ export class Player {
   private turnedInQuests: Quest[] = [];
   private maxHP = 100;
   private currentHP = 100;
-  private isDead = false; // Added isDead state
-  public onDeathObservable = new Observable<void>(); // Added observable for death event
+  private isDead = false;
+  public onDeathObservable = new Observable<void>();
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
@@ -24,7 +24,7 @@ export class Player {
     this.game = game!;
     if (this.isSheathed) {
       this.posOffset = new Vector3(0, 0, -0.21);
-      this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, +Math.PI / 3);
+      this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
     } else {
       this.posOffset = new Vector3(0.8, 0.05, 0.05);
       this.rotOffset = new Vector3(Math.PI, 0, 0);
@@ -49,7 +49,7 @@ export class Player {
     return this.currentHP;
   }
 
-  public isPlayerDead(): boolean { // Added method to check isDead
+  public isPlayerDead(): boolean {
     return this.isDead;
   }
 
@@ -59,16 +59,21 @@ export class Player {
     if (this.currentHP === 0 && !this.isDead) {
       this.isDead = true;
       console.log("Player is Dead!");
-      this.onDeathObservable.notifyObservers(); // Notify death event
-      // Trigger death animation via CharacterController
+      this.onDeathObservable.notifyObservers();
       const characterController = this.game?.getCharacterController();
       if (characterController) {
-        // Assuming CharacterController has a method to play animations
         characterController.playDeathAnimation();
       } else {
         console.warn("Player: Cannot play Death animation, CharacterController not found");
       }
     }
+  }
+
+  public reset(): void {
+    this.currentHP = this.maxHP;
+    this.isDead = false;
+    // Note: Could extend to reset position, inventory, crystals, or quests if needed
+    console.log("Player: Reset HP to max and cleared isDead state");
   }
 
   public getInventory(): Item[] {
@@ -254,7 +259,7 @@ export class Player {
     });
   }
 
-  public dispose(): void { // Added dispose method to clean up
+  public dispose(): void {
     this.onDeathObservable.clear();
     this.inventory.forEach(item => item.dispose());
     this.inventory = [];

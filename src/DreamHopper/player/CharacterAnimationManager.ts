@@ -253,11 +253,18 @@ export class CharacterAnimationManager {
     name: string,
     speed = 1.0,
     fromFrame?: number,
-    toFrame?: number
+    toFrame?: number,
+    loop?: boolean
   ): void {
     const newAnim = this.getAnimationByName(name);
     if (!newAnim) {
       console.warn(`CharacterAnimationManager: Animation group '${name}' not found`);
+      return;
+    }
+
+    // Prevent playing non-death animations if player is dead, unless it's Idle after respawn
+    if (this.characterController?.getPlayer().isPlayerDead() && name !== "Death" && name !== "Idle") {
+      console.log(`CharacterAnimationManager: Skipping animation '${name}' because player is dead`);
       return;
     }
 
@@ -291,7 +298,10 @@ export class CharacterAnimationManager {
       }
     }
 
-    if ((name === "Dreambolt" || name === "Jump") && this.currentAnimationName !== name) {
+    // Skip blending if transitioning from Death to another animation
+    const skipBlending = this.currentAnimationName === "Death";
+
+    if ((name === "Dreambolt" || name === "Jump" || name === "Death") && this.currentAnimationName !== name) {
       const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
       if (prevAnim) {
         prevAnim.stop();
@@ -308,37 +318,46 @@ export class CharacterAnimationManager {
 
     const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
 
-    if (prevAnim && name !== "Dreambolt" && name !== "Jump") {
+    if (prevAnim && !skipBlending && name !== "Dreambolt" && name !== "Jump" && name !== "Death") {
       prevAnim.setWeightForAllAnimatables(0);
       prevAnim.stop();
     }
 
     newAnim.stop();
-    newAnim.start(!(newAnim.name === "Jump" || newAnim.name === "Dreambolt"), speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
-    newAnim.setWeightForAllAnimatables(0);
+    // Explicitly set loop to false for Death animation
+    const isLooping = name === "Death" ? false : (loop ?? !(name === "Jump" || name === "Dreambolt"));
+    newAnim.start(isLooping, speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
+    newAnim.setWeightForAllAnimatables(skipBlending ? 1 : 0);
 
     this.currentAnimationName = name;
-    this.isBlending = true;
 
-    const blendDuration = 300;
-    const startTime = performance.now();
+    if (skipBlending) {
+      if (prevAnim) prevAnim.stop();
+      newAnim.setWeightForAllAnimatables(1);
+      this.isBlending = false;
+      console.log(`CharacterAnimationManager: Played '${name}' without blending (previous was Death)`);
+    } else {
+      this.isBlending = true;
+      const blendDuration = 300;
+      const startTime = performance.now();
 
-    const blendStep = (now: number) => {
-      const t = Math.min((now - startTime) / blendDuration, 1);
-      newAnim.setWeightForAllAnimatables(t);
-      if (prevAnim) prevAnim.setWeightForAllAnimatables(1 - t);
+      const blendStep = (now: number) => {
+        const t = Math.min((now - startTime) / blendDuration, 1);
+        newAnim.setWeightForAllAnimatables(t);
+        if (prevAnim) prevAnim.setWeightForAllAnimatables(1 - t);
 
-      if (t < 1) {
-        this.blendFrameId = requestAnimationFrame(blendStep);
-      } else {
-        if (prevAnim) prevAnim.stop();
-        newAnim.setWeightForAllAnimatables(1);
-        this.isBlending = false;
-        this.blendFrameId = null;
-      }
-    };
+        if (t < 1) {
+          this.blendFrameId = requestAnimationFrame(blendStep);
+        } else {
+          if (prevAnim) prevAnim.stop();
+          newAnim.setWeightForAllAnimatables(1);
+          this.isBlending = false;
+          this.blendFrameId = null;
+        }
+      };
 
-    this.blendFrameId = requestAnimationFrame(blendStep);
+      this.blendFrameId = requestAnimationFrame(blendStep);
+    }
 
     if (newAnim === this.getAnimationByName("Jump")) {
       this.isJumping = true;
@@ -371,7 +390,6 @@ export class CharacterAnimationManager {
       });
     }
   }
-
   public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
     let currentWeight = 1;
     let newWeight = 0;
@@ -443,6 +461,27 @@ export class CharacterAnimationManager {
   public getAnimationGroups() {
     return this.animationGroups;
   }
+
+  
+  public stopAllAnimations(): void {
+    if (this.blendFrameId !== null) {
+      cancelAnimationFrame(this.blendFrameId);
+      this.blendFrameId = null;
+    }
+    this.isBlending = false;
+    this.animationGroups.forEach(group => {
+      if (group.isPlaying || group.animatables.length > 0) {
+        group.stop();
+        group.setWeightForAllAnimatables(0);
+        group.animatables.forEach(anim => anim.stop());
+      }
+    });
+    this.currentAnimationName = null;
+    this.dreamboltSpawned = false;
+    console.log("CharacterAnimationManager: Stopped all animations, cleared blending state, and reset animatables");
+  }
+
+
   public dispose(): void {
     this.animationGroups.forEach(group => group.dispose());
     this.animationGroups = [];

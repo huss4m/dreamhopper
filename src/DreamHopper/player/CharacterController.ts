@@ -146,6 +146,9 @@ export class CharacterController {
 
   public playIdleAnimation(): void {
     if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Dreambolt") && !this.player.isPlayerDead()) {
+      if(this.animationManager.getAnimationByName("Death")?.isPlaying) {
+        this.animationManager.stopAllAnimations();
+      }
       this.animationManager.playAnimation("Idle", 1);
     }
   }

@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -46,6 +46,7 @@ export class Game {
   private ambientLight: HemisphericLight | null = null;
   private shadowGenerator: CascadedShadowGenerator | null = null;
   private treeColliders: Mesh[] = [];
+  public ground!: GroundMesh;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true);
@@ -196,9 +197,11 @@ private async loadGroundMesh(): Promise<void> {
       maxHeight: 1.5,
       // optionally add updatable: false if you don't need to update
     }, this.scene);
+    this.ground = ground;
 
     // Position ground
     ground.position = new Vector3(0, 0, 0);
+
 
     // Make it pickable and receive shadows like your original
     ground.receiveShadows = true;

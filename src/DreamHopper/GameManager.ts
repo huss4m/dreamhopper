@@ -1,4 +1,4 @@
-import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator, Mesh, Ray } from "@babylonjs/core";
+import { Scene, Vector3, ShadowGenerator, CascadedShadowGenerator, Mesh, Ray, GroundMesh } from "@babylonjs/core";
 import { AssetManager } from "./AssetManager";
 import { NPC } from "./npc/NPC";
 import { Enemy } from "./enemy/Enemy";
@@ -144,23 +144,20 @@ export class GameManager {
 
     console.log("GameManager: Initializing DreamCrystalManager with character mesh:", this.characterMesh.name);
 
-    const groundMesh = this.scene.getMeshByName("Plane");
+    const groundMesh = this.game.ground;
     if (!groundMesh) {
-      console.warn("GameManager: Ground mesh 'Plane' not found, using original y-positions");
+      throw new Error("GameManager: Ground mesh 'Plane' not found");
     }
 
-    const adjustedPositions = stateToUse.positions.map((pos: Vector3) => {
-      let yPos: number = pos.y;
-      if (groundMesh) {
-        const ray = new Ray(new Vector3(pos.x, 1000, pos.z), new Vector3(0, -1, 0));
-        const pickInfo = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
-        if (pickInfo?.hit && pickInfo.pickedPoint) {
-          yPos = pickInfo.pickedPoint.y;
-        } else {
-          console.warn(`GameManager: No ground hit for crystal at (${pos.x}, ${pos.z}), using original y: ${pos.y}`);
-        }
+  
+
+    const adjustedPositions = stateToUse.positions.map((pos: Vector3, index: number) => {
+      const height = groundMesh.getHeightAtCoordinates(pos.x, pos.z);
+      if (height === undefined || isNaN(height)) {
+        throw new Error(`GameManager: Invalid height for crystal ${index} at (${pos.x}, ${pos.z})`);
       }
-      return new Vector3(pos.x, yPos + 1, pos.z);
+      console.log(`GameManager: Crystal ${index} at (${pos.x}, ${pos.z}) placed at y=${height} using getHeightAtCoordinates`);
+      return new Vector3(pos.x, height + 1, pos.z); // Add 1 unit offset above ground
     });
 
     this.dreamCrystalManager = new DreamCrystalManager(
@@ -173,6 +170,7 @@ export class GameManager {
 
     return this.dreamCrystalManager;
   }
+
 
   getNPCs(): NPC[] {
     return this.npcs;
