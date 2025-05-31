@@ -114,6 +114,13 @@ export class Game {
       console.log("Game: All assets loaded.");
       onStepComplete();
 
+
+      this.highlightLayer = this.sceneCreator.highlightLayer;
+      this.targetingSystem = new TargetingSystem(scene);
+
+
+
+      
       const shadowGenerator = this.sceneCreator.getShadowGenerator();
       if (!shadowGenerator) {
         throw new Error("Game: Shadow generator not initialized");
@@ -124,9 +131,7 @@ export class Game {
       }
       console.log("Game: Shadow generator initialized with light:", shadowGenerator.getLight().name);
 
-      this.highlightLayer = this.sceneCreator.highlightLayer;
-      this.targetingSystem = new TargetingSystem(scene);
-
+      
       this.gameManager = new GameManager(
         scene,
         this.assetManager,
