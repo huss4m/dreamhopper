@@ -19,6 +19,7 @@ export class NPC implements Hoverable, Targettable {
   private physicsController: NPCPhysicsController | null = null;
   private hoverHandler: HoverHandler;
   private targetCircle: Mesh | null = null;
+  private hitboxMesh: Mesh | null = null; // New hitbox property
   private questMarker: Sprite | null = null;
   private questMarkerObserver: any | null = null;
   private dialogToggleObserver: any | null = null;
@@ -116,6 +117,7 @@ export class NPC implements Hoverable, Targettable {
 
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
+      this.npcMesh.isPickable = true; // Keep pickable for consistency, adjust if needed
 
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
@@ -127,12 +129,33 @@ export class NPC implements Hoverable, Targettable {
           mat.microSurface = 0.8;
         }
         mesh.checkCollisions = true;
+        mesh.isPickable = true; // Child meshes pickable, adjust if needed
       });
 
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
       }
+
+      // Create hitbox
+      this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
+        height: 2,
+        width: 1,
+      }, this.scene);
+      this.hitboxMesh.parent = this.npcMesh; // Parent to NPC mesh to follow it
+      this.hitboxMesh.position = new Vector3(0, 1, 0); // Centered at NPC's midpoint
+      this.hitboxMesh.checkCollisions = false;
+      this.hitboxMesh.isPickable = true; // Pickable for targeting
+      this.hitboxMesh.isVisible = false; // Invisible hitbox
+
+      const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
+      hitboxMaterial.alpha = 0; // Fully transparent
+      this.hitboxMesh.material = hitboxMaterial;
+
+      Tags.EnableFor(this.hitboxMesh);
+      Tags.AddTagsTo(this.hitboxMesh, `npcID:${this.id} hitbox`);
+
+      this.shadowGenerator.removeShadowCaster(this.hitboxMesh); // No shadows for hitbox
 
       Tags.EnableFor(this.npcMesh);
       Tags.AddTagsTo(this.npcMesh, `npcID:${this.id}`);
@@ -143,12 +166,19 @@ export class NPC implements Hoverable, Targettable {
 
       this.setupPhysics();
       this.animationManager.initialize(animationGroups);
-      this.hoverHandler.setupHover(this);
+
+      // Update hoverable to use hitbox for hovering
+      const hoverable: Hoverable = {
+        getMesh: () => this.hitboxMesh, // Use hitbox for hover detection
+        getScene: () => this.scene,
+        getHighlightMesh: () => this.npcMesh, // Highlight the NPC mesh
+      };
+      this.hoverHandler.setupHover(hoverable);
+
+      this.updateQuestMarker();
     } catch (error) {
       console.error(`NPC ${this.id}: Failed to load character`, error);
     }
-
-    this.updateQuestMarker();
   }
 
   private setupPhysics(): void {
@@ -429,7 +459,7 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public getMesh(): Mesh | null {
-    return this.npcMesh;
+    return this.hitboxMesh; // Return hitbox for targeting
   }
 
   public getScene(): Scene {
@@ -457,6 +487,11 @@ export class NPC implements Hoverable, Targettable {
       }
       this.targetCircle.dispose();
       this.targetCircle = null;
+    }
+
+    if (this.hitboxMesh) {
+      this.hitboxMesh.dispose();
+      this.hitboxMesh = null; // Dispose hitbox
     }
 
     if (this.questMarker) {
@@ -504,5 +539,8 @@ export class NPC implements Hoverable, Targettable {
     if (this.physicsController) {
       this.physicsController.stopWandering();
     }
+  }
+  public getHighlightMesh(): Mesh | null {
+    return this.npcMesh; // Return NPC mesh for highlighting
   }
 }

@@ -22,14 +22,17 @@ export class Player {
 
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator, game?: Game) {
     this.game = game!;
+    /*
     if (this.isSheathed) {
       this.posOffset = new Vector3(0, 0, -0.21);
       this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
     } else {
       this.posOffset = new Vector3(0.8, 0.05, 0.05);
       this.rotOffset = new Vector3(Math.PI, 0, 0);
-    }
-
+    }*/
+      this.posOffset = new Vector3(0, 0, -0.21);
+      this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
+    
     this.addItem(new Item(
       "sword1",
       scene,

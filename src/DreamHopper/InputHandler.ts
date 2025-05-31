@@ -8,7 +8,6 @@ import {
 import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
 
-
 interface KeyAction {
   key: string;
   action: string | { [key: string]: any };
@@ -21,6 +20,11 @@ interface KeyAction {
   };
 }
 
+interface Layout {
+  default?: boolean;
+  bindings: { [key: string]: KeyAction };
+}
+
 export class InputHandler {
   private keyStates: { [key: string]: boolean } = {};
   private isRightMouseDown = false;
@@ -30,6 +34,9 @@ export class InputHandler {
   private wasDreamboltPressed = false;
   private wasSheathePressed = false;
   private wasQuestDialogPressed = false;
+  private wasLayoutTogglePressed = false;
+  private layouts: { [key: string]: Layout } = {};
+  private currentLayout = "AZERTY";
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
   private lastDialogTargetId: string | null = null;
@@ -45,8 +52,19 @@ export class InputHandler {
     try {
       const response = await fetch('./controls/keybindings.json');
       if (!response.ok) throw new Error(`Failed to load keybindings: ${response.status}`);
-      this.keyBindings = (await response.json()).bindings;
-      console.log('InputHandler: Loaded keybindings:', this.keyBindings);
+      this.layouts = (await response.json()).layouts;
+      console.log('InputHandler: Loaded layouts:', this.layouts);
+
+      // Set default layout
+      for (const [layoutName, layout] of Object.entries(this.layouts)) {
+        if (layout.default) {
+          this.currentLayout = layoutName;
+          this.keyBindings = layout.bindings;
+          break;
+        }
+      }
+      console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
+
       this.setupKeyboardControls();
       this.setupPointerControls();
       this.isInitialized = true;
@@ -136,7 +154,6 @@ export class InputHandler {
           this.characterController.jump(binding.animation);
         }
         break;
-   
       case "moveDiagonallyRight":
         this.characterController.physicsController!.isDiagonal = true;
         if (!this.characterController.physicsController?.isJumping) {
@@ -186,6 +203,13 @@ export class InputHandler {
           } else {
             console.log("InputHandler: Cannot toggle quest dialog; no NPC targeted");
           }
+        }
+        break;
+      case "toggleLayout":
+        if (!this.wasLayoutTogglePressed) {
+          this.currentLayout = this.currentLayout === "AZERTY" ? "QWERTY" : "AZERTY";
+          this.keyBindings = this.layouts[this.currentLayout].bindings;
+          console.log(`InputHandler: Switched to ${this.currentLayout} layout`);
         }
         break;
     }
@@ -243,7 +267,7 @@ export class InputHandler {
       this.wasDreamboltPressed = false;
     }
 
-    if (this.keyStates["W"] && !this.wasSheathePressed) {
+    if (this.currentLayout === "AZERTY" && this.keyStates["W"] && !this.wasSheathePressed) {
       const sheatheBinding = this.keyBindings["W"];
       if (sheatheBinding) this.executeAction(sheatheBinding);
       this.wasSheathePressed = true;
@@ -260,19 +284,37 @@ export class InputHandler {
       this.wasQuestDialogPressed = false;
     }
 
+    if (this.keyStates["L"] && !this.wasLayoutTogglePressed) {
+      const layoutToggleBinding = this.keyBindings["L"];
+      if (layoutToggleBinding) this.executeAction(layoutToggleBinding);
+      this.wasLayoutTogglePressed = true;
+    } else if (!this.keyStates["L"]) {
+      this.wasLayoutTogglePressed = false;
+    }
+
     const activeActions: KeyAction[] = [];
-    if (this.keyStates["W"] && this.keyStates["D"] && this.keyBindings["W_D"]) {
-      activeActions.push(this.keyBindings["W_D"]);
-    } else if (this.keyStates["W"] && this.keyStates["A"] && this.keyBindings["W_A"]) {
-      activeActions.push(this.keyBindings["W_A"]);
-    } else if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
-      activeActions.push(this.keyBindings["Z_E"]);
-    } else if (this.keyStates["Z"] && this.keyStates["A"] && this.keyBindings["Z_A"]) {
-      activeActions.push(this.keyBindings["Z_A"]);
-    } else {
-      for (const binding of Object.values(this.keyBindings)) {
-        if (binding.continuous && !["W_D", "W_A", "Z_E", "Z_A"].includes(binding.key) && this.keyStates[binding.key]) {
-          activeActions.push(binding);
+    if (this.currentLayout === "AZERTY") {
+      if (this.keyStates["Z"] && this.keyStates["E"] && this.keyBindings["Z_E"]) {
+        activeActions.push(this.keyBindings["Z_E"]);
+      } else if (this.keyStates["Z"] && this.keyStates["A"] && this.keyBindings["Z_A"]) {
+        activeActions.push(this.keyBindings["Z_A"]);
+      } else {
+        for (const binding of Object.values(this.keyBindings)) {
+          if (binding.continuous && !["Z_E", "Z_A"].includes(binding.key) && this.keyStates[binding.key]) {
+            activeActions.push(binding);
+          }
+        }
+      }
+    } else if (this.currentLayout === "QWERTY") {
+      if (this.keyStates["W"] && this.keyStates["E"] && this.keyBindings["W_E"]) {
+        activeActions.push(this.keyBindings["W_E"]);
+      } else if (this.keyStates["W"] && this.keyStates["Q"] && this.keyBindings["W_Q"]) {
+        activeActions.push(this.keyBindings["W_Q"]);
+      } else {
+        for (const binding of Object.values(this.keyBindings)) {
+          if (binding.continuous && !["W_E", "W_Q"].includes(binding.key) && this.keyStates[binding.key]) {
+            activeActions.push(binding);
+          }
         }
       }
     }

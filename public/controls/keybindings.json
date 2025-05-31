@@ -1,73 +1,155 @@
 {
-  "bindings": {
-    "Z": {
-      "key": "Z",
-      "continuous": true,
-      "animation": { "name": "Run", "loop": 1, "speed": 1 },
-      "action": "moveForward"
+  "layouts": {
+    "AZERTY": {
+      "default": true,
+      "bindings": {
+        "Z": {
+          "key": "Z",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveForward"
+        },
+        "S": {
+          "key": "S",
+          "continuous": true,
+          "animation": { "name": "RunBackwards" },
+          "action": "backPedal"
+        },
+        "A": {
+          "key": "A",
+          "continuous": true,
+          "animation": { "name": "StrafeLeft" },
+          "action": "strafeLeft"
+        },
+        "E": {
+          "key": "E",
+          "continuous": true,
+          "animation": { "name": "RightStrafe" },
+          "action": "strafeRight"
+        },
+        "Q": {
+          "key": "Q",
+          "continuous": true,
+          "action": "rotateLeft"
+        },
+        "D": {
+          "key": "D",
+          "continuous": true,
+          "action": "rotateRight"
+        },
+        "SPACE": {
+          "key": " ",
+          "action": "jump"
+        },
+        "U": {
+          "key": "U",
+          "action": "switchScene"
+        },
+        "Z_E": {
+          "key": "Z+E",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveDiagonallyRight"
+        },
+        "Z_A": {
+          "key": "Z+A",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveDiagonallyLeft"
+        },
+        "1": {
+          "key": "1",
+          "continuous": false,
+          "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
+          "action": "castDreambolt"
+        },
+        "W": {
+          "key": "W",
+          "continuous": false,
+          "action": "toggleSheathe"
+        },
+        "T": {
+          "key": "T",
+          "action": "openQuestDialog"
+        },
+        "L": {
+          "key": "L",
+          "action": "toggleLayout"
+        }
+      }
     },
-    "S": {
-      "key": "S",
-      "continuous": true,
-      "animation": { "name": "RunBackwards" },
-      "action": "backPedal"
-    },
-    "A": {
-      "key": "A",
-      "continuous": true,
-      "animation": { "name": "StrafeLeft" },
-      "action": "strafeLeft"
-    },
-    "E": {
-      "key": "E",
-      "continuous": true,
-      "animation": { "name": "RightStrafe" },
-      "action": "strafeRight"
-    },
-    "Q": {
-      "key": "Q",
-      "continuous": true,
-      "action": "rotateLeft"
-    },
-    "D": {
-      "key": "D",
-      "continuous": true,
-      "action": "rotateRight"
-    },
-    "SPACE": {
-      "key": " ",
-      "action": "jump"
-    },
-    "U": {
-      "key": "U",
-      "action": "switchScene"
-    },
-    "Z_E": {
-      "key": "Z+E",
-      "continuous": true,
-      "animation": { "name": "Run", "loop": 1, "speed": 1 },
-      "action": "moveDiagonallyRight"
-    },
-    "Z_A": {
-      "key": "Z+A",
-      "continuous": true,
-      "animation": { "name": "Run", "loop": 1, "speed": 1 },
-      "action": "moveDiagonallyLeft"
-    },
-    "1": {
-      "key": "1",
-      "continuous": false,
-      "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
-      "action": "castDreambolt"
-    },
-    "W": {
-      "key": "W",
-      "continuous": false,
-      "action": "toggleSheathe"
-    },
-    "T": {
-      "key": "T",
-      "action": "openQuestDialog"
+    "QWERTY": {
+      "default": false,
+      "bindings": {
+        "W": {
+          "key": "W",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveForward"
+        },
+        "S": {
+          "key": "S",
+          "continuous": true,
+          "animation": { "name": "RunBackwards" },
+          "action": "backPedal"
+        },
+        "Q": {
+          "key": "Q",
+          "continuous": true,
+          "animation": { "name": "StrafeLeft" },
+          "action": "strafeLeft"
+        },
+        "E": {
+          "key": "E",
+          "continuous": true,
+          "animation": { "name": "RightStrafe" },
+          "action": "strafeRight"
+        },
+        "A": {
+          "key": "A",
+          "continuous": true,
+          "action": "rotateLeft"
+        },
+        "D": {
+          "key": "D",
+          "continuous": true,
+          "action": "rotateRight"
+        },
+        "SPACE": {
+          "key": " ",
+          "action": "jump"
+        },
+        "U": {
+          "key": "U",
+          "action": "switchScene"
+        },
+        "W_E": {
+          "key": "W+E",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveDiagonallyRight"
+        },
+        "W_Q": {
+          "key": "W+Q",
+          "continuous": true,
+          "animation": { "name": "Run", "loop": 1, "speed": 1 },
+          "action": "moveDiagonallyLeft"
+        },
+        "1": {
+          "key": "1",
+          "continuous": false,
+          "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
+          "action": "castDreambolt"
+        },
+        "T": {
+          "key": "T",
+          "action": "openQuestDialog"
+        },
+        "L": {
+          "key": "L",
+          "action": "toggleLayout"
+        }
+      }
     }
   }
 }
