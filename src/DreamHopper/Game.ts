@@ -180,7 +180,9 @@ export class Game {
 
   // Create mist particles
   this.createMistParticles();
-
+  this.createSparkleParticles();
+  this.createFireflyParticles();
+  //this.createDreamTrailParticles();
   // Create forest (now uses preloaded asset)
   await this.createForest(800);
 }
@@ -317,6 +319,105 @@ if (pbr.albedoTexture instanceof Texture) {
     this.mistSystem.addColorGradient(1.0, new Color4(1.0, 0.75, 0.85, 0.0));
     this.mistSystem.start();
   }
+
+  private createSparkleParticles(): void {
+  const sparkleSystem = new ParticleSystem("sparkles", 500, this.scene);
+  sparkleSystem.particleTexture = new Texture("./flare_1.png", this.scene); // texture à adapter
+  sparkleSystem.emitter = new Vector3(0, 2, 0); // centré mais diffusé large
+  sparkleSystem.minEmitBox = new Vector3(-50, 1, -50);
+  sparkleSystem.maxEmitBox = new Vector3(50, 5, 50);
+
+  sparkleSystem.minSize = 0.2;
+  sparkleSystem.maxSize = 0.5;
+  sparkleSystem.minLifeTime = 3.0;
+  sparkleSystem.maxLifeTime = 6.0;
+  sparkleSystem.emitRate = 250;
+
+  sparkleSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
+  sparkleSystem.gravity = new Vector3(0, -0.1, 0); // très légère chute
+  sparkleSystem.direction1 = new Vector3(-0.05, 0.05, -0.05);
+  sparkleSystem.direction2 = new Vector3(0.05, 0.05, 0.05);
+
+  sparkleSystem.minAngularSpeed = 0;
+  sparkleSystem.maxAngularSpeed = 0.5;
+  sparkleSystem.minEmitPower = 0.05;
+  sparkleSystem.maxEmitPower = 0.1;
+
+  sparkleSystem.addColorGradient(0, new Color4(1.0, 1.0, 1.0, 0.0));
+  sparkleSystem.addColorGradient(0.3, new Color4(0.9, 0.9, 1.0, 0.25));
+  sparkleSystem.addColorGradient(0.6, new Color4(1.0, 0.9, 1.0, 0.2));
+  sparkleSystem.addColorGradient(1.0, new Color4(1.0, 1.0, 1.0, 0.0));
+
+  sparkleSystem.start();
+}
+
+
+
+private createDreamTrailParticles(): void {
+  const trailSystem = new ParticleSystem("dreamTrail", 400, this.scene);
+  trailSystem.particleTexture = new Texture("./lines_8.png", this.scene); // texture floue ou filet lumineux
+
+  trailSystem.emitter = new Vector3(0, 12, 0); // haut de la scène
+  trailSystem.minEmitBox = new Vector3(-60, 0, -60);
+  trailSystem.maxEmitBox = new Vector3(60, 0, 60);
+
+  trailSystem.minSize = 0.8;
+  trailSystem.maxSize = 1.2;
+  trailSystem.minLifeTime = 5;
+  trailSystem.maxLifeTime = 9;
+  trailSystem.emitRate = 200;
+
+  trailSystem.direction1 = new Vector3(-0.1, -0.2, -0.1);
+  trailSystem.direction2 = new Vector3(0.1, -0.3, 0.1);
+  trailSystem.gravity = new Vector3(0, -0.1, 0); // lente descente
+
+  trailSystem.minEmitPower = 0.05;
+  trailSystem.maxEmitPower = 0.1;
+  trailSystem.minAngularSpeed = 0;
+  trailSystem.maxAngularSpeed = 0.2;
+
+  trailSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
+
+  trailSystem.addColorGradient(0.0, new Color4(1.0, 0.9, 1.0, 0.0));
+  trailSystem.addColorGradient(0.3, new Color4(1.0, 0.9, 1.0, 0.15));
+  trailSystem.addColorGradient(0.7, new Color4(0.9, 0.8, 1.0, 0.1));
+  trailSystem.addColorGradient(1.0, new Color4(1.0, 0.9, 1.0, 0.0));
+
+  trailSystem.start();
+}
+private createFireflyParticles(): void {
+  const fireflySystem = new ParticleSystem("fireflies", 100, this.scene);
+  fireflySystem.particleTexture = new Texture("./Flare.png", this.scene); // petit point lumineux flou
+
+  fireflySystem.emitter = new Vector3(0, 2, 0);
+  fireflySystem.minEmitBox = new Vector3(-40, 0, -40);
+  fireflySystem.maxEmitBox = new Vector3(40, 5, 40);
+
+  fireflySystem.minSize = 0.3;
+  fireflySystem.maxSize = 0.5;
+  fireflySystem.minLifeTime = 4;
+  fireflySystem.maxLifeTime = 8;
+  fireflySystem.emitRate = 15;
+
+  fireflySystem.direction1 = new Vector3(-0.2, 0.1, -0.2);
+  fireflySystem.direction2 = new Vector3(0.2, 0.1, 0.2);
+  fireflySystem.minEmitPower = 0.2;
+  fireflySystem.maxEmitPower = 0.5;
+  fireflySystem.minAngularSpeed = 0.0;
+  fireflySystem.maxAngularSpeed = 0.2;
+  fireflySystem.gravity = new Vector3(0, 0, 0); // pas de chute
+
+  fireflySystem.blendMode = ParticleSystem.BLENDMODE_ADD;
+
+  // Clignotement doux
+  fireflySystem.addColorGradient(0.0, new Color4(1.0, 1.0, 0.8, 0.0));
+  fireflySystem.addColorGradient(0.2, new Color4(1.0, 1.0, 0.6, 0.3));
+  fireflySystem.addColorGradient(0.5, new Color4(1.0, 1.0, 0.4, 0.5));
+  fireflySystem.addColorGradient(0.8, new Color4(1.0, 1.0, 0.6, 0.3));
+  fireflySystem.addColorGradient(1.0, new Color4(1.0, 1.0, 0.8, 0.0));
+
+  fireflySystem.start();
+}
 
   private async createForest(treeCount: number): Promise<void> {
   if (this.groundMeshes.length === 0) {

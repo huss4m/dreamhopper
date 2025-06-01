@@ -5,7 +5,7 @@ export class SoundManager {
   private audioEngine: AudioEngineV2 | null = null;
   private currentSound: any | null = null;
   private songFiles: string[];
-  private volume = 0.2;
+  private volume = 0.14;
   private isPlaying = false;
   private ambianceSound: any | null = null;
 
@@ -50,11 +50,8 @@ private async playAmbiance(): Promise<void> {
   try {
     this.ambianceSound = await CreateStreamingSoundAsync("ambiance", "./music/ambiance.mp3",
 {
-       spatialEnabled: true,
-        spatialDistanceModel: "linear",
-        spatialPanningModel: "HRTF",
-      
-        spatialMaxDistance: 25,
+       stereoEnabled: true,
+       
         
         loop: true,
         autoplay: true
