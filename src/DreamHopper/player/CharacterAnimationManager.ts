@@ -64,6 +64,7 @@ export class CharacterAnimationManager {
       console.warn("CharacterAnimationManager: Dreambolt animation not found");
     }
   }
+  
 
   private triggerFireworks(position: Vector3): void {
     const fireworks = new ParticleSystem("fairyFireworks", 2000, this.scene);

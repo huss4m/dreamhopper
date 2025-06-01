@@ -183,7 +183,7 @@ export class InputHandler {
             const playerMesh = this.characterController.characterMeshLoader.getCharacterMesh();
             const npcMesh = targetingSystem.getCurrentTarget()?.getMesh();
             if (playerMesh && npcMesh) {
-              const distance = Vector3.Distance(playerMesh.position, npcMesh.position);
+              const distance = Vector3.Distance(playerMesh.position, /*npcMesh.position*/ new Vector3(5,1,5));
               if (distance <= 5) {
                 console.log(`InputHandler: Toggling quest dialog for NPC (distance: ${distance.toFixed(2)} units)`);
                 this.game.toggleQuestDialog();
@@ -241,7 +241,7 @@ export class InputHandler {
         this.game.toggleQuestDialog();
         this.lastDialogTargetId = null;
       } else {
-        const distance = Vector3.Distance(playerMesh.position, npcMesh.position);
+        const distance = Vector3.Distance(playerMesh.position, new Vector3(5,1,5));
         if (distance > 5) {
           console.log(`InputHandler: Closing quest dialog; player too far from NPC (distance: ${distance.toFixed(2)} units)`);
           this.game.toggleQuestDialog();

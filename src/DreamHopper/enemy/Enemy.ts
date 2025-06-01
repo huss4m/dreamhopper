@@ -80,7 +80,7 @@ export class Enemy implements Hoverable, Targettable {
 
   private setupBehavior(): void {
     if (this.isNPC) {
-      console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+     // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
       return;
     }
 
@@ -101,7 +101,7 @@ export class Enemy implements Hoverable, Targettable {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
           this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-          console.log(`Enemy ${this.id}: Player is dead, stopping attack and switching to Idle`);
+          //console.log(`Enemy ${this.id}: Player is dead, stopping attack and switching to Idle`);
         }
         return;
       }
@@ -119,17 +119,17 @@ export class Enemy implements Hoverable, Targettable {
       }
 
       const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-      console.log(`Enemy ${this.id}: Distance to player = ${distanceToPlayer}`);
+      //console.log(`Enemy ${this.id}: Distance to player = ${distanceToPlayer}`);
 
       if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
         this.isAggroed = true;
         this.physicsController.stopAllMovement();
-        console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer}`);
+       // console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer}`);
       } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
         this.isAggroed = false;
         this.isAttacking = false;
         this.startWandering();
-        console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+       // console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
       }
 
       if (this.isAggroed) {
@@ -332,7 +332,7 @@ private updateHealthBar(): void {
       };
       this.hoverHandler.setupHover(hoverable);
 
-      console.log(`Enemy ${this.id}: Character loaded successfully`);
+      //console.log(`Enemy ${this.id}: Character loaded successfully`);
     } catch (error) {
       console.error(`Failed to load character for Enemy ${this.id}`, error);
     }
@@ -362,7 +362,7 @@ private updateHealthBar(): void {
     this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
-    console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
+    //console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
   }
 
   private duplicate(container: AssetContainer, position: Vector3) {
