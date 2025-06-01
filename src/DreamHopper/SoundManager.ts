@@ -5,7 +5,7 @@ export class SoundManager {
   private audioEngine: AudioEngineV2 | null = null;
   private currentSound: any | null = null;
   private songFiles: string[];
-  private volume = 0.14;
+  private volume = 0.2;
   private isPlaying = false;
   private ambianceSound: any | null = null;
 
