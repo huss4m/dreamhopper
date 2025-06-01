@@ -170,7 +170,8 @@ particles.colorDead = new Color4(0.0, 0.0, 0.1, 0.0); // fades into void
         if (player) {
           const currentHP = player.getCurrentHP();
           // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
-          player.setHP(currentHP - 10);
+          const damage = Math.floor(Math.random() * (10 - 5 + 1)) + 5; // min damage = 5, max damage = 10
+          player.setHP(currentHP - damage);
           
           // console.log(`EnemyAnimationManager: Applied 10 damage to player, new HP: ${player.getCurrentHP()}`);
         } else {

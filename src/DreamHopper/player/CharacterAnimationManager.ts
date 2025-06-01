@@ -334,7 +334,9 @@ export class CharacterAnimationManager {
     }
 
     const speed = 10;
-    const DREAMBOLT_DAMAGE = 40;
+    //const DREAMBOLT_DAMAGE = 40;
+    const DREAMBOLT_MIN_DAMAGE = 20;
+    const DREAMBOLT_MAX_DAMAGE = 40;
 
     const renderCallback = (eventData: Scene, eventState: EventState) => {
       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
@@ -353,8 +355,9 @@ export class CharacterAnimationManager {
               this.triggerFireworks(sphere.position.clone());
               console.log(`CharacterAnimationManager: Triggered fireworks for Dreambolt hit on enemy ${enemyId}`);
 
-              enemy.takeDamage(DREAMBOLT_DAMAGE);
-              console.log(`CharacterAnimationManager: Dealt ${DREAMBOLT_DAMAGE} damage to enemy ${enemyId}, HP: ${enemy.getCurrentHP()}/${enemy.getMaxHP()}`);
+              const damage = Math.floor(Math.random() * (DREAMBOLT_MAX_DAMAGE - DREAMBOLT_MIN_DAMAGE + 1)) + DREAMBOLT_MIN_DAMAGE;
+              enemy.takeDamage(damage);
+              console.log(`CharacterAnimationManager: Dealt ${damage} damage to enemy ${enemyId}, HP: ${enemy.getCurrentHP()}/${enemy.getMaxHP()}`);
               if (enemy.isDead()) {
                 console.log(`CharacterAnimationManager: Enemy ${enemyId} defeated`);
               }
