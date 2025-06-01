@@ -128,10 +128,13 @@ export class CharacterAnimationManager {
 
     const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("dreamboltMat", this.scene);
-    material.diffuseColor = new Color3(0.9, 0.8, 1.0);
-    material.emissiveColor = new Color3(0.2, 0.8, 1.0);
+material.diffuseColor = new Color3(1.0, 0.85, 0.9); // More pastel / softer highlight
+material.emissiveColor = new Color3(1.0, 0.95, 0.97); // Brighter glow
+material.alpha = 0.8; // Slight transparency for ethereal feel
+material.specularPower = 0;
+material.backFaceCulling = false; // Prevent visual glitches if it's a thin object
     sphere.material = material;
-    sphere.isVisible = false;
+    sphere.isVisible = true;
 
     const particles = new ParticleSystem("boltParticles", 1000, this.scene);
     particles.particleTexture = new Texture("./Flare.png", this.scene);
@@ -145,7 +148,7 @@ export class CharacterAnimationManager {
     particles.maxSize = 1.5;
     particles.minLifeTime = 0.15;
     particles.maxLifeTime = 0.4;
-    particles.emitRate = 1200;
+    particles.emitRate = 400;
     particles.blendMode = ParticleSystem.BLENDMODE_ADD;
     particles.gravity = Vector3.Zero();
     particles.direction1 = Vector3.Zero();

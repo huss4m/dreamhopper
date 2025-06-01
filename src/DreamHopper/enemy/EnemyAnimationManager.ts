@@ -81,21 +81,33 @@ export class EnemyAnimationManager {
 
     // console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
 
-    const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: 0.5 }, this.scene);
-    const material = new StandardMaterial("nightmareBoltMat", this.scene);
-    material.diffuseColor = new Color3(0.5, 0.0, 0.5);
-    material.emissiveColor = new Color3(0.3, 0.0, 0.6);
-    sphere.material = material;
-    sphere.isVisible = true;
+   const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: 0.5 }, this.scene);
 
-    const particles = new ParticleSystem("boltParticles", 500, this.scene);
-    particles.particleTexture = new Texture("./Flare.png", this.scene);
-    particles.emitter = sphere;
-    particles.minEmitBox = Vector3.Zero();
-    particles.maxEmitBox = Vector3.Zero();
-    particles.color1 = new Color4(0.5, 0.0, 0.5, 1.0);
-    particles.color2 = new Color4(0.6, 0.2, 0.7, 0.6);
-    particles.colorDead = new Color4(0.2, 0.0, 0.2, 0.0);
+      // Updated indigo material for a darker, more haunting look
+      const material = new StandardMaterial("nightmareBoltMat", this.scene);
+      material.diffuseColor = new Color3(0.15, 0.0, 0.3); // deeper, duskier indigo
+      material.emissiveColor = new Color3(0.1, 0.0, 0.4); // subtle glow, eerie blue-violet
+      material.specularColor = new Color3(0, 0, 0); // no highlight
+      material.specularPower = 0;
+      material.alpha = 0.6; // still visible but more shadowy
+      sphere.material = material;
+      sphere.isVisible = true;
+          
+
+    const particles = new ParticleSystem("boltParticles", 400, this.scene);
+particles.particleTexture = new Texture("./Flare.png", this.scene);
+particles.emitter = sphere;
+
+// Emit tightly around the bolt
+particles.minEmitBox = Vector3.Zero();
+particles.maxEmitBox = Vector3.Zero();
+
+// Updated colors for nightmare aura
+particles.color1 = new Color4(0.15, 0.0, 0.4, 1.0); // deep indigo
+particles.color2 = new Color4(0.05, 0.0, 0.4, 0.7); // darker bluish-violet
+particles.colorDead = new Color4(0.0, 0.0, 0.1, 0.0); // fades into void
+
+// Sizes and life duration to create a flash that vanishes quickly
     particles.minSize = 0.7;
     particles.maxSize = 1.5;
     particles.minLifeTime = 0.15;
@@ -105,7 +117,7 @@ export class EnemyAnimationManager {
     particles.gravity = Vector3.Zero();
     particles.direction1 = Vector3.Zero();
     particles.direction2 = Vector3.Zero();
-    particles.start();
+    particles.start()
 
     const forward = enemyMesh.getDirection(Vector3.Forward()).normalize();
     const spawnOffset = forward.scale(1).add(new Vector3(0, 1.2, 0));
