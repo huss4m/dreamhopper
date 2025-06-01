@@ -5,7 +5,7 @@ export class SoundManager {
   private audioEngine: AudioEngineV2 | null = null;
   private currentSound: any | null = null;
   private songFiles: string[];
-  private volume = 0.2;
+  private volume = 0.15;
   private isPlaying = false;
   private ambianceSound: any | null = null;
 
@@ -60,7 +60,7 @@ private async playAmbiance(): Promise<void> {
 
     );
     this.ambianceSound.loop = true;
-    this.ambianceSound.volume = 0.5; // ajustable indépendamment
+    this.ambianceSound.volume = 0.35; // ajustable indépendamment
   
     this.ambianceSound.play();
     console.log("SoundManager: Ambiance sound started");
