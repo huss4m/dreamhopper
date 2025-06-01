@@ -49,7 +49,7 @@ export class Game {
   public ground!: GroundMesh;
 
   constructor(private canvas: HTMLCanvasElement) {
-    this.engine = new Engine(canvas, true);
+    this.engine = new Engine(canvas, true, { audioEngine: true });
     this.soundManager = SoundManager.getInstance([
       "./music/music1.mp3",
       "./music/music2.mp3",
@@ -93,13 +93,14 @@ export class Game {
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
+    
+    await this.soundManager.initialize();
     // Initialize other scene components
     await this.initializeSceneComponents(() => {
       currentStep++;
       this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
     });
 
-    await this.soundManager.initialize();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 

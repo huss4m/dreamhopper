@@ -19,7 +19,7 @@ export class CharacterMeshLoader {
   private characterMesh: Mesh | null = null;
   private skeleton: Skeleton | null = null;
   private animationGroups: AnimationGroup[] = [];
-  private hitboxMesh: Mesh | null = null;
+  public hitboxMesh: Mesh | null = null;
   assetManager: AssetManager;
   shadowGenerator: CascadedShadowGenerator;
 

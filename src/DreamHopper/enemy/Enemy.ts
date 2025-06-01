@@ -89,7 +89,7 @@ export class Enemy implements Hoverable, Targettable {
 
       const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
       if (!playerMesh) {
-        console.warn(`Enemy ${this.id}: Player mesh not found`);
+        //console.warn(`Enemy ${this.id}: Player mesh not found`);
         return;
       }
 
@@ -113,7 +113,7 @@ export class Enemy implements Hoverable, Targettable {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
           this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-          console.log(`Enemy ${this.id}: Enemy is dead, stopping attack and switching to Idle`);
+          //console.log(`Enemy ${this.id}: Enemy is dead, stopping attack and switching to Idle`);
         }
         return;
       }
@@ -141,25 +141,25 @@ export class Enemy implements Hoverable, Targettable {
             this.isAttacking = true;
             const animationName = this.animationManager.getAnimationByName("NightmareBolt") ? "NightmareBolt" : "Idle";
             this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
-            console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer}), playing ${animationName}, facing player`);
+            //console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer}), playing ${animationName}, facing player`);
           }
         } else {
           this.isAttacking = false;
           this.moveTo(playerMesh.position);
           this.animationManager.playAnimation("Run");
-          console.log(`Enemy ${this.id}: Chasing player at distance ${distanceToPlayer}`);
+          //console.log(`Enemy ${this.id}: Chasing player at distance ${distanceToPlayer}`);
         }
       }
     });
   }
 private setupHealthBar(isNPC = false): void {
   if (isNPC) {
-    console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
+    //console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
     return;
   }
 
   if (!this.enemyMesh || !this.hitboxMesh) {
-    console.error(`Enemy ${this.id}: Cannot setup health bar, enemy mesh or hitbox is null`);
+    //console.error(`Enemy ${this.id}: Cannot setup health bar, enemy mesh or hitbox is null`);
     return;
   }
 
@@ -186,7 +186,7 @@ private setupHealthBar(isNPC = false): void {
     this.healthBarPlane.alwaysSelectAsActiveMesh = false;
 
     this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
-    console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
+    //console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
 
     // Background (soft pastel purple with subtle border)
     this.healthBarBackground = new Rectangle(`healthBarBg_${this.id}`);
@@ -197,7 +197,7 @@ private setupHealthBar(isNPC = false): void {
     this.healthBarBackground.background = "rgba(200, 160, 255, 0.2)";
     this.healthBarBackground.cornerRadius = 150; // Very round, capsule-like
     this.healthBarTexture.addControl(this.healthBarBackground);
-    console.log(`Enemy ${this.id}: Health bar background cornerRadius: ${this.healthBarBackground.cornerRadius}`);
+    //console.log(`Enemy ${this.id}: Health bar background cornerRadius: ${this.healthBarBackground.cornerRadius}`);
 
     // Fill (soft pink glow)
     this.healthBarFill = new Rectangle(`healthBarFill_${this.id}`);
@@ -210,9 +210,9 @@ private setupHealthBar(isNPC = false): void {
     //this.healthBarFill.shadowBlur = 20;
     //this.healthBarFill.shadowColor = "rgba(255, 255, 255, 0.5)";
     this.healthBarTexture.addControl(this.healthBarFill);
-    console.log(`Enemy ${this.id}: Health bar fill cornerRadius: ${this.healthBarFill.cornerRadius}`);
+   // console.log(`Enemy ${this.id}: Health bar fill cornerRadius: ${this.healthBarFill.cornerRadius}`);
 
-    // Optional floating animation
+    
     let floatPhase = 0;
     this.healthBarObserver = this.scene.onBeforeRenderObservable.add(() => {
       if (this.healthBarPlane && this.hitboxMesh && !this.hitboxMesh.isDisposed()) {
@@ -229,7 +229,7 @@ private setupHealthBar(isNPC = false): void {
     });
 
     this.updateHealthBar();
-    console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
+    //console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
   } catch (error) {
     console.error(`Enemy ${this.id}: Failed to setup dreamland health bar`, error);
   }
@@ -239,7 +239,7 @@ private updateHealthBar(): void {
   if (this.healthBarFill) {
     const hpRatio = Math.max(0, this.currentHP / this.maxHP);
     this.healthBarFill.width = `${hpRatio * 100}%`;
-    console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
+    //console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
   }
 }
 
@@ -278,13 +278,13 @@ private updateHealthBar(): void {
       this.enemyMesh.position = this.position;
       this.enemyMesh.checkCollisions = true;
       this.enemyMesh.isPickable = true;
-      console.log(`Root mesh: ${this.enemyMesh.name}, isVisible: ${this.enemyMesh.isVisible}, isPickable: ${this.enemyMesh.isPickable}`);
+      //console.log(`Root mesh: ${this.enemyMesh.name}, isVisible: ${this.enemyMesh.isVisible}, isPickable: ${this.enemyMesh.isPickable}`);
 
       this.enemyMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
         mesh.checkCollisions = true;
         mesh.isPickable = true;
-        console.log(`Child mesh: ${mesh.name}, isVisible: ${mesh.isVisible}, isPickable: ${mesh.isPickable}, material: ${mesh.material?.name}, tags: ${Tags.GetTags(mesh)}`);
+       // console.log(`Child mesh: ${mesh.name}, isVisible: ${mesh.isVisible}, isPickable: ${mesh.isPickable}, material: ${mesh.material?.name}, tags: ${Tags.GetTags(mesh)}`);
       });
 
       if (this.shadowGenerator) {
@@ -536,7 +536,7 @@ private updateHealthBar(): void {
 
   public takeDamage(damage: number): void {
     if (this.isNPC) {
-      console.log(`Enemy ${this.id}: Ignoring damage, already an NPC`);
+      //console.log(`Enemy ${this.id}: Ignoring damage, already an NPC`);
       return;
     }
     this.currentHP = Math.max(0, this.currentHP - damage);
@@ -544,7 +544,7 @@ private updateHealthBar(): void {
     this.updateHealthBar();
     if (this.isDead() && !this.isTransformed) {
       this.swapToNPCModel();
-      console.log(`Enemy ${this.id}: HP reached 0, transforming to NPC`);
+     // console.log(`Enemy ${this.id}: HP reached 0, transforming to NPC`);
     }
   }
 
@@ -590,7 +590,7 @@ private updateHealthBar(): void {
 
   public startWandering(maxDistance = 10): void {
     if (!this.physicsController) {
-      console.warn(`Enemy ${this.id}: Cannot start wandering, physicsController is null`);
+      //console.warn(`Enemy ${this.id}: Cannot start wandering, physicsController is null`);
       return;
     }
     this.physicsController.startWandering(maxDistance);

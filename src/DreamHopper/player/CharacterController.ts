@@ -37,6 +37,7 @@ export class CharacterController {
   public characterMeshLoader: CharacterMeshLoader;
   private player: Player;
   particleSystem: { rightHand: ParticleSystem; leftHand: ParticleSystem } | null = null;
+  characterMesh!: Mesh | null;
 
   constructor(
     private scene: Scene,
@@ -57,7 +58,9 @@ export class CharacterController {
 
   private async initialize(): Promise<void> {
     await this.characterMeshLoader.loadCharacter(new Vector3(5, 5, 0));
+
     const characterMesh = this.characterMeshLoader.getCharacterMesh();
+    this.characterMesh = characterMesh;
     const skeleton = this.characterMeshLoader.getSkeleton();
     
     if (characterMesh && skeleton) {
