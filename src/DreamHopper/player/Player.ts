@@ -33,7 +33,7 @@ export class Player {
       this.posOffset = new Vector3(0, 0, -0.21);
       this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
     
-    this.addItem(new Item(
+   /* this.addItem(new Item(
       "sword1",
       scene,
       assetManager.getAssetContainer("dragon_slayer"),
@@ -41,7 +41,7 @@ export class Player {
       this.posOffset,
       this.rotOffset,
       new Vector3(1.2, 1.2, 1.2)
-    ));
+    )); */
   }
 
   public getMaxHP(): number {

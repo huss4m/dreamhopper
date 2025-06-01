@@ -117,7 +117,8 @@ export class NPC implements Hoverable, Targettable {
 
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
-      this.npcMesh.isPickable = true; // Keep pickable for consistency, adjust if needed
+      this.npcMesh.isPickable = true;  // Keep pickable for consistency, adjust if needed
+      
 
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
@@ -127,6 +128,9 @@ export class NPC implements Hoverable, Targettable {
           mat.albedoColor = mat.albedoColor || new Color3(1, 1, 1);
           mat.reflectivityColor = new Color3(0.3, 0.3, 0.3);
           mat.microSurface = 0.8;
+         
+          
+        
         }
         mesh.checkCollisions = true;
         mesh.isPickable = true; // Child meshes pickable, adjust if needed

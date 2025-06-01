@@ -7,6 +7,7 @@ export class SoundManager {
   private songFiles: string[];
   private volume = 0.2;
   private isPlaying = false;
+  private ambianceSound: any | null = null;
 
   private constructor(songFiles: string[]) {
     if (!songFiles || songFiles.length === 0) {
@@ -31,16 +32,45 @@ export class SoundManager {
         this.audioEngine.dispose();
         this.audioEngine = null;
       }
-      this.audioEngine = await CreateAudioEngineAsync();
+      this.audioEngine = await CreateAudioEngineAsync({
+           listenerAutoUpdate: true,
+        listenerEnabled: true,
+        resumeOnInteraction: true
+      });
       await this.audioEngine.unlockAsync();
       console.log("SoundManager: Audio engine initialized and unlocked");
       await this.playRandomSong();
+      await this.playAmbiance();
     } catch (error) {
       console.error("SoundManager: Failed to initialize audio engine", error);
       throw error;
     }
   }
+private async playAmbiance(): Promise<void> {
+  try {
+    this.ambianceSound = await CreateStreamingSoundAsync("ambiance", "./music/ambiance.mp3",
+{
+       spatialEnabled: true,
+        spatialDistanceModel: "linear",
+        spatialPanningModel: "HRTF",
+      
+        spatialMaxDistance: 25,
+        
+        loop: true,
+        autoplay: true
 
+}
+
+    );
+    this.ambianceSound.loop = true;
+    this.ambianceSound.volume = 0.5; // ajustable indépendamment
+  
+    this.ambianceSound.play();
+    console.log("SoundManager: Ambiance sound started");
+  } catch (error) {
+    console.error("SoundManager: Failed to play ambiance sound", error);
+  }
+}
   private async playRandomSong(): Promise<void> {
     if (this.currentSound) {
       this.currentSound.stop();

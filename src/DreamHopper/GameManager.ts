@@ -14,6 +14,7 @@ export class GameManager {
   private dreamCrystalManager: DreamCrystalManager | null = null;
   private characterMesh: Mesh | null = null;
   private quests: Quest[] = [];
+  private respawnTimers: Map<string, number> = new Map(); // Use number for browser timers
 
   constructor(
     private scene: Scene,
@@ -88,7 +89,67 @@ export class GameManager {
 
     return this.npcs;
   }
+  
+public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
+    // Clear any existing timer for this enemy
+    if (this.respawnTimers.has(enemyId)) {
+      clearTimeout(this.respawnTimers.get(enemyId)!);
+      this.respawnTimers.delete(enemyId);
+      console.log(`GameManager: Cleared existing respawn timer for enemy ${enemyId}`);
+    }
 
+    // Start new 60-second timer
+    const timer = setTimeout(async () => {
+      console.log(`GameManager: Respawning enemy ${enemyId} at position`, position);
+
+      // Remove the old enemy (NPC) from the enemies array
+      const oldEnemyIndex = this.enemies.findIndex(enemy => enemy.getId() === enemyId);
+      if (oldEnemyIndex !== -1) {
+        const oldEnemy = this.enemies[oldEnemyIndex];
+        oldEnemy.dispose();
+        this.enemies.splice(oldEnemyIndex, 1);
+        console.log(`GameManager: Disposed old enemy (NPC) ${enemyId}`);
+      } else {
+        console.warn(`GameManager: Enemy ${enemyId} not found in enemies array for respawn`);
+      }
+
+      // Create new enemy at original position
+      const newEnemy = new Enemy(
+        this.scene,
+        "enemy",
+        this.assetManager,
+        this.shadowGenerator,
+        position,
+        this.highlightLayer,
+        this.targetingSystem,
+        this.game
+      );
+      this.enemies.push(newEnemy);
+
+      // Setup shadows for the new enemy
+      const enemyMesh = newEnemy.getMesh();
+      if (enemyMesh) {
+        this.shadowGenerator.addShadowCaster(enemyMesh, true);
+        enemyMesh.receiveShadows = true;
+        enemyMesh.getChildMeshes().forEach(child => {
+          this.shadowGenerator.addShadowCaster(child, true);
+          child.receiveShadows = true;
+        });
+       
+        
+        console.log(`GameManager: Respawned enemy ${enemyId} mesh added to shadow generator:`, enemyMesh.name);
+      } else {
+        console.warn(`GameManager: Respawned enemy ${enemyId} mesh not found for shadow generator`);
+      }
+
+      // Remove timer from tracking
+      this.respawnTimers.delete(enemyId);
+      console.log(`GameManager: Enemy ${enemyId} respawned successfully at position`, position);
+    }, 60000); // 60 seconds
+
+    this.respawnTimers.set(enemyId, timer);
+    console.log(`GameManager: Scheduled respawn for enemy ${enemyId} in 60 seconds`);
+  }
   async initializeEnemies(savedPositions?: Vector3[]): Promise<Enemy[]> {
     const configData = await this.assetManager.loadJson("./game_config.json");
     const enemyPositions = configData.enemies?.map((pos: { x: number, y: number, z: number }) => 
@@ -217,5 +278,11 @@ export class GameManager {
     this.dreamCrystalManager = null;
     this.characterMesh = null;
     this.quests = [];
+    this.respawnTimers.forEach((timer, enemyId) => {
+      clearTimeout(timer);
+      console.log(`GameManager: Cancelled respawn timer for enemy ${enemyId}`);
+    });
+    this.respawnTimers.clear();
+
   }
 }

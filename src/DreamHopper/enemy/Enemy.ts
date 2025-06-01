@@ -1,5 +1,5 @@
 import { AbstractMesh, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, Scene, Skeleton, StandardMaterial, Tags, Vector3, Observable } from "@babylonjs/core";
-import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
 import { Hoverable, HoverHandler, HoverConfig } from "../HoverableSystem";
 import { Targettable } from "../Targettable";
@@ -20,12 +20,19 @@ export class Enemy implements Hoverable, Targettable {
   private hoverConfig: HoverConfig;
   private targetCircle: Mesh | null = null;
   private hitboxMesh: Mesh | null = null;
+  private healthBarPlane: Mesh | null = null;
+  private healthBarTexture: AdvancedDynamicTexture | null = null;
+  private healthBarFill: Rectangle | null = null;
+  private healthBarBackground: Rectangle | null = null;
+  private healthBarObserver: any = null;
   private aggroRadius = 20;
   private attackRange = 10;
   private isAggroed = false;
   private isAttacking = false;
   private behaviorObserver: any = null;
   private isNPC = false;
+  private maxHP = 100; // Maximum HP for enemies
+  private currentHP = 100; // Current HP, initialized to maxHP
 
   isTargetted = false;
   isTransformed = false;
@@ -71,9 +78,9 @@ export class Enemy implements Hoverable, Targettable {
     this.setupBehavior();
   }
 
-   private setupBehavior(): void {
+  private setupBehavior(): void {
     if (this.isNPC) {
-      // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+      console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
       return;
     }
 
@@ -99,18 +106,30 @@ export class Enemy implements Hoverable, Targettable {
         return;
       }
 
+      // Check if enemy is dead
+      if (this.isDead()) {
+        if (this.isAggroed || this.isAttacking) {
+          this.isAggroed = false;
+          this.isAttacking = false;
+          this.physicsController.stopAllMovement();
+          this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
+          console.log(`Enemy ${this.id}: Enemy is dead, stopping attack and switching to Idle`);
+        }
+        return;
+      }
+
       const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-      // console.log(`Enemy ${this.id}: Distance to player = ${distanceToPlayer}`);
+      console.log(`Enemy ${this.id}: Distance to player = ${distanceToPlayer}`);
 
       if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
         this.isAggroed = true;
         this.physicsController.stopAllMovement();
-        // console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer}`);
+        console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer}`);
       } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
         this.isAggroed = false;
         this.isAttacking = false;
         this.startWandering();
-        // console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+        console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
       }
 
       if (this.isAggroed) {
@@ -122,18 +141,127 @@ export class Enemy implements Hoverable, Targettable {
             this.isAttacking = true;
             const animationName = this.animationManager.getAnimationByName("NightmareBolt") ? "NightmareBolt" : "Idle";
             this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
-            // console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer}), playing ${animationName}, facing player`);
+            console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer}), playing ${animationName}, facing player`);
           }
         } else {
           this.isAttacking = false;
           this.moveTo(playerMesh.position);
           this.animationManager.playAnimation("Run");
-          // console.log(`Enemy ${this.id}: Chasing player at distance ${distanceToPlayer}`);
+          console.log(`Enemy ${this.id}: Chasing player at distance ${distanceToPlayer}`);
         }
       }
     });
   }
+private setupHealthBar(isNPC = false): void {
+  if (isNPC) {
+    console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
+    return;
+  }
 
+  if (!this.enemyMesh || !this.hitboxMesh) {
+    console.error(`Enemy ${this.id}: Cannot setup health bar, enemy mesh or hitbox is null`);
+    return;
+  }
+
+  try {
+    const hitboxHeight = 2.0;
+    const yOffset = 0.2;
+    this.hitboxMesh.computeWorldMatrix(true);
+    const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
+
+    this.healthBarPlane = MeshBuilder.CreatePlane(`healthBar_${this.id}`, {
+      width: 1.5,
+      height: 0.15,
+    }, this.scene);
+
+    this.healthBarPlane.position = new Vector3(
+      this.hitboxMesh.absolutePosition.x,
+      hitboxTopY + yOffset,
+      this.hitboxMesh.absolutePosition.z
+    );
+    this.healthBarPlane.isPickable = false;
+    this.healthBarPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    this.healthBarPlane.isVisible = true;
+    this.healthBarPlane.renderingGroupId = 0;
+    this.healthBarPlane.alwaysSelectAsActiveMesh = false;
+
+    this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
+    console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
+
+    // Background (soft pastel purple with subtle border)
+    this.healthBarBackground = new Rectangle(`healthBarBg_${this.id}`);
+    this.healthBarBackground.width = "100%";
+    this.healthBarBackground.height = "100%";
+    this.healthBarBackground.thickness = 1;
+    this.healthBarBackground.color = "rgba(255, 255, 255, 0.4)";
+    this.healthBarBackground.background = "rgba(200, 160, 255, 0.2)";
+    this.healthBarBackground.cornerRadius = 150; // Very round, capsule-like
+    this.healthBarTexture.addControl(this.healthBarBackground);
+    console.log(`Enemy ${this.id}: Health bar background cornerRadius: ${this.healthBarBackground.cornerRadius}`);
+
+    // Fill (soft pink glow)
+    this.healthBarFill = new Rectangle(`healthBarFill_${this.id}`);
+    this.healthBarFill.width = `${(this.currentHP / this.maxHP) * 100}%`;
+    this.healthBarFill.height = "90%";
+    this.healthBarFill.horizontalAlignment = Rectangle.HORIZONTAL_ALIGNMENT_LEFT;
+    this.healthBarFill.background = "rgba(33, 184, 221, 0.95)";
+    this.healthBarFill.thickness = 0;
+    this.healthBarFill.cornerRadius = 90; // Less rounded, fits within background
+    //this.healthBarFill.shadowBlur = 20;
+    //this.healthBarFill.shadowColor = "rgba(255, 255, 255, 0.5)";
+    this.healthBarTexture.addControl(this.healthBarFill);
+    console.log(`Enemy ${this.id}: Health bar fill cornerRadius: ${this.healthBarFill.cornerRadius}`);
+
+    // Optional floating animation
+    let floatPhase = 0;
+    this.healthBarObserver = this.scene.onBeforeRenderObservable.add(() => {
+      if (this.healthBarPlane && this.hitboxMesh && !this.hitboxMesh.isDisposed()) {
+        this.hitboxMesh.computeWorldMatrix(true);
+        const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
+        floatPhase += this.scene.getEngine().getDeltaTime() * 0.002;
+        const floatY = Math.sin(floatPhase) * 0.05;
+        this.healthBarPlane.position = new Vector3(
+          this.hitboxMesh.absolutePosition.x,
+          hitboxTopY + yOffset + floatY,
+          this.hitboxMesh.absolutePosition.z
+        );
+      }
+    });
+
+    this.updateHealthBar();
+    console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
+  } catch (error) {
+    console.error(`Enemy ${this.id}: Failed to setup dreamland health bar`, error);
+  }
+}
+
+private updateHealthBar(): void {
+  if (this.healthBarFill) {
+    const hpRatio = Math.max(0, this.currentHP / this.maxHP);
+    this.healthBarFill.width = `${hpRatio * 100}%`;
+    console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
+  }
+}
+
+
+
+  private disposeHealthBar(): void {
+    if (this.healthBarObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.healthBarObserver);
+      this.healthBarObserver = null;
+    }
+    if (this.healthBarTexture) {
+      this.healthBarTexture.dispose();
+      this.healthBarTexture = null;
+    }
+    if (this.healthBarPlane) {
+      this.healthBarPlane.dispose();
+      this.healthBarPlane = null;
+    }
+    this.healthBarFill = null;
+    this.healthBarBackground = null;
+    console.log(`Enemy ${this.id}: Health bar disposed`);
+  }
   public async loadCharacter(name: string): Promise<void> {
     try {
       const enemyAssetContainer = this.assetManager.getAssetContainer(name);
@@ -150,13 +278,13 @@ export class Enemy implements Hoverable, Targettable {
       this.enemyMesh.position = this.position;
       this.enemyMesh.checkCollisions = true;
       this.enemyMesh.isPickable = true;
-      // console.log(`Root mesh: ${this.enemyMesh.name}, isVisible: ${this.enemyMesh.isVisible}, isPickable: ${this.enemyMesh.isPickable}`);
+      console.log(`Root mesh: ${this.enemyMesh.name}, isVisible: ${this.enemyMesh.isVisible}, isPickable: ${this.enemyMesh.isPickable}`);
 
       this.enemyMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
         mesh.checkCollisions = true;
         mesh.isPickable = true;
-        // console.log(`Child mesh: ${mesh.name}, isVisible: ${mesh.isVisible}, isPickable: ${mesh.isPickable}, material: ${mesh.material?.name}, tags: ${Tags.GetTags(mesh)}`);
+        console.log(`Child mesh: ${mesh.name}, isVisible: ${mesh.isVisible}, isPickable: ${mesh.isPickable}, material: ${mesh.material?.name}, tags: ${Tags.GetTags(mesh)}`);
       });
 
       if (this.shadowGenerator) {
@@ -186,7 +314,7 @@ export class Enemy implements Hoverable, Targettable {
 
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
-      // console.log(`Hitbox: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
+      console.log(`Hitbox: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
 
       this.hitboxMesh.receiveShadows = false;
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
@@ -194,12 +322,17 @@ export class Enemy implements Hoverable, Targettable {
       this.setupPhysics();
       this.animationManager.initialize(animationGroups);
 
+      // Setup health bar for non-NPC
+      this.setupHealthBar(this.isNPC);
+
       const hoverable: Hoverable = {
         getMesh: () => this.enemyMesh,
         getScene: () => this.scene,
         getHighlightMesh: () => this.enemyMesh,
       };
       this.hoverHandler.setupHover(hoverable);
+
+      console.log(`Enemy ${this.id}: Character loaded successfully`);
     } catch (error) {
       console.error(`Failed to load character for Enemy ${this.id}`, error);
     }
@@ -229,7 +362,7 @@ export class Enemy implements Hoverable, Targettable {
     this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
-    // console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
+    console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
   }
 
   private duplicate(container: AssetContainer, position: Vector3) {
@@ -258,7 +391,7 @@ export class Enemy implements Hoverable, Targettable {
 
   public setTargetted(isTargetted: boolean): void {
     this.isTargetted = isTargetted;
-  
+
     if (this.enemyMesh) {
       this.enemyMesh.refreshBoundingInfo();
       const boundingBox = this.enemyMesh.getBoundingInfo().boundingBox;
@@ -267,7 +400,7 @@ export class Enemy implements Hoverable, Targettable {
         boundingBox.minimumWorld.y + 0.05,
         this.enemyMesh.position.z
       );
-  
+
       if (isTargetted) {
         this.targetCircle = MeshBuilder.CreateDisc(`targetCircle_${this.id}`, {
           radius: 0.5,
@@ -275,7 +408,7 @@ export class Enemy implements Hoverable, Targettable {
         }, this.scene);
         this.targetCircle.position = feetPosition;
         this.targetCircle.rotation.x = Math.PI / 2;
-  
+
         const textureSize = 512;
         const dynamicTexture = new DynamicTexture(`targetCircleTex_${this.id}`, textureSize, this.scene, true);
         const ctx = dynamicTexture.getContext();
@@ -290,7 +423,7 @@ export class Enemy implements Hoverable, Targettable {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, textureSize, textureSize);
         dynamicTexture.update();
-  
+
         const circleMaterial = new StandardMaterial(`targetCircleMat_${this.id}`, this.scene);
         circleMaterial.diffuseTexture = dynamicTexture;
         circleMaterial.opacityTexture = dynamicTexture;
@@ -298,7 +431,7 @@ export class Enemy implements Hoverable, Targettable {
         this.targetCircle.material = circleMaterial;
         this.targetCircle.isPickable = false;
         this.targetCircle.alwaysSelectAsActiveMesh = true;
-  
+
         const observer = this.scene.onBeforeRenderObservable.add(() => {
           if (this.targetCircle && this.enemyMesh && !this.enemyMesh.isDisposed()) {
             this.enemyMesh.refreshBoundingInfo();
@@ -311,9 +444,9 @@ export class Enemy implements Hoverable, Targettable {
             this.targetCircle.rotation.y += 0.01;
           }
         });
-  
+
         this.targetCircle.metadata = { observer };
-  
+
         try {
           if (this.highlightLayer && !this.enemyMesh.isDisposed()) {
             if ((this.highlightLayer as any)._thicknessLayer?._engine?._gl) {
@@ -338,7 +471,7 @@ export class Enemy implements Hoverable, Targettable {
           this.targetCircle.dispose();
           this.targetCircle = null;
         }
-  
+
         if (this.highlightLayer && this.enemyMesh && !this.enemyMesh.isDisposed()) {
           this.highlightLayer.removeMesh(this.enemyMesh);
           this.enemyMesh.getChildMeshes().forEach((mesh) => {
@@ -393,6 +526,32 @@ export class Enemy implements Hoverable, Targettable {
     return this.position;
   }
 
+  public getCurrentHP(): number {
+    return this.currentHP;
+  }
+
+  public getMaxHP(): number {
+    return this.maxHP;
+  }
+
+  public takeDamage(damage: number): void {
+    if (this.isNPC) {
+      console.log(`Enemy ${this.id}: Ignoring damage, already an NPC`);
+      return;
+    }
+    this.currentHP = Math.max(0, this.currentHP - damage);
+    console.log(`Enemy ${this.id}: Took ${damage} damage, current HP: ${this.currentHP}/${this.maxHP}`);
+    this.updateHealthBar();
+    if (this.isDead() && !this.isTransformed) {
+      this.swapToNPCModel();
+      console.log(`Enemy ${this.id}: HP reached 0, transforming to NPC`);
+    }
+  }
+
+  public isDead(): boolean {
+    return this.currentHP <= 0;
+  }
+
   public dispose(): void {
     if (this.behaviorObserver) {
       this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
@@ -413,12 +572,14 @@ export class Enemy implements Hoverable, Targettable {
       this.hitboxMesh.dispose();
       this.hitboxMesh = null;
     }
+    this.disposeHealthBar();
     if (this.enemyMesh) {
       this.enemyMesh.dispose();
       this.enemyMesh = null;
     }
     this.animationManager.dispose();
     this.enemySkeleton = null;
+    console.log(`Enemy ${this.id}: Disposed`);
   }
 
   public moveTo(position: Vector3): void {
@@ -443,155 +604,179 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   public async swapToNPCModel(): Promise<void> {
-    if (this.isTransformed) {
-      // console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
-      return;
-    }
-
-    if (!this.assetManager) {
-      console.error(`Cannot swap model: AssetManager is not defined for Enemy ${this.id}`);
-      return;
-    }
-  
-    try {
-      // console.log(`Enemy ${this.id}: Attempting to swap to NPC, isTransformed: ${this.isTransformed}`);
-      const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
-      const wasWandering = this.isAggroed ? false : true;
-
-      if (this.behaviorObserver) {
-        this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
-        this.behaviorObserver = null;
-      }
-
-      if (this.physicsController) {
-        this.physicsController.stopAllMovement();
-        this.physicsController.dispose();
-        this.physicsController = null;
-        // console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
-      }
-
-      if (this.targetCircle) {
-        if (this.targetCircle.metadata?.observer) {
-          this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
-        }
-        this.targetCircle.dispose();
-        this.targetCircle = null;
-      }
-
-      if (this.hitboxMesh) {
-        this.hitboxMesh.dispose();
-        this.hitboxMesh = null;
-      }
-
-      if (this.enemyMesh && this.highlightLayer && !this.enemyMesh.isDisposed()) {
-        this.highlightLayer.removeMesh(this.enemyMesh);
-        this.enemyMesh.getChildMeshes().forEach((mesh) => {
-          if (!mesh.isDisposed() && mesh instanceof Mesh) {
-            this.highlightLayer.removeMesh(mesh);
-          }
-        });
-      }
-
-      if (this.enemyMesh) {
-        this.enemyMesh.dispose();
-        this.enemyMesh = null;
-      }
-
-      this.animationManager.dispose();
-      this.enemySkeleton = null;
-
-      const npcAssetContainer = this.assetManager.getAssetContainer("plushUnicorn");
-      if (!npcAssetContainer) {
-        console.error(`Failed to load npc asset container for Enemy ${this.id}`);
-        this.position = currentPosition;
-        return;
-      }
-
-      const clones = this.duplicate(npcAssetContainer, currentPosition);
-      this.enemyMesh = clones.rootNodes[0] as Mesh;
-      this.enemySkeleton = clones.skeletons[0];
-      const animationGroups = clones.animationGroups || [];
-
-      this.enemyMesh.position = currentPosition;
-      this.enemyMesh.checkCollisions = true;
-      this.enemyMesh.isPickable = false; // Make unicorn model non-pickable
-      this.enemyMesh.scaling = new Vector3(3, 3, 3);
-
-      this.enemyMesh.getChildMeshes().forEach((mesh) => {
-        mesh.checkCollisions = true;
-        mesh.isPickable = false; // Make child meshes non-pickable
-        if (this.shadowGenerator) {
-          this.shadowGenerator.addShadowCaster(mesh);
-        }
-      });
-
-      Tags.EnableFor(this.enemyMesh);
-      Tags.AddTagsTo(this.enemyMesh, `enemyID:${this.id}`);
-      this.enemyMesh.getChildMeshes().forEach((mesh) => {
-        Tags.EnableFor(mesh);
-        Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
-      });
-
-      this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
-        height: 0.4, // 5x smaller than 2
-        width: 0.3,  // 5x smaller than 1.5
-      }, this.scene);
-      this.hitboxMesh.parent = this.enemyMesh;
-      this.hitboxMesh.position = new Vector3(0, 0.2, 0); // Adjusted for smaller height
-      this.hitboxMesh.checkCollisions = false;
-      this.hitboxMesh.isPickable = true;
-      this.hitboxMesh.isVisible = false;
-
-      const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
-      hitboxMaterial.alpha = 0;
-      this.hitboxMesh.material = hitboxMaterial;
-
-      Tags.EnableFor(this.hitboxMesh);
-      //Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
-      // console.log(`Enemy ${this.id}: Unicorn hitbox created, height: 0.4, width: 0.3, isPickable: ${this.hitboxMesh.isPickable}, mesh isPickable: ${this.enemyMesh.isPickable}`);
-
-      this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
-
-      this.setupPhysics();
-
-      this.animationManager.initialize(animationGroups);
-
-      const hoverable: Hoverable = {
-        getMesh: () => this.hitboxMesh, // Use hitbox for hovering
-        getScene: () => this.scene,
-        getHighlightMesh: () => this.enemyMesh,
-      };
-      this.hoverHandler.setupHover(hoverable);
-
-      if (this.isTargetted) {
-        if (!this.highlightLayer) {
-          console.error(`HighlightLayer is undefined before reapplying targeting for Enemy ${this.id}`);
-          this.isTargetted = false;
-        } else {
-          this.setTargetted(true);
-        }
-      }
-
-      // Set NPC state
-      this.isNPC = true;
-      this.isAggroed = false;
-      this.isAttacking = false;
-      this.isTransformed = true;
-
-      // Play appropriate animation (default to Idle)
-      this.physicsController!.stopAllMovement();
-      this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-      // console.log(`Enemy ${this.id}: Set to Idle as NPC`);
-
-      if (wasWandering) {
-        this.physicsController!.startWandering();
-        this.animationManager.playAnimation("Run", 1.0, undefined, undefined, true);
-        // console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
-      }
-
-      // console.log(`Enemy ${this.id} model swapped to plushUnicorn at position`, currentPosition);
-    } catch (error) {
-      console.error(`Failed to swap model to npc for Enemy ${this.id}`, error);
-    }
+  if (this.isTransformed) {
+    console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
+    return;
   }
+
+  if (!this.assetManager) {
+    console.error(`Enemy ${this.id}: Cannot swap model: AssetManager is undefined`);
+    return;
+  }
+
+  try {
+    console.log(`Enemy ${this.id}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
+    const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
+    console.log(`Enemy ${this.id}: Current position for respawn`, currentPosition);
+    const wasWandering = this.isAggroed ? false : true;
+
+    if (this.behaviorObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
+      this.behaviorObserver = null;
+      console.log(`Enemy ${this.id}: Removed behavior observer`);
+    }
+
+    if (this.physicsController) {
+      this.physicsController.stopAllMovement();
+      this.physicsController.dispose();
+      this.physicsController = null;
+      console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
+    }
+
+    if (this.targetCircle) {
+      if (this.targetCircle.metadata?.observer) {
+        this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+      }
+      this.targetCircle.dispose();
+      this.targetCircle = null;
+      console.log(`Enemy ${this.id}: Disposed target circle`);
+    }
+
+    if (this.hitboxMesh) {
+      console.log(`Enemy ${this.id}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
+      this.hitboxMesh.dispose();
+      this.hitboxMesh = null;
+    }
+
+    this.disposeHealthBar();
+    console.log(`Enemy ${this.id}: Disposed health bar`);
+
+    if (this.enemyMesh && this.highlightLayer && !this.enemyMesh.isDisposed()) {
+      this.highlightLayer.removeMesh(this.enemyMesh);
+      this.enemyMesh.getChildMeshes().forEach((mesh) => {
+        if (!mesh.isDisposed() && mesh instanceof Mesh) {
+          this.highlightLayer.removeMesh(mesh);
+        }
+      });
+      console.log(`Enemy ${this.id}: Removed highlight layer from mesh`);
+    }
+
+    if (this.enemyMesh) {
+      this.enemyMesh.dispose();
+      this.enemyMesh = null;
+      console.log(`Enemy ${this.id}: Disposed enemy mesh`);
+    }
+
+    this.animationManager.dispose();
+    this.enemySkeleton = null;
+    console.log(`Enemy ${this.id}: Disposed animation manager and skeleton`);
+
+    const npcAssetContainer = this.assetManager.getAssetContainer("plushUnicorn");
+    if (!npcAssetContainer) {
+      console.error(`Enemy ${this.id}: Failed to load npc asset container`);
+      this.position = currentPosition;
+      return;
+    }
+
+    const clones = this.duplicate(npcAssetContainer, currentPosition);
+    this.enemyMesh = clones.rootNodes[0] as Mesh;
+    this.enemySkeleton = clones.skeletons[0];
+    const animationGroups = clones.animationGroups || [];
+    console.log(`Enemy ${this.id}: Loaded plushUnicorn model`);
+
+    this.enemyMesh.position = currentPosition;
+    this.enemyMesh.checkCollisions = true;
+    this.enemyMesh.isPickable = false;
+    this.enemyMesh.scaling = new Vector3(3, 3, 3);
+
+    this.enemyMesh.getChildMeshes().forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.isPickable = false;
+      if (this.shadowGenerator) {
+        this.shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+
+    Tags.EnableFor(this.enemyMesh);
+    Tags.AddTagsTo(this.enemyMesh, `enemyID:${this.id}`);
+    this.enemyMesh.getChildMeshes().forEach((mesh) => {
+      Tags.EnableFor(mesh);
+      Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
+    });
+    console.log(`Enemy ${this.id}: Set up tags for unicorn mesh`);
+
+    this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
+      height: 0.4,
+      width: 0.3,
+    }, this.scene);
+    this.hitboxMesh.parent = this.enemyMesh;
+    this.hitboxMesh.position = new Vector3(0, 0.2, 0);
+    this.hitboxMesh.checkCollisions = false;
+    this.hitboxMesh.isPickable = true;
+    this.hitboxMesh.isVisible = false;
+
+    const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
+    hitboxMaterial.alpha = 0;
+    this.hitboxMesh.material = hitboxMaterial;
+
+    Tags.EnableFor(this.hitboxMesh);
+    Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
+    console.log(`Enemy ${this.id}: Unicorn hitbox created, height: 0.4, width: 0.3, isPickable: ${this.hitboxMesh.isPickable}, isVisible: ${this.hitboxMesh.isVisible}, material alpha: ${hitboxMaterial.alpha}`);
+
+    this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
+
+    this.setupPhysics();
+    this.animationManager.initialize(animationGroups);
+    console.log(`Enemy ${this.id}: Initialized physics and animations`);
+
+    this.setupHealthBar(true);
+    console.log(`Enemy ${this.id}: Set up hidden health bar`);
+
+    const hoverable: Hoverable = {
+      getMesh: () => this.hitboxMesh,
+      getScene: () => this.scene,
+      getHighlightMesh: () => this.enemyMesh,
+    };
+    this.hoverHandler.setupHover(hoverable);
+    console.log(`Enemy ${this.id}: Set up hover handler`);
+
+    if (this.isTargetted) {
+      if (!this.highlightLayer) {
+        console.error(`Enemy ${this.id}: HighlightLayer is undefined for targeting`);
+        this.isTargetted = false;
+      } else {
+        this.setTargetted(true);
+        console.log(`Enemy ${this.id}: Reapplied targeting`);
+      }
+    }
+
+    this.isNPC = true;
+    this.isAggroed = false;
+    this.isAttacking = false;
+    this.isTransformed = true;
+    console.log(`Enemy ${this.id}: Set NPC state`);
+
+    this.physicsController!.stopAllMovement();
+    this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
+    console.log(`Enemy ${this.id}: Set to Idle as NPC`);
+
+    if (wasWandering) {
+      this.physicsController!.startWandering();
+      this.animationManager.playAnimation("Run", 1.0, undefined, undefined, true);
+      console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
+    }
+
+    // Schedule respawn
+    if (this.game?.gameManager) {
+      this.game.gameManager.scheduleEnemyRespawn(this.id, currentPosition);
+      console.log(`Enemy ${this.id}: Scheduled respawn in 60 seconds at position`, currentPosition);
+    } else {
+      console.error(`Enemy ${this.id}: Cannot schedule respawn, game or gameManager is undefined`);
+    }
+
+    console.log(`Enemy ${this.id}: Completed transformation to plushUnicorn at position`, currentPosition);
+  } catch (error) {
+    console.error(`Enemy ${this.id}: Failed to swap model to NPC`, error);
+  }
+}
 }

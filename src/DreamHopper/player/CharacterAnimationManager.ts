@@ -71,31 +71,31 @@ export class CharacterAnimationManager {
     fireworks.emitter = position;
     fireworks.minEmitBox = new Vector3(0, 0, 0);
     fireworks.maxEmitBox = new Vector3(0, 0, 0);
-  
+
     fireworks.color1 = new Color4(1.0, 0.0, 1.0, 1.0);    // vibrant magenta
     fireworks.color2 = new Color4(0.2, 0.8, 1.0, 1.0);    // bright cyan
     fireworks.colorDead = new Color4(1.0, 1.0, 0.5, 0.3); // fades to transparent gold
-  
+
     fireworks.minSize = 0.15;
     fireworks.maxSize = 0.5;
     fireworks.minLifeTime = 2.5;
     fireworks.maxLifeTime = 4.0;
-  
+
     fireworks.emitRate = 1000;
     fireworks.blendMode = ParticleSystem.BLENDMODE_ADD;
     fireworks.gravity = new Vector3(0, -0.5, 0); // gentle fall
-  
+
     fireworks.direction1 = new Vector3(-1, -1, -1);
     fireworks.direction2 = new Vector3(1, 1, 1 );
-  
+
     fireworks.minAngularSpeed = -Math.PI / 6;
     fireworks.maxAngularSpeed = Math.PI / 6;
     fireworks.minEmitPower = 0.5;
     fireworks.maxEmitPower = 1.2;
     fireworks.updateSpeed = 0.05;
-  
+
     fireworks.start();
-  
+
     // Emit briefly, fade slowly
     setTimeout(() => {
       fireworks.stop(); // stop emitting
@@ -105,132 +105,139 @@ export class CharacterAnimationManager {
       }, 5000); // wait for fade
     }, 1000); // emit for 1s
   }
-    
 
   private spawnDreamboltSphere(): void {
-    if (!this.characterController) {
-      console.error("CharacterAnimationManager: CharacterController not initialized");
-      return;
+  if (!this.characterController) {
+    console.error("CharacterAnimationManager: CharacterController not initialized");
+    return;
+  }
+
+  const characterMesh = this.characterController.getCharacter().colliderBox;
+  if (!characterMesh) {
+    console.error("CharacterAnimationManager: Character mesh not found");
+    return;
+  }
+
+  if (!this.characterController.physicsController) {
+    console.error("CharacterAnimationManager: PhysicsController not found");
+    return;
+  }
+
+  console.log("CharacterAnimationManager: Spawning Dreambolt sphere");
+
+  const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
+  const material = new StandardMaterial("dreamboltMat", this.scene);
+  material.diffuseColor = new Color3(1.0, 0.85, 0.9); // More pastel / softer highlight
+  material.emissiveColor = new Color3(1.0, 0.95, 0.97); // Brighter glow
+  material.alpha = 0.8; // Slight transparency for ethereal feel
+  material.specularPower = 0;
+  material.backFaceCulling = false; // Prevent visual glitches if it's a thin object
+  sphere.material = material;
+  sphere.isVisible = true;
+
+  const particles = new ParticleSystem("boltParticles", 1000, this.scene);
+  particles.particleTexture = new Texture("./Flare.png", this.scene);
+  particles.emitter = sphere;
+  particles.minEmitBox = Vector3.Zero();
+  particles.maxEmitBox = Vector3.Zero();
+  particles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
+  particles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
+  particles.colorDead = new Color4(0, 0, 0.2, 0.0);
+  particles.minSize = 0.7;
+  particles.maxSize = 1.5;
+  particles.minLifeTime = 0.15;
+  particles.maxLifeTime = 0.4;
+  particles.emitRate = 400;
+  particles.blendMode = ParticleSystem.BLENDMODE_ADD;
+  particles.gravity = Vector3.Zero();
+  particles.direction1 = Vector3.Zero();
+  particles.direction2 = Vector3.Zero();
+  particles.start();
+
+  const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
+  const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
+  const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
+  sphere.position = startPos;
+  sphere.checkCollisions = true;
+
+  console.log(`CharacterAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
+
+  let moveDirection: Vector3;
+  if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
+    const target = this.targetingSystem.getCurrentTarget();
+    const targetMesh = target!.getMesh()!;
+
+    targetMesh.computeWorldMatrix(true);
+    targetMesh.refreshBoundingInfo();
+    const boundingBox = targetMesh.getBoundingInfo().boundingBox;
+
+    const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
+    const targetPos = targetMesh.getAbsolutePosition();
+
+    console.log(`CharacterAnimationManager: Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
+
+    const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
+
+    if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
+      adjustedTargetPos.y = targetPos.y + 0.875;
+      console.log(`CharacterAnimationManager: Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
     }
-
-    const characterMesh = this.characterController.getCharacter().colliderBox;
-    if (!characterMesh) {
-      console.error("CharacterAnimationManager: Character mesh not found");
-      return;
-    }
-
-    if (!this.characterController.physicsController) {
-      console.error("CharacterAnimationManager: PhysicsController not found");
-      return;
-    }
-
-    console.log("CharacterAnimationManager: Spawning Dreambolt sphere");
-
-    const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
-    const material = new StandardMaterial("dreamboltMat", this.scene);
-material.diffuseColor = new Color3(1.0, 0.85, 0.9); // More pastel / softer highlight
-material.emissiveColor = new Color3(1.0, 0.95, 0.97); // Brighter glow
-material.alpha = 0.8; // Slight transparency for ethereal feel
-material.specularPower = 0;
-material.backFaceCulling = false; // Prevent visual glitches if it's a thin object
-    sphere.material = material;
-    sphere.isVisible = true;
-
-    const particles = new ParticleSystem("boltParticles", 1000, this.scene);
-    particles.particleTexture = new Texture("./Flare.png", this.scene);
-    particles.emitter = sphere;
-    particles.minEmitBox = Vector3.Zero();
-    particles.maxEmitBox = Vector3.Zero();
-    particles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
-    particles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
-    particles.colorDead = new Color4(0, 0, 0.2, 0.0);
-    particles.minSize = 0.7;
-    particles.maxSize = 1.5;
-    particles.minLifeTime = 0.15;
-    particles.maxLifeTime = 0.4;
-    particles.emitRate = 400;
-    particles.blendMode = ParticleSystem.BLENDMODE_ADD;
-    particles.gravity = Vector3.Zero();
-    particles.direction1 = Vector3.Zero();
-    particles.direction2 = Vector3.Zero();
-    particles.start();
-
-    const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
-    const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
-    const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
-    sphere.position = startPos;
-    sphere.checkCollisions = true;
-
-    console.log(`CharacterAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
-
-    let moveDirection: Vector3;
-    if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
-      const target = this.targetingSystem.getCurrentTarget();
-      const targetMesh = target!.getMesh()!;
-
-      targetMesh.computeWorldMatrix(true);
-      targetMesh.refreshBoundingInfo();
-      const boundingBox = targetMesh.getBoundingInfo().boundingBox;
-
-      const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
-      const targetPos = targetMesh.getAbsolutePosition();
-
-      console.log(`CharacterAnimationManager: Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
-
-      const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
-
-      if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
-        adjustedTargetPos.y = targetPos.y + 0.875;
-        console.log(`CharacterAnimationManager: Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
-      }
-      moveDirection = adjustedTargetPos.subtract(sphere.position);
-      if (moveDirection.lengthSquared() > 0.0001) {
-        moveDirection = moveDirection.normalize();
-        console.log(`CharacterAnimationManager: Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
-      } else {
-        moveDirection = forward;
-        console.log(`CharacterAnimationManager: Target ${target!.getId()} is at same position as sphere, using forward direction`);
-      }
+    moveDirection = adjustedTargetPos.subtract(sphere.position);
+    if (moveDirection.lengthSquared() > 0.0001) {
+      moveDirection = moveDirection.normalize();
+      console.log(`CharacterAnimationManager: Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
     } else {
       moveDirection = forward;
-      console.log("CharacterAnimationManager: No target or target mesh not found, moving sphere in character's forward direction");
+      console.log(`CharacterAnimationManager: Target ${target!.getId()} is at same position as sphere, using forward direction`);
     }
+  } else {
+    moveDirection = forward;
+    console.log("CharacterAnimationManager: No target or target mesh not found, moving sphere in character's forward direction");
+  }
 
-    const speed = 10;
+  const speed = 10;
+  const DREAMBOLT_DAMAGE = 40; // Dreambolt deals 40 damage
 
-    const renderCallback = (eventData: Scene, eventState: EventState) => {
-      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
-      const moveDistance = speed * deltaTime;
-      sphere.position.addInPlace(moveDirection.scale(moveDistance));
+  const renderCallback = (eventData: Scene, eventState: EventState) => {
+    const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+    const moveDistance = speed * deltaTime;
+    sphere.position.addInPlace(moveDirection.scale(moveDistance));
 
-      // Check for intersection with enemy hitboxes only
-      const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
-      for (const hitbox of hitboxes) {
-        if (sphere.intersectsMesh(hitbox, true)) {
-          const tags = Tags.GetTags(hitbox);
-          const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
-          if (enemyId) {
-            console.log(`CharacterAnimationManager: Dreambolt hit enemy hitbox, id: ${enemyId}`);
-            const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
-            if (enemy) {
-              enemy.swapToNPCModel();
-              console.log(`CharacterAnimationManager: Enemy ${enemyId} model swapped to npc.glb`);
-              this.triggerFireworks(sphere.position.clone());
-              particles.stop();
-              particles.dispose();
-              sphere.dispose();
-              this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-              return;
-            } else {
-              console.warn(`CharacterAnimationManager: Enemy with id ${enemyId} not found in GameManager`);
+    // Check for intersection with enemy hitboxes only
+    const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
+    for (const hitbox of hitboxes) {
+      if (sphere.intersectsMesh(hitbox, true)) {
+        const tags = Tags.GetTags(hitbox);
+        const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
+        if (enemyId) {
+          console.log(`CharacterAnimationManager: Dreambolt hit enemy hitbox, id: ${enemyId}`);
+          const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+          if (enemy) {
+            // Trigger fireworks on every hit
+            this.triggerFireworks(sphere.position.clone());
+            console.log(`CharacterAnimationManager: Triggered fireworks for Dreambolt hit on enemy ${enemyId}`);
+
+            enemy.takeDamage(DREAMBOLT_DAMAGE);
+            console.log(`CharacterAnimationManager: Dealt ${DREAMBOLT_DAMAGE} damage to enemy ${enemyId}, HP: ${enemy.getCurrentHP()}/${enemy.getMaxHP()}`);
+            if (enemy.isDead()) {
+              console.log(`CharacterAnimationManager: Enemy ${enemyId} defeated`);
             }
+
+            particles.stop();
+            particles.dispose();
+            sphere.dispose();
+            this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
+            return;
+          } else {
+            console.warn(`CharacterAnimationManager: Enemy with id ${enemyId} not found in GameManager`);
           }
         }
       }
-    };
+    }
+  };
 
-    this.scene.onBeforeRenderObservable.add(renderCallback);
-  }
+  this.scene.onBeforeRenderObservable.add(renderCallback);
+}
 
   public cancelDreambolt(): void {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
@@ -393,6 +400,7 @@ material.backFaceCulling = false; // Prevent visual glitches if it's a thin obje
       });
     }
   }
+
   public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
     let currentWeight = 1;
     let newWeight = 0;
@@ -460,12 +468,10 @@ material.backFaceCulling = false; // Prevent visual glitches if it's a thin obje
     return this.animationGroups.find(group => group.name === name);
   }
 
-
   public getAnimationGroups() {
     return this.animationGroups;
   }
 
-  
   public stopAllAnimations(): void {
     if (this.blendFrameId !== null) {
       cancelAnimationFrame(this.blendFrameId);
@@ -483,7 +489,6 @@ material.backFaceCulling = false; // Prevent visual glitches if it's a thin obje
     this.dreamboltSpawned = false;
     console.log("CharacterAnimationManager: Stopped all animations, cleared blending state, and reset animatables");
   }
-
 
   public dispose(): void {
     this.animationGroups.forEach(group => group.dispose());

@@ -29,7 +29,7 @@ export class Game {
   private targetingSystem!: TargetingSystem;
   private assetManager!: AssetManager;
   private highlightLayer!: HighlightLayer;
-  private gameManager!: GameManager;
+  public gameManager!: GameManager;
   private soundManager: SoundManager;
   private loadingScreen: DreamHopperLoadingScreen;
   private showQuestDialog = false;
