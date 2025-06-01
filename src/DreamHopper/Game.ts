@@ -240,8 +240,8 @@ private async loadGroundMesh(): Promise<void> {
    pbr.useAmbientOcclusionFromMetallicTextureRed = false;
     pbr.useRoughnessFromMetallicTextureGreen = true;
     pbr.useMetallnessFromMetallicTextureBlue = true;
-	pbr.roughness = 0.8; // Or use pbr.microSurface
-pbr.metallic = 0.0;  // Grass is non-metallic
+	pbr.roughness = 0.8; 
+pbr.metallic = 0.0;  
     
   
 
