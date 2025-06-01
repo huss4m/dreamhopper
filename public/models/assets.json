@@ -92,6 +92,12 @@
       "name": "mapleTree",
       "rootUrl": "./models/",
       "filename": "maple_tree3.glb"
+    },
+    {
+      "name": "grassPlant",
+      "rootUrl": "./models/",
+      "filename": "grass_plant.glb"
     }
+ 
   ]
   

@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -179,7 +179,7 @@ export class Game {
 
   // Load ground mesh
   await this.loadGroundMesh();
-
+  //await this.createGrass(800);
   // Create mist particles
   this.createMistParticles();
   this.createSparkleParticles();
@@ -189,14 +189,17 @@ export class Game {
  // this.createRainbowArcParticles();
   //this.createDreamTrailParticles();
   // Create forest (now uses preloaded asset)
+
+  //this.createProceduralRainbowArc();
   await this.createForest(800);
+  await this.createGrass(2500);
 }
 
   
 private async loadGroundMesh(): Promise<void> {
   try {
     // Create ground from heightmap
-    const ground = GroundBuilder.CreateGroundFromHeightMap("Plane", "./HeightMap.png", {
+    const ground = GroundBuilder.CreateGroundFromHeightMap("Plane", "./HeightMap2.png", {
       width: 300,
       height: 300,
       subdivisions: 150,
@@ -271,6 +274,7 @@ if (pbr.albedoTexture instanceof Texture) {
     if (this.scene.isPhysicsEnabled()) {
       try {
         ground.onMeshReadyObservable.addOnce(() => {
+          
   try {
     //ground.optimize(100);
     new PhysicsAggregate(
@@ -279,6 +283,7 @@ if (pbr.albedoTexture instanceof Texture) {
       { mass: 0, restitution: 0.1, friction: 0.8 },
       this.scene
     );
+    
   } catch (physicsError) {
     console.error(`Failed to apply physics to ${ground.name}:`, physicsError);
   }
@@ -464,6 +469,103 @@ setTimeout(() => {
 }, 100);      
 }
 
+private createProceduralRainbowArc(): void {
+   const radius = 20;
+  const arcAngle = Math.PI;
+  const segments = 100;
+  const thickness = 30;
+
+  const pathArray: Vector3[][] = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * arcAngle;
+    const inner = radius - thickness / 2;
+    const outer = radius + thickness / 2;
+
+    const innerPoint = new Vector3(
+      Math.cos(angle) * inner,
+      Math.sin(angle) * inner,
+      0
+    );
+    const outerPoint = new Vector3(
+      Math.cos(angle) * outer,
+      Math.sin(angle) * outer,
+      0
+    );
+
+    pathArray.push([innerPoint, outerPoint]);
+  }
+
+  const rainbow = MeshBuilder.CreateRibbon("rainbow", {
+    pathArray: pathArray,
+    sideOrientation: Mesh.DOUBLESIDE,
+    updatable: false
+  }, this.scene);
+
+  rainbow.position = new Vector3(5, 0, 5);
+  rainbow.rotation = new Vector3(0, Math.PI / 2, 0);
+
+  const shaderName = "rainbowShader";
+
+  Effect.ShadersStore[`${shaderName}VertexShader`] = `
+    precision highp float;
+    attribute vec3 position;
+    attribute vec2 uv;
+    uniform mat4 worldViewProjection;
+    varying vec2 vUV;
+    void main() {
+      vUV = uv;
+      gl_Position = worldViewProjection * vec4(position, 1.0);
+    }
+  `;
+
+  Effect.ShadersStore[`${shaderName}FragmentShader`] = `
+    precision highp float;
+    varying vec2 vUV;
+
+    vec3 hsl2rgb(float h, float s, float l) {
+      float c = (1.0 - abs(2.0 * l - 1.0)) * s;
+      float x = c * (1.0 - abs(mod(h * 6.0, 2.0) - 1.0));
+      float m = l - c / 2.0;
+      vec3 rgb = vec3(0.0);
+      if (h < 1.0/6.0) rgb = vec3(c, x, 0.0);
+      else if (h < 2.0/6.0) rgb = vec3(x, c, 0.0);
+      else if (h < 3.0/6.0) rgb = vec3(0.0, c, x);
+      else if (h < 4.0/6.0) rgb = vec3(0.0, x, c);
+      else if (h < 5.0/6.0) rgb = vec3(x, 0.0, c);
+      else rgb = vec3(c, 0.0, x);
+      return rgb + vec3(m);
+    }
+
+    void main() {
+      float t = vUV.x;
+      float h = clamp(t, 0.0, 1.0);
+      vec3 color = hsl2rgb(h, 1.0, 0.5);
+
+      float edgeFadeStart = 0.3;
+      float edgeFadeEnd = 0.7;
+      float alpha = smoothstep(0.0, edgeFadeStart, t) * smoothstep(1.0, edgeFadeEnd, t);
+      alpha = pow(alpha, 1.5);
+      alpha *= 0.25;
+
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  const shaderMat = new ShaderMaterial("rainbowMat", this.scene, {
+    vertex: shaderName,
+    fragment: shaderName
+  }, {
+    attributes: ["position", "uv"],
+    uniforms: ["worldViewProjection"]
+  });
+
+  shaderMat.backFaceCulling = false;
+  shaderMat.transparencyMode = Material.MATERIAL_ALPHABLEND;
+  shaderMat.alpha = 1.0;
+
+  rainbow.material = shaderMat;
+}
 
 private createRainbowArcParticles(): void {
   const rainbowSystem = new ParticleSystem("rainbow", 300, this.scene);
@@ -729,6 +831,136 @@ private createRainbowArcParticles(): void {
   mergedLeavesMesh.thinInstanceCount = Math.min(points.length, treeCount);
 
   console.log(`Created forest with ${Math.min(points.length, treeCount)} trees using thin instances and physics colliders.`);
+}
+
+
+
+
+private async createGrass(grassCount: number): Promise<void> {
+  if (this.groundMeshes.length === 0) {
+    console.warn("No ground mesh loaded to create grass");
+    return;
+  }
+
+  const groundMesh = this.groundMeshes[0];
+  groundMesh.isPickable = true;
+
+  // Retrieve the preloaded Grass asset
+  const grassContainer = this.assetManager.getAssetContainer("grassPlant");
+  if (!grassContainer) {
+    console.error("Game: Grass asset not found in AssetManager", this.assetManager);
+    return;
+  }
+
+  // Access meshes from the asset container
+  const grassMeshes = grassContainer.meshes.filter(mesh => mesh.name.includes("Grass")) as Mesh[];
+  if (grassMeshes.length === 0) {
+    console.warn("No Grass meshes found in asset container");
+    console.log("Available meshes:", grassContainer.meshes.map(m => m.name));
+    return;
+  }
+
+  // Clone meshes to avoid modifying originals
+  const clonedGrassMeshes = grassMeshes.map(mesh => mesh.clone(`cloned_grass_${mesh.name}`, null, true));
+
+  // Apply material properties
+  clonedGrassMeshes.forEach(mesh => {
+    if (mesh.material instanceof PBRMaterial) {
+      const mat = mesh.material as PBRMaterial;
+      mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+      mat.alphaCutOff = 0.3;
+      mat.useAlphaFromAlbedoTexture = true;
+      mat.needAlphaTesting();
+      mat.forceDepthWrite = true;
+      mat.separateCullingPass = true;
+      mat.backFaceCulling = false;
+      mat.usePhysicalLightFalloff = true;
+    }
+  });
+
+  // Merge meshes for thin instancing
+  const mergedGrassMesh = Mesh.MergeMeshes(clonedGrassMeshes, true, true, undefined, false, true);
+  if (!mergedGrassMesh) {
+    console.warn("Failed to merge grass meshes");
+    clonedGrassMeshes.forEach(m => m.dispose());
+    return;
+  }
+
+  // Dispose cloned meshes after merging
+  clonedGrassMeshes.forEach(m => m.dispose());
+
+  mergedGrassMesh.refreshBoundingInfo();
+  mergedGrassMesh.receiveShadows = true;
+  if (this.shadowGenerator) {
+    this.shadowGenerator.addShadowCaster(mergedGrassMesh, true);
+    this.shadowGenerator.transparencyShadow = true;
+  }
+
+  // Random distribution for grass placement
+  const seed = 98765432;
+  const rand = this.mulberry32(seed);
+  const bounds = { minX: -200, maxX: 200, minZ: -200, maxZ: 200 };
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxZ - bounds.minZ;
+  const grassMatrices: Float32Array = new Float32Array(grassCount * 16);
+
+  let processedCount = 0;
+
+  for (let i = 0; i < grassCount; i++) {
+    const x = bounds.minX + rand() * width;
+    const z = bounds.minZ + rand() * height;
+
+    this.ground.onMeshReadyObservable.add(() => {
+      let position: Vector3;
+      let rotation = Quaternion.Identity();
+
+      // Get height from this.ground
+      const y = this.ground.getHeightAtCoordinates(x, z);
+      if (y === undefined || isNaN(y)) {
+        console.warn(`No valid height for grass ${i} at (${x}, ${z})`);
+        position = new Vector3(x, 0, z); // Fallback position
+      } else {
+        position = new Vector3(x, y, z);
+      }
+
+      // Calculate normal-based rotation
+      const ray = new Ray(new Vector3(x, position.y + 100, z), Vector3.Down(), 200);
+      const hit = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
+
+      if (hit && hit.getNormal) {
+        const normal = hit.getNormal(true) || Vector3.Up();
+        const up = Vector3.Up();
+        if (normal.lengthSquared() > 0 && !normal.equalsWithEpsilon(up, 0.0001)) {
+          const axis = Vector3.Cross(up, normal).normalize();
+          const angle = Math.acos(Vector3.Dot(up, normal) / normal.length());
+          if (axis.lengthSquared() > 0.0001) {
+            rotation = Quaternion.RotationAxis(axis, angle);
+          } else if (Vector3.Dot(up, normal) < -0.999) {
+            rotation = Quaternion.RotationAxis(Vector3.Right(), Math.PI);
+          }
+        }
+      }
+
+      const randomYaw = rand() * Math.PI * 2;
+      const yawRotation = Quaternion.RotationAxis(Vector3.Up(), randomYaw);
+      rotation = yawRotation.multiply(rotation);
+
+      const scaleValue = 10 + rand() * (0.6 - 0.3);
+      const scale = new Vector3(scaleValue, scaleValue, scaleValue);
+
+      const grassMatrix = Matrix.Compose(scale, rotation, position);
+      grassMatrix.copyToArray(grassMatrices, i * 16);
+
+      processedCount++;
+
+      // Apply instances only when all grass positions are processed
+      if (processedCount === grassCount) {
+        mergedGrassMesh.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
+        mergedGrassMesh.thinInstanceCount = grassCount;
+        console.log(`Created ${grassCount} grass instances using thin instancing.`);
+      }
+    }, -1, false, false, true); // Run once per instance
+  }
 }
 
   private mulberry32(seed: number) {
