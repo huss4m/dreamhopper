@@ -140,7 +140,7 @@ export class CharacterAnimationManager {
     console.log("CharacterAnimationManager: Preloading bolt.wav");
     this.dreamboltSound = new Sound(
       "dreamboltSound",
-      "./sfx/bolt.wav",
+      "./sfx/bolt2.mp3",
       this.scene,
       () => {
         console.log("CharacterAnimationManager: Dreambolt sound preloaded");

@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -145,7 +145,7 @@ export class Game {
   // Setup lighting
   this.light = new DirectionalLight("sunLight", new Vector3(-0.5, -1, -0.5).normalize(), this.scene);
   this.light.intensityMode = Light.INTENSITYMODE_ILLUMINANCE;
-  this.light.intensity = 3;
+  this.light.intensity = 1;
   this.light.position = new Vector3(12, 25, 12);
 
   this.shadowGenerator = new CascadedShadowGenerator(1024, this.light);
@@ -170,6 +170,7 @@ export class Game {
   this.envTexture.rotationY = Math.PI;
   this.scene.environmentTexture = this.envTexture;
 
+
   this.skybox = this.scene.createDefaultSkybox(this.envTexture, true, 100000, 0);
   if (this.skybox && this.skybox.material) {
     this.skybox.applyFog = false;
@@ -183,6 +184,9 @@ export class Game {
   this.createMistParticles();
   this.createSparkleParticles();
   this.createFireflyParticles();
+  //this.createGodrays();
+  //this.createGodrayParticles();
+ // this.createRainbowArcParticles();
   //this.createDreamTrailParticles();
   // Create forest (now uses preloaded asset)
   await this.createForest(800);
@@ -258,6 +262,7 @@ if (pbr.albedoTexture instanceof Texture) {
     //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
 
     //pbr.environmentIntensity = 0.3;
+    
     ground.material = pbr;
     // Store in your groundMeshes array to keep your logic consistent
     this.groundMeshes.push(ground);
@@ -416,6 +421,84 @@ private createFireflyParticles(): void {
   fireflySystem.addColorGradient(1.0, new Color4(1.0, 1.0, 0.8, 0.0));
 
   fireflySystem.start();
+}
+private createGodrays(): void {
+
+  // SUN LIGHT SOURCE as a sphere
+  const sun = MeshBuilder.CreateSphere("sun", { diameter: 4, segments: 32 }, this.scene);
+  sun.position = new Vector3(0, 10, 10);
+
+  const sunMat = new StandardMaterial("sunMat", this.scene);
+  sunMat.emissiveColor = new Color3(1, 0.9, 0.6);
+
+  sunMat.backFaceCulling = false;
+  sun.material = sunMat;
+
+  // GODRAY POSTPROCESS
+  const godrays = new VolumetricLightScatteringPostProcess(
+    "godrays",
+    1.0,
+    this.camera,
+    sun,
+    100,
+    Texture.BILINEAR_SAMPLINGMODE,
+    this.engine,
+    false
+  );
+
+  godrays.exposure = 0.2;
+  godrays.decay = 1;
+  godrays.weight = 0.4;
+  godrays.density = 0.5;
+
+
+    // GIZMO MANAGER
+ const gizmoManager = new GizmoManager(this.scene);
+gizmoManager.attachToMesh(null);        // detach from anything first
+gizmoManager.positionGizmoEnabled = true;
+
+setTimeout(() => {
+  gizmoManager.attachToMesh(null); // detach any previous
+  gizmoManager.positionGizmoEnabled = true;
+  gizmoManager.attachToMesh(sun);
+}, 100);      
+}
+
+
+private createRainbowArcParticles(): void {
+  const rainbowSystem = new ParticleSystem("rainbow", 300, this.scene);
+  rainbowSystem.particleTexture = new Texture("./flare_1.png", this.scene); // Use soft circular glow
+
+  // Emit from arc-shaped area (fake a semi-circle using vertical range and emission box)
+  rainbowSystem.emitter = new Vector3(0, 5, 0);
+  rainbowSystem.minEmitBox = new Vector3(-20, 0, -5);
+  rainbowSystem.maxEmitBox = new Vector3(20, 10, 5);
+
+  rainbowSystem.minSize = 1.5;
+  rainbowSystem.maxSize = 2.5;
+  rainbowSystem.minLifeTime = 4;
+  rainbowSystem.maxLifeTime = 6;
+  rainbowSystem.emitRate = 150;
+  rainbowSystem.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+
+  rainbowSystem.gravity = new Vector3(0, 0, 0); // Keep them floating
+  rainbowSystem.direction1 = new Vector3(-0.1, 0.1, -0.1);
+  rainbowSystem.direction2 = new Vector3(0.1, 0.1, 0.1);
+
+  rainbowSystem.minEmitPower = 0.05;
+  rainbowSystem.maxEmitPower = 0.1;
+  rainbowSystem.minAngularSpeed = 0;
+  rainbowSystem.maxAngularSpeed = 0.05;
+
+  // Gradient simulating rainbow colors
+  rainbowSystem.addColorGradient(0.0, new Color4(1.0, 0.0, 0.0, 0.3)); // Red
+  rainbowSystem.addColorGradient(0.2, new Color4(1.0, 0.5, 0.0, 0.3)); // Orange
+  rainbowSystem.addColorGradient(0.4, new Color4(1.0, 1.0, 0.0, 0.3)); // Yellow
+  rainbowSystem.addColorGradient(0.6, new Color4(0.0, 1.0, 0.0, 0.3)); // Green
+  rainbowSystem.addColorGradient(0.8, new Color4(0.0, 0.0, 1.0, 0.3)); // Blue
+  rainbowSystem.addColorGradient(1.0, new Color4(0.6, 0.0, 1.0, 0.3)); // Violet
+
+  rainbowSystem.start();
 }
 
   private async createForest(treeCount: number): Promise<void> {
