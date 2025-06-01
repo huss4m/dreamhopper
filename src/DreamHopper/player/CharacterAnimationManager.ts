@@ -226,19 +226,19 @@ export class CharacterAnimationManager {
 
   private spawnDreamboltSphere(): void {
     if (!this.characterController) {
-      console.error("CharacterAnimationManager: CharacterController not initialized");
-      return;
+        console.error("CharacterAnimationManager: CharacterController not initialized");
+        return;
     }
 
     const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
     if (!characterMesh) {
-      console.error("CharacterAnimationManager: Character mesh not found");
-      return;
+        console.error("CharacterAnimationManager: Character mesh not found");
+        return;
     }
 
     if (!this.characterController.physicsController) {
-      console.error("CharacterAnimationManager: PhysicsController not found");
-      return;
+        console.error("CharacterAnimationManager: PhysicsController not found");
+        return;
     }
 
     console.log("CharacterAnimationManager: Spawning Dreambolt sphere");
@@ -281,128 +281,133 @@ export class CharacterAnimationManager {
     console.log(`CharacterAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
 
     if (this.boltLaunchSound) {
-      console.log("CharacterAnimationManager: Playing boltLaunch.wav");
-      this.boltLaunchSound.play();
+        console.log("CharacterAnimationManager: Playing boltLaunch.wav");
+        this.boltLaunchSound.play();
     } else {
-      console.warn("CharacterAnimationManager: boltLaunchSound not preloaded");
+        console.warn("CharacterAnimationManager: boltLaunchSound not preloaded");
     }
 
+    let sphereDreamboltSound: Sound | null = null;
     if (this.dreamboltSound) {
-      console.log("CharacterAnimationManager: Playing bolt.wav");
-      if (sphere && !sphere.isDisposed()) {
-        this.dreamboltSound.attachToMesh(sphere);
-        this.dreamboltSound.play();
-        console.log("CharacterAnimationManager: Dreambolt sound playing, attached to sphere");
-      } else {
-        console.warn("CharacterAnimationManager: Sphere disposed before dreambolt sound could be attached");
-      }
+        console.log(`CharacterAnimationManager: Cloning preloaded dreambolt sound for sphere ${sphere.uniqueId}`);
+        sphereDreamboltSound = this.dreamboltSound.clone();
+        if (sphere && !sphere.isDisposed()) {
+            sphereDreamboltSound!.attachToMesh(sphere);
+            sphereDreamboltSound!.play();
+            console.log(`CharacterAnimationManager: Cloned dreambolt sound playing, attached to sphere ${sphere.uniqueId}`);
+        } else {
+            console.warn(`CharacterAnimationManager: Sphere ${sphere.uniqueId} disposed before dreambolt sound could be attached`);
+            sphereDreamboltSound!.dispose();
+            sphereDreamboltSound = null;
+        }
     } else {
-      console.warn("CharacterAnimationManager: dreamboltSound not preloaded");
+        console.warn("CharacterAnimationManager: dreamboltSound not preloaded");
     }
 
     let moveDirection: Vector3;
     if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
-      const target = this.targetingSystem.getCurrentTarget();
-      const targetMesh = target!.getMesh()!;
+        const target = this.targetingSystem.getCurrentTarget();
+        const targetMesh = target!.getMesh()!;
 
-      targetMesh.computeWorldMatrix(true);
-      targetMesh.refreshBoundingInfo();
-      const boundingBox = targetMesh.getBoundingInfo().boundingBox;
+        targetMesh.computeWorldMatrix(true);
+        targetMesh.refreshBoundingInfo();
+        const boundingBox = targetMesh.getBoundingInfo().boundingBox;
 
-      const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
-      const targetPos = targetMesh.getAbsolutePosition();
+        const targetCenterY = (boundingBox.minimumWorld.y + boundingBox.maximumWorld.y) / 2;
+        const targetPos = targetMesh.getAbsolutePosition();
 
-      console.log(`CharacterAnimationManager: Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
+        console.log(`CharacterAnimationManager: Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${targetCenterY}`);
 
-      const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
+        const adjustedTargetPos = new Vector3(targetPos.x, targetCenterY, targetPos.z);
 
-      if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
-        adjustedTargetPos.y = targetPos.y + 0.875;
-        console.log(`CharacterAnimationManager: Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
-      }
-      moveDirection = adjustedTargetPos.subtract(sphere.position);
-      if (moveDirection.lengthSquared() > 0.0001) {
-        moveDirection = moveDirection.normalize();
-        console.log(`CharacterAnimationManager: Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
-      } else {
-        moveDirection = forward;
-        console.log(`CharacterAnimationManager: Target ${target!.getId()} is at same position as sphere, using forward direction`);
-      }
+        if (targetCenterY - boundingBox.minimumWorld.y < 0.5) {
+            adjustedTargetPos.y = targetPos.y + 0.875;
+            console.log(`CharacterAnimationManager: Warning: Target ${target!.getId()} bounding box midpoint too low, using fallback y=${adjustedTargetPos.y}`);
+        }
+        moveDirection = adjustedTargetPos.subtract(sphere.position);
+        if (moveDirection.lengthSquared() > 0.0001) {
+            moveDirection = moveDirection.normalize();
+            console.log(`CharacterAnimationManager: Moving sphere toward target ${target!.getId()} at adjusted position: ${adjustedTargetPos.toString()}`);
+        } else {
+            moveDirection = forward;
+            console.log(`CharacterAnimationManager: Target ${target!.getId()} is at same position as sphere, using forward direction`);
+        }
     } else {
-      moveDirection = forward;
-      console.log("CharacterAnimationManager: No target or target mesh not found, moving sphere in character's forward direction");
+        moveDirection = forward;
+        console.log("CharacterAnimationManager: No target or target mesh not found, moving sphere in character's forward direction");
     }
 
     const speed = 10;
-    //const DREAMBOLT_DAMAGE = 40;
     const DREAMBOLT_MIN_DAMAGE = 20;
     const DREAMBOLT_MAX_DAMAGE = 40;
 
     const renderCallback = (eventData: Scene, eventState: EventState) => {
-      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
-      const moveDistance = speed * deltaTime;
-      sphere.position.addInPlace(moveDirection.scale(moveDistance));
+        const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+        const moveDistance = speed * deltaTime;
+        sphere.position.addInPlace(moveDirection.scale(moveDistance));
 
-      const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
-      for (const hitbox of hitboxes) {
-        if (sphere.intersectsMesh(hitbox, true)) {
-          const tags = Tags.GetTags(hitbox);
-          const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
-          if (enemyId) {
-            console.log(`CharacterAnimationManager: Dreambolt hit enemy hitbox, id: ${enemyId}`);
-            const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
-            if (enemy) {
-              this.triggerFireworks(sphere.position.clone());
-              console.log(`CharacterAnimationManager: Triggered fireworks for Dreambolt hit on enemy ${enemyId}`);
+        const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
+        for (const hitbox of hitboxes) {
+            if (sphere.intersectsMesh(hitbox, true)) {
+                const tags = Tags.GetTags(hitbox);
+                const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
+                if (enemyId) {
+                    console.log(`CharacterAnimationManager: Dreambolt hit enemy hitbox, id: ${enemyId}`);
+                    const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+                    if (enemy) {
+                        this.triggerFireworks(sphere.position.clone());
+                        console.log(`CharacterAnimationManager: Triggered fireworks for Dreambolt hit on enemy ${enemyId}`);
 
-              const damage = Math.floor(Math.random() * (DREAMBOLT_MAX_DAMAGE - DREAMBOLT_MIN_DAMAGE + 1)) + DREAMBOLT_MIN_DAMAGE;
-              enemy.takeDamage(damage);
-              console.log(`CharacterAnimationManager: Dealt ${damage} damage to enemy ${enemyId}, HP: ${enemy.getCurrentHP()}/${enemy.getMaxHP()}`);
-              if (enemy.isDead()) {
-                console.log(`CharacterAnimationManager: Enemy ${enemyId} defeated`);
-              }
+                        const damage = Math.floor(Math.random() * (DREAMBOLT_MAX_DAMAGE - DREAMBOLT_MIN_DAMAGE + 1)) + DREAMBOLT_MIN_DAMAGE;
+                        enemy.takeDamage(damage);
+                        console.log(`CharacterAnimationManager: Dealt ${damage} damage to enemy ${enemyId}, HP: ${enemy.getCurrentHP()}/${enemy.getMaxHP()}`);
+                        if (enemy.isDead()) {
+                            console.log(`CharacterAnimationManager: Enemy ${enemyId} defeated`);
+                        }
 
-              particles.stop();
-              particles.dispose();
-              sphere.dispose();
-              if (this.dreamboltSound) {
-                this.dreamboltSound.stop();
-                console.log("CharacterAnimationManager: Dreambolt sound stopped");
-              }
-              if (this.boltLaunchSound) {
-                this.boltLaunchSound.stop();
-                console.log("CharacterAnimationManager: Bolt launch sound stopped");
-              }
-              this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-              return;
-            } else {
-              console.warn(`CharacterAnimationManager: Enemy with id ${enemyId} not found in GameManager`);
+                        particles.stop();
+                        particles.dispose();
+                        sphere.dispose();
+                        if (sphereDreamboltSound) {
+                            sphereDreamboltSound.stop();
+                            sphereDreamboltSound.dispose();
+                            console.log(`CharacterAnimationManager: Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed`);
+                        }
+                        if (this.boltLaunchSound) {
+                            this.boltLaunchSound.stop();
+                            console.log("CharacterAnimationManager: Bolt launch sound stopped");
+                        }
+                        this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
+                        return;
+                    } else {
+                        console.warn(`CharacterAnimationManager: Enemy with id ${enemyId} not found in GameManager`);
+                    }
+                }
             }
-          }
         }
-      }
     };
 
     this.scene.onBeforeRenderObservable.add(renderCallback);
 
     setTimeout(() => {
-      if (sphere && !sphere.isDisposed()) {
-        console.log("CharacterAnimationManager: Dreambolt sphere timed out, disposing");
-        particles.stop();
-        particles.dispose();
-        sphere.dispose();
-        if (this.dreamboltSound) {
-          this.dreamboltSound.stop();
-          console.log("CharacterAnimationManager: Dreambolt sound stopped due to timeout");
+        if (sphere && !sphere.isDisposed()) {
+            console.log(`CharacterAnimationManager: Dreambolt sphere ${sphere.uniqueId} timed out, disposing`);
+            particles.stop();
+            particles.dispose();
+            sphere.dispose();
+            if (sphereDreamboltSound) {
+                sphereDreamboltSound.stop();
+                sphereDreamboltSound.dispose();
+                console.log(`CharacterAnimationManager: Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed due to timeout`);
+            }
+            if (this.boltLaunchSound) {
+                this.boltLaunchSound.stop();
+                console.log("CharacterAnimationManager: Bolt launch sound stopped due to timeout");
+            }
+            this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
         }
-        if (this.boltLaunchSound) {
-          this.boltLaunchSound.stop();
-          console.log("CharacterAnimationManager: Bolt launch sound stopped due to timeout");
-        }
-        this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-      }
     }, 5000);
-  }
+}
 
   public cancelDreambolt(): void {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
