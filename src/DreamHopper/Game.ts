@@ -397,7 +397,7 @@ private createFireflyParticles(): void {
   fireflySystem.maxSize = 0.5;
   fireflySystem.minLifeTime = 4;
   fireflySystem.maxLifeTime = 8;
-  fireflySystem.emitRate = 15;
+  fireflySystem.emitRate = 8;
 
   fireflySystem.direction1 = new Vector3(-0.2, 0.1, -0.2);
   fireflySystem.direction2 = new Vector3(0.2, 0.1, 0.2);
