@@ -227,23 +227,21 @@ private async loadGroundMesh(): Promise<void> {
     );
 
     pbr.bumpTexture = new Texture(
-      "./textures/grass3/bump.jpg",
+      "./textures/grass3/Normal.jpg",
       this.scene
     );
 
     pbr.invertNormalMapX = true;
     pbr.invertNormalMapY = true;
 
-   pbr.metallicTexture = new Texture(
-      "./textures/asphalt/asphalt_ao_rough_metal.jpg",
-      this.scene
-    );
+  
     
 
-   pbr.useAmbientOcclusionFromMetallicTextureRed = true;
+   pbr.useAmbientOcclusionFromMetallicTextureRed = false;
     pbr.useRoughnessFromMetallicTextureGreen = true;
     pbr.useMetallnessFromMetallicTextureBlue = true;
-	
+	pbr.roughness = 0.8; // Or use pbr.microSurface
+pbr.metallic = 0.0;  // Grass is non-metallic
     
   
 
