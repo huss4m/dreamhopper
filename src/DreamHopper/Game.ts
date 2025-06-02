@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect, DefaultRenderingPipeline, ColorGradingTexture, ColorCurves } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -47,6 +47,7 @@ export class Game {
   private shadowGenerator: CascadedShadowGenerator | null = null;
   private treeColliders: Mesh[] = [];
   public ground!: GroundMesh;
+  private boundaryWalls: Mesh[] = [];
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, { audioEngine: true });
@@ -177,9 +178,12 @@ export class Game {
   }
   
 
+  
+
   // Load ground mesh
   await this.loadGroundMesh();
   //await this.createGrass(800);
+  await this.createBoundaryWalls();
   // Create mist particles
   this.createMistParticles();
   this.createSparkleParticles();
@@ -193,29 +197,42 @@ export class Game {
   //this.createProceduralRainbowArc();
   await this.createForest(800);
   await this.createGrass(2500);
+
+  
 }
 
   
 private async loadGroundMesh(): Promise<void> {
   try {
     // Create ground from heightmap
-    const ground = GroundBuilder.CreateGroundFromHeightMap("Plane", "./HeightMap2.png", {
-      width: 300,
-      height: 300,
-      subdivisions: 150,
-      minHeight: 0,
-      maxHeight: 1.5,
-      // optionally add updatable: false if you don't need to update
-    }, this.scene);
+    const ground = MeshBuilder.CreateGroundFromHeightMap(
+      "Plane",
+      "./HeightMap2.png",
+      {
+        width: 300, 
+        height: 300, 
+        subdivisions: 150, 
+        minHeight: 0, 
+        maxHeight: 1.5, 
+     
+        
+        onReady: (mesh) => {
+          console.log(`Ground mesh ${mesh.name} is ready`);
+        },
+      },
+      this.scene
+    );
+    this.ground = ground;
     this.ground = ground;
 
+    ground.onMeshReadyObservable.add(() => {
     // Position ground
-    ground.position = new Vector3(0, 0, 0);
+    //ground.position = new Vector3(0, 0, 0);
 
-
-    // Make it pickable and receive shadows like your original
     ground.receiveShadows = true;
     ground.isPickable = true;
+
+    })
 
     /*
     // Create and assign a simple standard material so it's visible
@@ -242,23 +259,17 @@ private async loadGroundMesh(): Promise<void> {
     pbr.invertNormalMapX = true;
     pbr.invertNormalMapY = true;
 
-  
-    
-
-
-  
-    
-  pbr.metallic = 0;
-  pbr.roughness = 1;
-
+  pbr.metallic = 0.2;
+  pbr.roughness = 0.6;
+ 
 
 if (pbr.albedoTexture instanceof Texture) {
-              pbr.albedoTexture.uScale = 80;
-              pbr.albedoTexture.vScale = 80;
+              pbr.albedoTexture.uScale = 75;
+              pbr.albedoTexture.vScale = 75;
             }
 
 
-          pbr.environmentIntensity = 0.2;
+          pbr.environmentIntensity = 0.3;
 
     //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
 
@@ -832,7 +843,79 @@ private createRainbowArcParticles(): void {
 }
 
 
+private async createBoundaryWalls(): Promise<void> {
+    try {
+      const wallHeight = 100; // Tall enough to prevent jumping over
+      const wallThickness = 1; // Thin to minimize impact
+      const bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }; // Match forest bounds
+      const wallLength = 400; // Matches ground width/height (maxX - minX or maxZ - minZ)
 
+      // Create four walls (north, south, east, west)
+      const walls = [
+        // North wall (z = maxZ)
+        {
+          name: "northWall",
+          position: new Vector3(0, wallHeight / 2, bounds.maxZ),
+          dimensions: { width: wallLength, height: wallHeight, depth: wallThickness },
+        },
+        // South wall (z = minZ)
+        {
+          name: "southWall",
+          position: new Vector3(0, wallHeight / 2, bounds.minZ),
+          dimensions: { width: wallLength, height: wallHeight, depth: wallThickness },
+        },
+        // East wall (x = maxX)
+        {
+          name: "eastWall",
+          position: new Vector3(bounds.maxX, wallHeight / 2, 0),
+          dimensions: { width: wallThickness, height: wallHeight, depth: wallLength },
+        },
+        // West wall (x = minX)
+        {
+          name: "westWall",
+          position: new Vector3(bounds.minX, wallHeight / 2, 0),
+          dimensions: { width: wallThickness, height: wallHeight, depth: wallLength },
+        },
+      ];
+
+      for (const wallConfig of walls) {
+        const wall = MeshBuilder.CreateBox(
+          wallConfig.name,
+          {
+            width: wallConfig.dimensions.width,
+            height: wallConfig.dimensions.height,
+            depth: wallConfig.dimensions.depth,
+          },
+          this.scene
+        );
+        wall.position = wallConfig.position;
+        wall.isVisible = false;
+        wall.isPickable = false;
+
+        // Add physics
+        if (this.scene.isPhysicsEnabled()) {
+          try {
+            new PhysicsAggregate(
+              wall,
+              PhysicsShapeType.BOX,
+              { mass: 0, restitution: 0.1, friction: 0.8 },
+              this.scene
+            );
+          } catch (physicsError) {
+            console.error(`Failed to apply physics to ${wallConfig.name}:`, physicsError);
+            wall.dispose();
+            continue;
+          }
+        }
+
+        this.boundaryWalls.push(wall);
+      }
+
+      console.log("Created invisible boundary walls around the forest");
+    } catch (error) {
+      console.error("Error creating boundary walls:", error);
+    }
+  }
 
 private async createGrass(grassCount: number): Promise<void> {
   if (this.groundMeshes.length === 0) {
