@@ -481,10 +481,11 @@ setTimeout(() => {
 private createProceduralRainbowArc(): void {
    const radius = 20;
   const arcAngle = Math.PI;
-  const segments = 100;
+  const segments = 200;
   const thickness = 30;
 
   const pathArray: Vector3[][] = [];
+  const uvs: Vector2[] = [];
 
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * arcAngle;
@@ -503,19 +504,25 @@ private createProceduralRainbowArc(): void {
     );
 
     pathArray.push([innerPoint, outerPoint]);
+
+    const u = i / segments;
+    uvs.push(new Vector2(u, 0)); // inner
+    uvs.push(new Vector2(u, 1)); // outer
   }
 
   const rainbow = MeshBuilder.CreateRibbon("rainbow", {
-    pathArray: pathArray,
+    pathArray,
     sideOrientation: Mesh.DOUBLESIDE,
-    updatable: false
+    updatable: false,
+    uvs
   }, this.scene);
 
   rainbow.position = new Vector3(5, 0, 5);
   rainbow.rotation = new Vector3(0, Math.PI / 2, 0);
 
-  const shaderName = "rainbowShader";
+  const shaderName = "realisticRainbow";
 
+  // Vertex shader
   Effect.ShadersStore[`${shaderName}VertexShader`] = `
     precision highp float;
     attribute vec3 position;
@@ -528,6 +535,7 @@ private createProceduralRainbowArc(): void {
     }
   `;
 
+  // Fragment shader (no shimmer, no ripple, just clean soft rainbow)
   Effect.ShadersStore[`${shaderName}FragmentShader`] = `
     precision highp float;
     varying vec2 vUV;
@@ -547,15 +555,15 @@ private createProceduralRainbowArc(): void {
     }
 
     void main() {
-      float t = vUV.x;
-      float h = clamp(t, 0.0, 1.0);
-      vec3 color = hsl2rgb(h, 1.0, 0.5);
+      float t = vUV.y; // thickness direction (inner to outer)
 
-      float edgeFadeStart = 0.3;
-      float edgeFadeEnd = 0.7;
-      float alpha = smoothstep(0.0, edgeFadeStart, t) * smoothstep(1.0, edgeFadeEnd, t);
-      alpha = pow(alpha, 1.5);
-      alpha *= 0.25;
+      // Map t (0 to 1) -> hue from violet (0.83) to red (0.0)
+      float h = 0.83 * (1.0 - t);
+      vec3 color = hsl2rgb(h, 1.0, 0.6);
+
+      // Soft edge fade to make it blend into the environment
+      float fade = exp(-pow((t - 0.5) / 0.33, 2.0));
+      float alpha = fade * 0.6;
 
       gl_FragColor = vec4(color, alpha);
     }
@@ -572,9 +580,12 @@ private createProceduralRainbowArc(): void {
   shaderMat.backFaceCulling = false;
   shaderMat.transparencyMode = Material.MATERIAL_ALPHABLEND;
   shaderMat.alpha = 1.0;
+  shaderMat.needDepthPrePass = true;
+  shaderMat.separateCullingPass = true;
 
   rainbow.material = shaderMat;
 }
+
 
 private createRainbowArcParticles(): void {
   const rainbowSystem = new ParticleSystem("rainbow", 300, this.scene);

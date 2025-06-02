@@ -168,7 +168,7 @@ export class CharacterAnimationManager {
         loop: false,
         spatialSound: true,
         maxDistance: 50,
-        volume: 0.3
+        volume: 0.04
       }
     );
   }
