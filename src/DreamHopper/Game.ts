@@ -865,6 +865,7 @@ private async createGrass(grassCount: number): Promise<void> {
 
   // Apply material properties
   clonedGrassMeshes.forEach(mesh => {
+    mesh.isPickable = false;
     if (mesh.material instanceof PBRMaterial) {
       const mat = mesh.material as PBRMaterial;
       mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
