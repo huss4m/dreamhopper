@@ -202,7 +202,7 @@ private async loadGroundMesh(): Promise<void> {
     const ground = GroundBuilder.CreateGroundFromHeightMap("Plane", "./HeightMap2.png", {
       width: 300,
       height: 300,
-      subdivisions: 100,
+      subdivisions: 150,
       minHeight: 0,
       maxHeight: 1.5,
       // optionally add updatable: false if you don't need to update
