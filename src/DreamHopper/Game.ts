@@ -268,7 +268,7 @@ if (pbr.albedoTexture instanceof Texture) {
  
     this.groundMeshes.push(ground);
 
-    // Physics (if enabled)
+    // Physics
     if (this.scene.isPhysicsEnabled()) {
       try {
         ground.onMeshReadyObservable.addOnce(() => {
