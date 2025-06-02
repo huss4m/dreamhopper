@@ -202,7 +202,7 @@ private async loadGroundMesh(): Promise<void> {
     const ground = GroundBuilder.CreateGroundFromHeightMap("Plane", "./HeightMap2.png", {
       width: 300,
       height: 300,
-      subdivisions: 150,
+      subdivisions: 100,
       minHeight: 0,
       maxHeight: 1.5,
       // optionally add updatable: false if you don't need to update
@@ -235,7 +235,7 @@ private async loadGroundMesh(): Promise<void> {
     );
 
     pbr.bumpTexture = new Texture(
-      "./textures/grass3/Normal.jpg",
+      "./textures/grass4/normal.jpg",
       this.scene
     );
 
@@ -245,22 +245,20 @@ private async loadGroundMesh(): Promise<void> {
   
     
 
-   pbr.useAmbientOcclusionFromMetallicTextureRed = false;
-    pbr.useRoughnessFromMetallicTextureGreen = true;
-    pbr.useMetallnessFromMetallicTextureBlue = true;
-	pbr.roughness = 0.8; 
-pbr.metallic = 0.0;  
-    
+
   
+    
+  pbr.metallic = 0;
+  pbr.roughness = 1;
 
 
 if (pbr.albedoTexture instanceof Texture) {
-              pbr.albedoTexture.uScale = 100;
-              pbr.albedoTexture.vScale = 100;
+              pbr.albedoTexture.uScale = 80;
+              pbr.albedoTexture.vScale = 80;
             }
 
 
-           // pbr.environmentIntensity = 4;
+          pbr.environmentIntensity = 0.2;
 
     //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
 
