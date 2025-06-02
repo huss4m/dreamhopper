@@ -265,7 +265,7 @@ if (pbr.albedoTexture instanceof Texture) {
     //pbr.environmentIntensity = 0.3;
     
     ground.material = pbr;
-    // Store in your groundMeshes array to keep your logic consistent
+ 
     this.groundMeshes.push(ground);
 
     // Physics (if enabled)
