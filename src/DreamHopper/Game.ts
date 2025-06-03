@@ -708,8 +708,14 @@ private createRainbowArcParticles(): void {
   leavesBase.addLODLevel(60, lodLow.leaves!);
   //leavesBase.addLODLevel(120, null);
 
-  lodLow.trunk!.isVisible = false;
-  lodLow.leaves!.isVisible = false;
+  // Hide base meshes to prevent them from rendering
+lodHigh.trunk!.isVisible = false;
+lodMid.trunk!.isVisible = false;
+lodLow.trunk!.isVisible = false;
+
+lodHigh.leaves!.isVisible = false;
+lodMid.leaves!.isVisible = false;
+lodLow.leaves!.isVisible = false;
 
   // Disable fog & shadows for LOD2
   lodLow.trunk!.receiveShadows = false;
