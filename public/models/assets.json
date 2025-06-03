@@ -94,6 +94,16 @@
       "filename": "maple_tree3.glb"
     },
     {
+      "name": "mapleTreeHighPoly",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3_highpoly.glb"
+    },
+    {
+      "name": "mapleTreeLowPoly",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3_lowpoly.glb"
+    },
+    {
       "name": "grassPlant",
       "rootUrl": "./models/",
       "filename": "grass_plant.glb"

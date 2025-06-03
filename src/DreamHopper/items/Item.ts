@@ -63,7 +63,7 @@ export class Item {
       this.parentMesh.position = this.positionOffset;
       this.parentMesh.rotation = this.rotationOffset;
       this.parentMesh.scaling = this.scaling;
-      this.shadowGenerator.addShadowCaster(this.parentMesh);
+      //this.shadowGenerator.addShadowCaster(this.parentMesh);
     } catch (err) {
       console.error(`Error initializing item '${this.name}':`, err);
       this.parentMesh.dispose();

@@ -29,7 +29,7 @@ export class InputHandler {
   private keyStates: { [key: string]: boolean } = {};
   private isRightMouseDown = false;
   private moveSpeed = 5;
-  private rotationSpeed = 0.05;
+  private rotationSpeed = 0.1;
   private wasSpacePressed = false;
   private wasDreamboltPressed = false;
   private wasSheathePressed = false;

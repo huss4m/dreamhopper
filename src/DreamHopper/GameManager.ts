@@ -75,12 +75,9 @@ export class GameManager {
     this.npcs.forEach((npc, index) => {
       const npcMesh = npc.getMesh();
       if (npcMesh) {
-        this.shadowGenerator.addShadowCaster(npcMesh, true);
+        //this.shadowGenerator.addShadowCaster(npcMesh, true);
         npcMesh.receiveShadows = true;
-        npcMesh.getChildMeshes().forEach(child => {
-          this.shadowGenerator.addShadowCaster(child, true);
-          child.receiveShadows = true;
-        });
+       
         console.log(`GameManager: NPC ${index} mesh added to shadow generator:`, npcMesh.name);
       } else {
         console.warn(`GameManager: NPC ${index} mesh not found for shadow generator`);
@@ -129,12 +126,9 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
       // Setup shadows for the new enemy
       const enemyMesh = newEnemy.getMesh();
       if (enemyMesh) {
-        this.shadowGenerator.addShadowCaster(enemyMesh, true);
+        //this.shadowGenerator.addShadowCaster(enemyMesh, true);
         enemyMesh.receiveShadows = true;
-        enemyMesh.getChildMeshes().forEach(child => {
-          this.shadowGenerator.addShadowCaster(child, true);
-          child.receiveShadows = true;
-        });
+        
        
         
         console.log(`GameManager: Respawned enemy ${enemyId} mesh added to shadow generator:`, enemyMesh.name);
@@ -173,12 +167,9 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
     this.enemies.forEach((enemy, index) => {
       const enemyMesh = enemy.getMesh();
       if (enemyMesh) {
-        this.shadowGenerator.addShadowCaster(enemyMesh, true);
+        //this.shadowGenerator.addShadowCaster(enemyMesh, true);
         enemyMesh.receiveShadows = true;
-        enemyMesh.getChildMeshes().forEach(child => {
-          this.shadowGenerator.addShadowCaster(child, true);
-          child.receiveShadows = true;
-        });
+        
         console.log(`GameManager: Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
         console.log(`GameManager: Enemy ${index} ID:`, enemy.getId());
       } else {

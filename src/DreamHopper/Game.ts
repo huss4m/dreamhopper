@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect, DefaultRenderingPipeline, ColorGradingTexture, ColorCurves } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect, DefaultRenderingPipeline, ColorGradingTexture, ColorCurves, Tags } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -13,6 +13,10 @@ import { CharacterAnimationManager } from "./player/CharacterAnimationManager";
 import { Quest, QuestState } from "./npc/Quest";
 import { NPC } from "./npc/NPC";
 import { CharacterCameraController } from "./player/CharacterCameraController";
+import { RecastJSPlugin } from "@babylonjs/core";
+import Recast from "recast-detour";
+
+
 
 export interface SceneState {
   npcPositions?: Vector3[];
@@ -49,6 +53,9 @@ export class Game {
   public ground!: GroundMesh;
   private boundaryWalls: Mesh[] = [];
 
+  private navigationPlugin: RecastJSPlugin | null = null;
+  private crowd: any | null = null; // Will hold the crowd instance
+
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, { audioEngine: true });
     this.soundManager = SoundManager.getInstance([
@@ -74,7 +81,7 @@ export class Game {
   private async initialize(): Promise<void> {
   try {
     this.engine.displayLoadingUI();
-    const totalSteps = 6;
+    const totalSteps = 7;
     let currentStep = 0;
 
     // Initialize AssetManager first to ensure assets are available
@@ -94,8 +101,16 @@ export class Game {
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
+    // Initialize navigation
+    await this.initializeNavigation();
+    currentStep++;
+    this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
+
     
     await this.soundManager.initialize();
+
+    //this.scene.setRenderingAutoClearDepthStencil(0, true, true, true);
+    //this.scene.setRenderingOrder(0, (a: any, b: any) => b - a); // Sort transparent objects back-to-front
     // Initialize other scene components
     await this.initializeSceneComponents(() => {
       currentStep++;
@@ -112,6 +127,7 @@ export class Game {
     this.engine.runRenderLoop(() => {
       if (this.inputHandler.getIsInitialized()) {
         this.inputHandler.update();
+       
         this.scene.render();
       }
     });
@@ -128,6 +144,7 @@ export class Game {
     this.engine.hideLoadingUI();
     throw error;
   }
+
 }
 
   private async initializePhysics(): Promise<void> {
@@ -154,7 +171,7 @@ export class Game {
   this.shadowGenerator.lambda = 0.9;
   this.shadowGenerator.autoCalcDepthBounds = true;
   this.shadowGenerator.shadowMaxZ = 1000;
-  this.shadowGenerator.bias = 0.0005;
+  this.shadowGenerator.bias = 0.001;
   this.shadowGenerator.cascadeBlendPercentage = 0.05;
   this.shadowGenerator.penumbraDarkness = 1.0;
   this.shadowGenerator.stabilizeCascades = true;
@@ -231,6 +248,7 @@ private async loadGroundMesh(): Promise<void> {
 
     ground.receiveShadows = true;
     ground.isPickable = true;
+    //ground.checkCollisions = true;
 
     })
 
@@ -479,10 +497,10 @@ setTimeout(() => {
 }
 
 private createProceduralRainbowArc(): void {
-   const radius = 20;
+  const radius = 50;
   const arcAngle = Math.PI;
   const segments = 200;
-  const thickness = 30;
+  const thickness = 15;
 
   const pathArray: Vector3[][] = [];
   const uvs: Vector2[] = [];
@@ -510,64 +528,74 @@ private createProceduralRainbowArc(): void {
     uvs.push(new Vector2(u, 1)); // outer
   }
 
-  const rainbow = MeshBuilder.CreateRibbon("rainbow", {
+  const rainbow = MeshBuilder.CreateRibbon("rainbowArc", {
     pathArray,
     sideOrientation: Mesh.DOUBLESIDE,
     updatable: false,
     uvs
   }, this.scene);
 
-  rainbow.position = new Vector3(5, 0, 5);
-  rainbow.rotation = new Vector3(0, Math.PI / 2, 0);
+  rainbow.position = new Vector3(0, 0, 0);
+  rainbow.rotation = new Vector3(0, Math.PI/2, 0); // Face the camera
+  //rainbow.renderingGroupId = 1;
+  rainbow.hasVertexAlpha = true; // Ensure the mesh is treated as having alpha
 
-  const shaderName = "realisticRainbow";
+rainbow.alphaIndex = 1000; // Higher alphaIndex renders later 
 
-  // Vertex shader
+  const shaderName = "rainbowArcShader";
+
+  // Vertex Shader
   Effect.ShadersStore[`${shaderName}VertexShader`] = `
     precision highp float;
     attribute vec3 position;
     attribute vec2 uv;
     uniform mat4 worldViewProjection;
     varying vec2 vUV;
+
     void main() {
       vUV = uv;
       gl_Position = worldViewProjection * vec4(position, 1.0);
     }
   `;
 
-  // Fragment shader (no shimmer, no ripple, just clean soft rainbow)
-  Effect.ShadersStore[`${shaderName}FragmentShader`] = `
-    precision highp float;
-    varying vec2 vUV;
+  // Fragment Shader
+Effect.ShadersStore[`${shaderName}FragmentShader`] = `
+  precision highp float;
+  varying vec2 vUV;
 
-    vec3 hsl2rgb(float h, float s, float l) {
-      float c = (1.0 - abs(2.0 * l - 1.0)) * s;
-      float x = c * (1.0 - abs(mod(h * 6.0, 2.0) - 1.0));
-      float m = l - c / 2.0;
-      vec3 rgb = vec3(0.0);
-      if (h < 1.0/6.0) rgb = vec3(c, x, 0.0);
-      else if (h < 2.0/6.0) rgb = vec3(x, c, 0.0);
-      else if (h < 3.0/6.0) rgb = vec3(0.0, c, x);
-      else if (h < 4.0/6.0) rgb = vec3(0.0, x, c);
-      else if (h < 5.0/6.0) rgb = vec3(x, 0.0, c);
-      else rgb = vec3(c, 0.0, x);
-      return rgb + vec3(m);
-    }
+  vec3 hsl2rgb(float h, float s, float l) {
+    float c = (1.0 - abs(2.0 * l - 1.0)) * s;
+    float x = c * (1.0 - abs(mod(h * 6.0, 2.0) - 1.0));
+    float m = l - c / 2.0;
+    vec3 rgb = vec3(0.0);
+    if (h < 1.0/6.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0/6.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0/6.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0/6.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0/6.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + vec3(m);
+  }
 
-    void main() {
-      float t = vUV.y; // thickness direction (inner to outer)
+  void main() {
+    float t = vUV.y;
 
-      // Map t (0 to 1) -> hue from violet (0.83) to red (0.0)
-      float h = 0.83 * (1.0 - t);
-      vec3 color = hsl2rgb(h, 1.0, 0.6);
+    // Full spectrum hue
+    float h = 0.0 + t * 0.83;
+    vec3 color = hsl2rgb(h, 0.8, 0.5); // less saturated, softer
 
-      // Soft edge fade to make it blend into the environment
-      float fade = exp(-pow((t - 0.5) / 0.33, 2.0));
-      float alpha = fade * 0.6;
+    // Smoother edge fading
+    float edgeFade = smoothstep(0.0, 0.08, t) * smoothstep(1.0, 0.92, t);
 
-      gl_FragColor = vec4(color, alpha);
-    }
-  `;
+    // Slight fade toward center
+    float centerFade = 1.0 - pow((t - 0.5) / 0.5, 2.0);
+
+    // Lower overall intensity
+    float alpha = edgeFade * centerFade * 0.1;
+
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
 
   const shaderMat = new ShaderMaterial("rainbowMat", this.scene, {
     vertex: shaderName,
@@ -580,8 +608,9 @@ private createProceduralRainbowArc(): void {
   shaderMat.backFaceCulling = false;
   shaderMat.transparencyMode = Material.MATERIAL_ALPHABLEND;
   shaderMat.alpha = 1.0;
-  shaderMat.needDepthPrePass = true;
+  shaderMat.needDepthPrePass = false;
   shaderMat.separateCullingPass = true;
+  shaderMat.forceDepthWrite = false;
 
   rainbow.material = shaderMat;
 }
@@ -630,29 +659,30 @@ private createRainbowArcParticles(): void {
   }
   const groundMesh = this.groundMeshes[0];
 
-  // Retrieve the preloaded mapleTree asset
-  const treeContainer = this.assetManager.getAssetContainer("mapleTree");
-  if (!treeContainer) {
-    console.error("Game: mapleTree asset not found in AssetManager");
+  const loadLODMesh = (containerName: string) => {
+    const container = this.assetManager.getAssetContainer(containerName);
+    if (!container) {
+      console.error(`Game: ${containerName} asset not found`);
+      return null;
+    }
+    const trunks = container.meshes.filter(m => m.name.includes("Sakura_Sakura_Mat_0")) as Mesh[];
+    const leaves = container.meshes.filter(m => m.name.includes("Sakura_Bark001_2K_JPG_Mat_0")) as Mesh[];
+    return {
+      trunk: Mesh.MergeMeshes(trunks.map(m => m.clone(`${containerName}_trunk`, null, true)), true, true, undefined, false, true),
+      leaves: Mesh.MergeMeshes(leaves.map(m => m.clone(`${containerName}_leaves`, null, true)), true, true, undefined, false, true),
+    };
+  };
+
+  const lodHigh = loadLODMesh("mapleTreeHighPoly");
+  const lodMid = loadLODMesh("mapleTree");
+  const lodLow = loadLODMesh("mapleTreeLowPoly");
+
+  if (!lodHigh || !lodMid || !lodLow || !lodHigh.trunk || !lodMid.trunk || !lodLow.trunk || !lodHigh.leaves || !lodMid.leaves || !lodLow.leaves) {
+    console.warn("LOD meshes could not be loaded or merged.");
     return;
   }
 
-  // Access meshes directly from the asset container
-  const trunkMeshes = treeContainer.meshes.filter(mesh => mesh.name.includes("Sakura_Sakura_Mat_0")) as Mesh[];
-  const leavesMeshes = treeContainer.meshes.filter(mesh => mesh.name.includes("Sakura_Bark001_2K_JPG_Mat_0")) as Mesh[];
-
-  if (trunkMeshes.length === 0 || leavesMeshes.length === 0) {
-    console.warn("Could not find both trunk and leaves meshes in mapleTree asset container");
-    console.log("Available meshes:", treeContainer.meshes.map(m => m.name));
-    return;
-  }
-
-  // Clone meshes to avoid modifying the original assets
-  const clonedTrunkMeshes = trunkMeshes.map(mesh => mesh.clone(`cloned_trunk_${mesh.name}`, null, true));
-  const clonedLeavesMeshes = leavesMeshes.map(mesh => mesh.clone(`cloned_leaves_${mesh.name}`, null, true));
-
-  // Apply material properties to leaves
-  clonedLeavesMeshes.forEach(mesh => {
+  const configureLeavesMaterial = (mesh: Mesh) => {
     if (mesh.material instanceof PBRMaterial) {
       const mat = mesh.material as PBRMaterial;
       mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
@@ -663,41 +693,42 @@ private createRainbowArcParticles(): void {
       mat.separateCullingPass = true;
       mat.backFaceCulling = false;
       mat.usePhysicalLightFalloff = true;
+      mat.fogEnabled = true;
     }
-  });
+  };
+  [lodHigh.leaves, lodMid.leaves, lodLow.leaves].forEach(configureLeavesMaterial);
 
-  // Merge meshes for thin instancing
-  const mergedTrunkMesh = Mesh.MergeMeshes(clonedTrunkMeshes, true, true, undefined, false, true);
-  const mergedLeavesMesh = Mesh.MergeMeshes(clonedLeavesMeshes, true, true, undefined, false, true);
+  const trunkBase = lodHigh.trunk!;
+  trunkBase.addLODLevel(30, lodMid.trunk!);
+  trunkBase.addLODLevel(60, lodLow.trunk!);
+  //trunkBase.addLODLevel(120, null);
 
-  if (!mergedTrunkMesh || !mergedLeavesMesh) {
-    console.warn("Failed to merge trunk or leaves meshes");
-    clonedTrunkMeshes.forEach(m => m.dispose());
-    clonedLeavesMeshes.forEach(m => m.dispose());
-    return;
+  const leavesBase = lodHigh.leaves!;
+  leavesBase.addLODLevel(30, lodMid.leaves!);
+  leavesBase.addLODLevel(60, lodLow.leaves!);
+  //leavesBase.addLODLevel(120, null);
+
+  lodLow.trunk!.isVisible = false;
+  lodLow.leaves!.isVisible = false;
+
+  // Disable fog & shadows for LOD2
+  lodLow.trunk!.receiveShadows = false;
+  lodLow.leaves!.receiveShadows = false;
+  if (lodLow.leaves!.material instanceof PBRMaterial) {
+    const mat = lodLow.leaves!.material as PBRMaterial;
+    mat.fogEnabled = false;
+    mat.backFaceCulling = true;
+    mat.transparencyMode = PBRMaterial.PBRMATERIAL_OPAQUE;
   }
 
-  // Dispose cloned meshes after merging
-  clonedTrunkMeshes.forEach(m => m.dispose());
-  clonedLeavesMeshes.forEach(m => m.dispose());
-
-  mergedTrunkMesh.refreshBoundingInfo();
-  const trunkBoundingBox = mergedTrunkMesh.getBoundingInfo().boundingBox;
-  const trunkHeight = trunkBoundingBox.maximumWorld.y - trunkBoundingBox.minimumWorld.y;
+  // Bounding info
+  trunkBase.refreshBoundingInfo();
+  const trunkHeight = trunkBase.getBoundingInfo().boundingBox.maximumWorld.y -
+                      trunkBase.getBoundingInfo().boundingBox.minimumWorld.y;
   const trunkDiameter = 4;
 
-  mergedTrunkMesh.receiveShadows = true;
-  mergedLeavesMesh.receiveShadows = true;
-  if (this.shadowGenerator) {
-    this.shadowGenerator.addShadowCaster(mergedTrunkMesh, true);
-    this.shadowGenerator.addShadowCaster(mergedLeavesMesh, true);
-    this.shadowGenerator.transparencyShadow = true;
-    this.shadowGenerator.blurScale = 2;
-    this.shadowGenerator.blurBoxOffset = 2;
-    this.shadowGenerator.useContactHardeningShadow = true;
-  }
-
-  // Poisson disk sampling for tree placement (unchanged)
+  // Poisson Disk Sampling
+  const points: Vector2[] = [];
   const seed = 12314584;
   const rand = this.mulberry32(seed);
   const radius = 10;
@@ -709,125 +740,92 @@ private createRainbowArcParticles(): void {
   const gridHeight = Math.ceil(height / cellSize);
   const grid: (Vector2 | null)[] = new Array(gridWidth * gridHeight).fill(null);
   const active: Vector2[] = [];
-  const points: Vector2[] = [];
 
-  const isValidPoint = (point: Vector2, grid: (Vector2 | null)[], gridWidth: number, cellSize: number) => {
+  const isValidPoint = (point: Vector2) => {
     const gridX = Math.floor((point.x - bounds.minX) / cellSize);
     const gridZ = Math.floor((point.y - bounds.minZ) / cellSize);
     if (gridX < 0 || gridX >= gridWidth || gridZ < 0 || gridZ >= gridHeight) return false;
 
-    const startX = Math.max(0, gridX - 2);
-    const endX = Math.min(gridWidth - 1, gridX + 2);
-    const startZ = Math.max(0, gridZ - 2);
-    const endZ = Math.min(gridHeight - 1, gridZ + 2);
-
-    for (let z = startZ; z <= endZ; z++) {
-      for (let x = startX; x <= endX; x++) {
-        const neighbor = grid[z * gridWidth + x];
-        if (neighbor && Vector2.Distance(point, neighbor) < radius) {
-          return false;
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const x = gridX + dx, z = gridZ + dz;
+        if (x >= 0 && x < gridWidth && z >= 0 && z < gridHeight) {
+          const neighbor = grid[z * gridWidth + x];
+          if (neighbor && Vector2.Distance(point, neighbor) < radius) return false;
         }
       }
     }
     return true;
   };
 
-  const firstPoint = new Vector2(bounds.minX + rand() * width, bounds.minZ + rand() * height);
-  points.push(firstPoint);
-  active.push(firstPoint);
-  const gridX = Math.floor((firstPoint.x - bounds.minX) / cellSize);
-  const gridZ = Math.floor((firstPoint.y - bounds.minZ) / cellSize);
-  grid[gridZ * gridWidth + gridX] = firstPoint;
+  const first = new Vector2(bounds.minX + rand() * width, bounds.minZ + rand() * height);
+  active.push(first); points.push(first);
+  grid[Math.floor((first.y - bounds.minZ) / cellSize) * gridWidth + Math.floor((first.x - bounds.minX) / cellSize)] = first;
 
   while (active.length > 0 && points.length < treeCount) {
     const idx = Math.floor(rand() * active.length);
-    const point = active[idx];
+    const p = active[idx];
     let found = false;
-
     for (let i = 0; i < 30; i++) {
       const angle = rand() * Math.PI * 2;
       const dist = radius + rand() * radius;
-      const newPoint = new Vector2(point.x + Math.cos(angle) * dist, point.y + Math.sin(angle) * dist);
-
+      const np = new Vector2(p.x + Math.cos(angle) * dist, p.y + Math.sin(angle) * dist);
       if (
-        newPoint.x >= bounds.minX && newPoint.x <= bounds.maxX &&
-        newPoint.y >= bounds.minZ && newPoint.y <= bounds.maxZ &&
-        isValidPoint(newPoint, grid, gridWidth, cellSize)
+        np.x >= bounds.minX && np.x <= bounds.maxX &&
+        np.y >= bounds.minZ && np.y <= bounds.maxZ &&
+        isValidPoint(np)
       ) {
-        points.push(newPoint);
-        active.push(newPoint);
-        const newGridX = Math.floor((newPoint.x - bounds.minX) / cellSize);
-        const newGridZ = Math.floor((newPoint.y - bounds.minZ) / cellSize);
-        grid[newGridZ * gridWidth + newGridX] = newPoint;
+        points.push(np);
+        active.push(np);
+        grid[Math.floor((np.y - bounds.minZ) / cellSize) * gridWidth + Math.floor((np.x - bounds.minX) / cellSize)] = np;
         found = true;
-        if (points.length >= treeCount) break;
+        break;
       }
     }
-
-    if (!found) {
-      active.splice(idx, 1);
-    }
+    if (!found) active.splice(idx, 1);
   }
 
-  // Create thin instances for trees
-  const trunkMatrices: Float32Array = new Float32Array(treeCount * 16);
-  const leavesMatrices: Float32Array = new Float32Array(treeCount * 16);
+  for (let i = 0; i < points.length; i++) {
+    const x = points[i].x;
+    const z = points[i].y;
 
-  for (let i = 0; i < Math.min(points.length, treeCount); i++) {
-    const point = points[i];
-    const x = point.x;
-    const z = point.y;
+    const position = new Vector3(x, 0, z); // No raycast
+    const rotation = Quaternion.RotationAxis(Vector3.Up(), rand() * Math.PI * 2);
+    const scaleVal = 0.4 + rand() * (0.8 - 0.4);
+    const scale = new Vector3(scaleVal, scaleVal, scaleVal);
 
-    const ray = new Ray(new Vector3(x, 100, z), Vector3.Down(), 200);
-    const hit = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
+    const trunk = trunkBase.createInstance(`trunkInstance_${i}`);
+    trunk.position = position;
+    trunk.rotationQuaternion = rotation;
+    trunk.scaling = scale;
+    this.shadowGenerator!.addShadowCaster(trunk);
+    trunk.receiveShadows = true;
+ 
 
-    let position = new Vector3(x, 0, z);
-    let rotation = Quaternion.Identity();
+    const leaves = leavesBase.createInstance(`leavesInstance_${i}`);
+    leaves.position = position;
+    leaves.rotationQuaternion = rotation;
+    leaves.scaling = scale;
+    //this.shadowGenerator!.addShadowCaster(leaves);
+    leaves.receiveShadows = true;
 
-    if (hit && hit.pickedPoint && hit.getNormal) {
-      position = hit.pickedPoint;
-      const normal = hit.getNormal(true) || Vector3.Up();
 
-      const up = Vector3.Up();
-      if (normal.lengthSquared() > 0 && !normal.equalsWithEpsilon(up, 0.0001)) {
-        const axis = Vector3.Cross(up, normal).normalize();
-        const angle = Math.acos(Vector3.Dot(up, normal) / normal.length());
-        if (axis.lengthSquared() > 0.0001) {
-          rotation = Quaternion.RotationAxis(axis, angle);
-        } else if (Vector3.Dot(up, normal) < -0.999) {
-          rotation = Quaternion.RotationAxis(Vector3.Right(), Math.PI);
-        }
-      }
-    } else {
-      console.warn(`No terrain hit for tree ${i} at (${x}, ${z})`);
-    }
-
-    const randomYaw = rand() * Math.PI * 2;
-    const yawRotation = Quaternion.RotationAxis(Vector3.Up(), randomYaw);
-    rotation = yawRotation.multiply(rotation);
-
-    const leafRandomTilt = Quaternion.RotationAxis(Vector3.Forward(), (rand() - 0.5) * 0.1);
-    const leafRotation = leafRandomTilt.multiply(rotation);
-
-    const scaleValue = 0.4 + rand() * (0.8 - 0.4);
-    const scale = new Vector3(scaleValue, scaleValue, scaleValue);
-
-    const trunkMatrix = Matrix.Compose(scale, rotation, position);
-    const leavesMatrix = Matrix.Compose(scale, leafRotation, position);
-
-    trunkMatrix.copyToArray(trunkMatrices, i * 16);
-    leavesMatrix.copyToArray(leavesMatrices, i * 16);
+    trunk.freezeWorldMatrix();
+    leaves.freezeWorldMatrix();
 
     if (this.scene.isPhysicsEnabled()) {
       const collider = MeshBuilder.CreateCylinder(
         `treeCollider${i}`,
-        { height: trunkHeight * scaleValue, diameter: trunkDiameter * scaleValue },
+        { height: trunkHeight * scaleVal, diameter: trunkDiameter * scaleVal },
         this.scene
       );
       collider.position = position;
       collider.rotationQuaternion = rotation;
       collider.isVisible = false;
-      collider.isPickable = false;
+      collider.checkCollisions = true;
+
+      Tags.EnableFor(collider);
+      Tags.AddTagsTo(collider, "obstacle");
 
       try {
         new PhysicsAggregate(
@@ -837,21 +835,16 @@ private createRainbowArcParticles(): void {
           this.scene
         );
         this.treeColliders.push(collider);
-      } catch (physicsError) {
-        console.error(`Failed to apply physics to tree collider ${i}:`, physicsError);
+      } catch (err) {
+        console.error(`Physics error on tree ${i}:`, err);
         collider.dispose();
       }
     }
   }
 
-  mergedTrunkMesh.thinInstanceSetBuffer("matrix", trunkMatrices, 16, true);
-  mergedLeavesMesh.thinInstanceSetBuffer("matrix", leavesMatrices, 16, true);
-
-  mergedTrunkMesh.thinInstanceCount = Math.min(points.length, treeCount);
-  mergedLeavesMesh.thinInstanceCount = Math.min(points.length, treeCount);
-
-  console.log(`Created forest with ${Math.min(points.length, treeCount)} trees using thin instances and physics colliders.`);
+  console.log(`Created forest with ${points.length} instances and adaptive LOD0 shadows.`);
 }
+
 
 
 private async createBoundaryWalls(): Promise<void> {
@@ -957,6 +950,7 @@ private async createGrass(grassCount: number): Promise<void> {
 
   // Apply material properties
   clonedGrassMeshes.forEach(mesh => {
+ 
     mesh.isPickable = false;
     if (mesh.material instanceof PBRMaterial) {
       const mat = mesh.material as PBRMaterial;
@@ -1050,6 +1044,7 @@ private async createGrass(grassCount: number): Promise<void> {
       if (processedCount === grassCount) {
         mergedGrassMesh.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
         mergedGrassMesh.thinInstanceCount = grassCount;
+        mergedGrassMesh.freezeWorldMatrix();
         console.log(`Created ${grassCount} grass instances using thin instancing.`);
       }
     }, -1, false, false, true); // Run once per instance
@@ -1314,6 +1309,82 @@ private async createGrass(grassCount: number): Promise<void> {
     return this.initializationPromise;
   }
 
+
+  private async initializeNavigation(): Promise<void> {
+    try {
+      const recast = await Recast();
+      this.navigationPlugin = new RecastJSPlugin(recast);
+      const navmeshParameters = {
+        cs: 0.38, // Cell size (tune for precision vs. performance)
+        ch: 0.05, // Cell height
+        walkableSlopeAngle: 60, // Max slope enemies can climb
+        walkableHeight: 2.0, // Enemy height
+        walkableClimb: 11.0, // Max height enemies can step up
+        walkableRadius: 0.5, // Enemy radius for collision
+        maxEdgeLen: 24,
+          maxSimplificationError: 0.5,
+  minRegionArea: 2,
+  mergeRegionArea: 8,
+  maxVertsPerPoly: 6,
+  detailSampleDist: 3,
+  detailSampleMaxError: 0.4,
+      };
+
+      // Combine ground and obstacle meshes (trees, walls)
+      const navmeshMeshes = [
+        this.ground,
+        ...this.treeColliders,
+        ...this.boundaryWalls,
+      ].filter((mesh): mesh is Mesh => !!mesh);
+
+      this.navigationPlugin.createNavMesh(navmeshMeshes, navmeshParameters);
+      console.log("Game: Navmesh created successfully");
+      /*
+      const navmeshdebug = this.navigationPlugin.createDebugNavMesh(this.scene);
+      const matdebug = new StandardMaterial("matdebug", this.scene);
+      matdebug.diffuseColor = new Color3(0.1, 0.2, 1);
+      matdebug.alpha = 0.2;
+      navmeshdebug.material = matdebug;
+      */
+
+      // Create crowd for enemies
+      this.crowd = this.navigationPlugin.createCrowd(20, 2.0, this.scene); // Max 20 enemies, max speed 2.0
+      console.log("Game: Crowd initialized for enemies");
+    } catch (error) {
+      console.error("Game: Failed to initialize navigation:", error);
+    }
+  }
+
+  // Getter for navigation plugin
+  public getNavigationPlugin(): RecastJSPlugin | null {
+    return this.navigationPlugin;
+  }
+
+  // Getter for crowd
+  public getCrowd(): any | null {
+    return this.crowd;
+  }
+
+  // Update crowd in render loop
+  private updateCrowd(): void {
+    if (this.crowd) {
+      this.crowd.update(this.scene.getEngine().getDeltaTime());
+    }
+  }
+
+  // Modify render loop to include crowd update
+  private initializeRenderLoop(): void {
+    this.engine.runRenderLoop(() => {
+      if (this.inputHandler.getIsInitialized()) {
+        this.inputHandler.update();
+        this.updateCrowd(); // Add crowd update
+        this.scene.render();
+      }
+    });
+  }
+
+  
+
   public dispose(): void {
     try {
       this.characterController?.dispose();
@@ -1397,4 +1468,4 @@ private async createGrass(grassCount: number): Promise<void> {
       console.error("Game: Dispose failed:", error);
     }
   }
-}
+} 

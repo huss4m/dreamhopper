@@ -136,10 +136,12 @@ export class NPC implements Hoverable, Targettable {
         mesh.isPickable = true; // Child meshes pickable, adjust if needed
       });
 
+      
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
       }
+        
 
       // Create hitbox
       this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
