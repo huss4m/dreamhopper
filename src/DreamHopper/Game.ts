@@ -15,7 +15,7 @@ import { NPC } from "./npc/NPC";
 import { CharacterCameraController } from "./player/CharacterCameraController";
 import { RecastJSPlugin } from "@babylonjs/core";
 import Recast from "recast-detour";
-
+//import { Inspector } from "@babylonjs/inspector"
 
 
 export interface SceneState {
@@ -76,6 +76,15 @@ export class Game {
     window.addEventListener("beforeunload", () => {
       this.soundManager.dispose();
     });
+
+
+/*
+    Inspector.Show(this.scene, {
+  embedMode: true, 
+});
+
+
+*/ 
   }
 
   private async initialize(): Promise<void> {
@@ -170,7 +179,7 @@ export class Game {
   this.shadowGenerator.numCascades = 1;
   this.shadowGenerator.lambda = 0.9;
   this.shadowGenerator.autoCalcDepthBounds = true;
-  this.shadowGenerator.shadowMaxZ = 1000;
+  this.shadowGenerator.shadowMaxZ = 100;
   this.shadowGenerator.bias = 0.001;
   this.shadowGenerator.cascadeBlendPercentage = 0.05;
   this.shadowGenerator.penumbraDarkness = 1.0;
@@ -287,7 +296,7 @@ if (pbr.albedoTexture instanceof Texture) {
             }
 
 
-          pbr.environmentIntensity = 0.3;
+          pbr.environmentIntensity = 0.15;
 
     //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
 
@@ -984,10 +993,12 @@ private async createGrass(grassCount: number): Promise<void> {
 
   mergedGrassMesh.refreshBoundingInfo();
   mergedGrassMesh.receiveShadows = true;
+  /*
   if (this.shadowGenerator) {
     this.shadowGenerator.addShadowCaster(mergedGrassMesh, true);
     this.shadowGenerator.transparencyShadow = true;
   }
+    */
 
   // Random distribution for grass placement
   const seed = 98765432;
