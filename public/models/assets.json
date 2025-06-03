@@ -1,25 +1,9 @@
 [
-    {
-      "name": "guy",
-      "rootUrl": "./models/",
-      "filename": "guycrig.glb"
-    },
-
+   
     {
       "name": "caster",
       "rootUrl": "./models/",
       "filename": "caster.glb"
-    },
-
-    {
-      "name": "sword",
-      "rootUrl": "./models/",
-      "filename": "steel_sword.glb"
-    },
-    {
-      "name": "sword_of_artorias",
-      "rootUrl": "./models/",
-      "filename": "sword_of_artorias.glb"
     },
     {
       "name": "npc",
@@ -31,62 +15,15 @@
       "rootUrl": "./models/",
       "filename": "enemy.glb"
     },
-
-    {
-      "name": "cube",
-      "rootUrl": "./models/",
-      "filename": "cube.glb"
-    },
-    {
-      "name": "plank",
-      "rootUrl": "./models/",
-      "filename": "plank.glb"
-    },
-    {
-      "name": "dragon_slayer",
-      "rootUrl": "./models/",
-      "filename": "dragon_slayer_berserk.glb"
-    },
-    {
-      "name": "question_mark",
-      "rootUrl": "./models/",
-      "filename": "question_mark.glb"
-    },
-    {
-      "name": "exclamation_point",
-      "rootUrl": "./models/",
-      "filename": "exclamation_point.glb"
-    },
-    {
-      "name": "portals",
-      "rootUrl": "./models/",
-      "filename": "portals.glb"
-    },
     {
       "name": "dreamCrystal",
       "rootUrl": "./models/",
       "filename": "dream_crystal.glb"
     },
     {
-      "name": "plushToy",
-      "rootUrl": "./models/",
-      "filename": "plush_toy.glb"
-    },
-    {
-      "name": "cake3D",
-      "rootUrl": "./models/",
-      "filename": "cake_3d.glb"
-    },
-    {
       "name": "plushUnicorn",
       "rootUrl": "./models/",
       "filename": "plush_unicorn.glb"
-    },
-
-    {
-      "name": "map",
-      "rootUrl": "./models/",
-      "filename": "map.glb"
     },
     {
       "name": "mapleTree",
@@ -108,6 +45,5 @@
       "rootUrl": "./models/",
       "filename": "grass_plant.glb"
     }
- 
   ]
   
