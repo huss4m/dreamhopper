@@ -373,7 +373,7 @@ export class Enemy implements Hoverable, Targettable {
       },
     };
 
-    this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig, this.game);
+    this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig, this.game, this);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
     console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);

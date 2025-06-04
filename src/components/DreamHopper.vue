@@ -21,6 +21,11 @@
       :visible="isDeathScreenVisible"
       @restart="handleRestart"
     />
+    <HelpDialog
+      :visible="showHelpDialog"
+      :steps="helpDialogSteps"
+      :onClose="closeHelpDialog"
+    />
   </main>
 </template>
 
@@ -34,10 +39,18 @@ import QuestDialog from "./QuestDialog.vue";
 import HPBar from "./HPBar.vue";
 import { Quest } from "@/DreamHopper/npc/Quest";
 import { Vector3 } from "@babylonjs/core";
+import HelpDialog from "./HelpDialog.vue";
 
 export default defineComponent({
   name: "DreamHopper",
-  components: { CastingBar, DreamCrystalCounter, QuestDialog, HPBar, DeathScreen },
+  components: {
+    CastingBar,
+    DreamCrystalCounter,
+    QuestDialog,
+    HPBar,
+    DeathScreen,
+    HelpDialog,
+  },
   setup() {
     const canvas = ref<HTMLCanvasElement | null>(null);
     const animationManager = ref<any>(null);
@@ -71,6 +84,7 @@ export default defineComponent({
       console.log("DreamHopper: Quest dialog closed!");
       if (gameInstance) {
         gameInstance.handleQuestClose();
+        dialogState.visible = false; // smooth close
       }
     };
 
@@ -87,21 +101,33 @@ export default defineComponent({
       if (gameInstance) {
         const player = gameInstance.getCharacterController()?.getPlayer();
         if (player) {
-          // Reset player state
-          player.reset(); // Use the new reset method
-          // Reset player position
+          player.reset();
           const characterMesh = gameInstance.getCharacterController()?.characterMeshLoader.getCharacterMesh();
           if (characterMesh) {
-            characterMesh.position = new Vector3(5, 5, 0); // Respawn at initial position
+            characterMesh.position = new Vector3(5, 5, 0);
           }
-          // Resume idle animation
           gameInstance.getCharacterController()?.playIdleAnimation();
           gameInstance.getCharacterController()!.animationManager.stopAllAnimations();
-          console.log(gameInstance.getCharacterController()!.animationManager.getAnimationGroups().map(g => ({ name: g.name, isPlaying: g.isPlaying })));
-          // Hide death screen
           isDeathScreenVisible.value = false;
           console.log("DreamHopper: Player respawned, death screen hidden");
         }
+      }
+    };
+
+    // === HelpDialog state ===
+    const showHelpDialog = ref(false);
+    const helpDialogPermanentlyDismissed = ref(false);
+
+    const helpDialogSteps = [
+      "Appuyez sur Z pour avancer, S pour reculer, A et E pour vous déplacer latéralement, Q et D pour pivoter. Appuyez sur L pour activer/désactiver le clavier QWERTY.",
+      "Maintenez le clic gauche pour faire pivoter la caméra autour du personnage, et le clic droit pour contrôler la rotation avec la souris.",
+      "Sélectionnez un PNJ et appuyez sur T pour interagir."
+    ];
+
+    const closeHelpDialog = (permanently = false) => {
+      showHelpDialog.value = false;
+      if (permanently) {
+        helpDialogPermanentlyDismissed.value = true;
       }
     };
 
@@ -115,26 +141,20 @@ export default defineComponent({
 
         dialogState.visible = gameInstance.getShowQuestDialog();
         dialogState.quest = gameInstance.getCurrentQuest();
-        console.log(`DreamHopper: Initial dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
 
         gameInstance.getOnQuestDialogToggled().add((isVisible) => {
-          console.log(`DreamHopper: Quest dialog toggled to ${isVisible}`);
           dialogState.visible = isVisible;
           dialogState.quest = gameInstance!.getCurrentQuest();
           dialogState.questKey++;
-          console.log(`DreamHopper: Updated dialog state - visible=${dialogState.visible}, quest=${dialogState.quest?.getId() ?? "null"}, status=${dialogState.quest?.getState().status ?? "none"}`);
         });
 
-        // Subscribe to player death
         const player = gameInstance.getCharacterController()?.getPlayer();
         if (player) {
           player.onDeathObservable.add(() => {
-            console.log("DreamHopper: Player died, showing death screen");
             isDeathScreenVisible.value = true;
           });
         }
 
-        // Poll HP changes (temporary until events are added)
         const hpInterval = setInterval(() => {
           if (gameInstance) {
             playerHP.value = gameInstance.getPlayerHP();
@@ -144,6 +164,13 @@ export default defineComponent({
         onUnmounted(() => {
           clearInterval(hpInterval);
         });
+
+        // Show help dialog after 5 seconds (if not dismissed)
+        setTimeout(() => {
+          if (!helpDialogPermanentlyDismissed.value) {
+            showHelpDialog.value = true;
+          }
+        }, 5000);
       }
     });
 
@@ -151,7 +178,6 @@ export default defineComponent({
       () => dialogState.quest?.getState().status,
       (newStatus) => {
         if (newStatus) {
-          console.log(`DreamHopper: Quest status changed to ${newStatus}`);
           dialogState.questKey++;
         }
       }
@@ -176,6 +202,9 @@ export default defineComponent({
       handleClose,
       handleTurnIn,
       handleRestart,
+      showHelpDialog,
+      helpDialogSteps,
+      closeHelpDialog,
     };
   },
 });
@@ -200,41 +229,5 @@ canvas {
   border: none;
   outline: none;
   box-shadow: 8px 8px 10px -6px #000000;
-}
-
-.spell-bar {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px;
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-.spell-slot {
-  width: 50px;
-  height: 50px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  border: 2px solid #444;
-  position: relative;
-  cursor: url("../../public/images/cursorTargetAlly.png"), auto;
-}
-
-.spell-slot:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.spell-slot.active {
-  border: 2px solid #ffcc00;
-  box-shadow: 0 0 10px #ffcc00;
 }
 </style>

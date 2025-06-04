@@ -2,6 +2,7 @@ import { Mesh, Scene, Vector3, Quaternion } from "@babylonjs/core";
 import { PhysicsController, PhysicsConfig, ColliderType } from "../PhysicsController";
 import { RecastJSPlugin } from "@babylonjs/core";
 import { Game } from "../Game";
+import { Enemy } from "./Enemy";
 
 export class EnemyPhysicsController {
   private physicsController: PhysicsController;
@@ -14,21 +15,23 @@ export class EnemyPhysicsController {
   private crowd: any | null;
   private game: Game;
   private navDummy: Mesh;
+  enemy: Enemy;
 
-  constructor(scene: Scene, mesh: Mesh, physicsConfig: PhysicsConfig, game: Game) {
+  constructor(scene: Scene, mesh: Mesh, physicsConfig: PhysicsConfig, game: Game, enemy: Enemy) {
     this.scene = scene;
     this.mesh = mesh;
     this.game = game;
+    this.enemy = enemy;
     this.physicsController = new PhysicsController(scene, mesh, physicsConfig);
     this.navigationPlugin = game.getNavigationPlugin();
     this.crowd = game.getCrowd();
 
     // Create invisible navDummy for crowd navigation
-    this.navDummy = Mesh.CreateBox("navDummy", 0.1, scene);
+    this.navDummy = Mesh.CreateBox("navDummy", 1, scene);
     this.navDummy.isVisible = false;
     this.navDummy.isPickable = false;
     this.navDummy.setEnabled(true);
-    this.navDummy.position = this.mesh.position.clone();
+    this.navDummy.position.copyFrom(this.mesh.getAbsolutePosition());
 
     if (this.navigationPlugin && this.crowd) {
       const agentParams = {
@@ -36,8 +39,8 @@ export class EnemyPhysicsController {
         height: physicsConfig.colliderParams.pointB!.y - physicsConfig.colliderParams.pointA!.y || 1.75,
         maxAcceleration: 8.0,
         maxSpeed: 3,
-        collisionQueryRange: 3,
-        pathOptimizationRange: 5,
+        collisionQueryRange: 0,
+        pathOptimizationRange: 50,
         separationWeight: 5,
       };
       this.agentIndex = this.crowd.addAgent(this.navDummy.position, agentParams, this.navDummy);
@@ -45,6 +48,13 @@ export class EnemyPhysicsController {
     } else {
       console.warn("EnemyPhysicsController: Navigation plugin or crowd not available");
     }
+
+
+    this.scene.onBeforeRenderObservable.add(() => {
+  if (this.navDummy && this.mesh) {
+    this.navDummy.position.copyFrom(this.mesh.getAbsolutePosition());
+  }
+});
   }
 
   
@@ -150,38 +160,79 @@ export class EnemyPhysicsController {
   }
 
   public startWandering(maxDistance = 10): void {
-    if (!this.mesh || !this.physicsController || !this.crowd || this.agentIndex === -1) return;
+  if (!this.mesh || !this.physicsController || !this.crowd || this.agentIndex === -1) return;
 
-    this.stopWandering();
+  this.stopWandering();
 
-    const moveToNextTarget = () => {
-      const randomDirection = this.generateRandomDirection();
-      const distance = 5 + Math.random() * (maxDistance - 5);
-      const target = this.mesh.position.add(randomDirection.scale(distance));
-      this.crowd.agentGoto(this.agentIndex, target);
-    };
+  let waitingForNextTarget = false;
 
-    this.wanderObserver = this.scene.onBeforeRenderObservable.add(() => {
-      const aggregate = this.physicsController.getPhysicsAggregate();
-      if (!aggregate || !this.crowd) return;
+  const moveToNextTarget = () => {
+    const randomDirection = this.generateRandomDirection();
+    const distance = 5 + Math.random() * (maxDistance - 5);
+    const roughTarget = this.mesh.position.add(randomDirection.scale(distance));
 
-      const agentVelocity = this.crowd.getAgentVelocity(this.agentIndex);
-      if (agentVelocity.lengthSquared() < 0.01) {
-        moveToNextTarget();
+    let finalTarget = roughTarget;
+
+    // Make sure target is on the navmesh
+    if (this.navigationPlugin) {
+      const closest = this.navigationPlugin.getClosestPoint(roughTarget);
+      if (closest) {
+        finalTarget = closest;
       } else {
-        this.orientToForwardDirection(agentVelocity);
-        try {
-          const y = aggregate.body.getLinearVelocity().y;
-          const horizVel = new Vector3(agentVelocity.x, y, agentVelocity.z);
-          aggregate.body.setLinearVelocity(horizVel);
-        } catch (e) {
-          console.warn("startWandering: Failed to set velocity", e);
-        }
+        console.warn("startWandering: No valid navmesh point for target");
+        return;
       }
-    });
+    }
 
-    moveToNextTarget();
-  }
+    this.crowd.agentGoto(this.agentIndex, finalTarget);
+    this.enemy.getAnimationManager().playAnimation("Run");
+
+    waitingForNextTarget = false;
+  };
+
+  this.wanderObserver = this.scene.onBeforeRenderObservable.add(() => {
+    const aggregate = this.physicsController.getPhysicsAggregate();
+    if (!aggregate || !this.crowd) return;
+
+    const agentVelocity = this.crowd.getAgentVelocity(this.agentIndex);
+
+    if (agentVelocity.lengthSquared() < 0.01) {
+      if (!waitingForNextTarget) {
+        waitingForNextTarget = true;
+
+        this.enemy.getAnimationManager().playAnimation("Idle", 1.0, undefined, undefined, true);
+        setTimeout(() => {
+          moveToNextTarget();
+        }, 3000); // Delay before wandering again
+      }
+    } else {
+      // Smooth rotation toward velocity
+      const flatVel = new Vector3(agentVelocity.x, 0, agentVelocity.z);
+      if (flatVel.lengthSquared() > 0.05) {
+        const desiredAngle = Math.atan2(flatVel.x, flatVel.z) + Math.PI;
+        const targetRotation = Quaternion.RotationAxis(Vector3.Up(), desiredAngle);
+
+        // Interpolate rotation smoothly
+        this.mesh.rotationQuaternion = Quaternion.Slerp(
+          this.mesh.rotationQuaternion ?? Quaternion.Identity(),
+          targetRotation,
+          0.1 // Smooth factor (tweak as needed)
+        );
+      }
+
+      try {
+        const y = aggregate.body.getLinearVelocity().y;
+        const horizVel = new Vector3(agentVelocity.x, y, agentVelocity.z);
+        aggregate.body.setLinearVelocity(horizVel);
+      } catch (e) {
+        console.warn("startWandering: Failed to set velocity", e);
+      }
+    }
+  });
+
+  // Start first wander
+  moveToNextTarget();
+}
 
 
   private fallbackStartWandering(maxDistance = 10): void {
