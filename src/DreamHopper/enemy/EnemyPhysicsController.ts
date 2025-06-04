@@ -39,9 +39,9 @@ export class EnemyPhysicsController {
         height: physicsConfig.colliderParams.pointB!.y - physicsConfig.colliderParams.pointA!.y || 1.75,
         maxAcceleration: 8.0,
         maxSpeed: 3,
-        collisionQueryRange: 0,
+        collisionQueryRange: 3,
         pathOptimizationRange: 50,
-        separationWeight: 5,
+        separationWeight: 3,
       };
       this.agentIndex = this.crowd.addAgent(this.navDummy.position, agentParams, this.navDummy);
       console.log(`EnemyPhysicsController: Added agent ${this.agentIndex} at`, this.navDummy.position);

@@ -2,7 +2,7 @@
   <transition name="fade">
     <div v-if="visible" class="help-dialog">
       <div class="dialog-content">
-        <h2>Help</h2>
+        <h2>Aide</h2>
         <ul>
           <li v-for="(step, index) in steps" :key="index">{{ step }}</li>
         </ul>
