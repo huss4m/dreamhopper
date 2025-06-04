@@ -102,11 +102,11 @@ export class CharacterController {
           if (isPlaying) {
             this.particleSystem.rightHand.start();
             this.particleSystem.leftHand.start();
-            console.log("Started hand particle systems for Dreambolt animation");
+            // // // console.log("Started hand particle systems for Dreambolt animation");
           } else {
             this.particleSystem.rightHand.stop();
             this.particleSystem.leftHand.stop();
-            console.log("Stopped hand particle systems after Dreambolt animation");
+            // // // console.log("Stopped hand particle systems after Dreambolt animation");
           }
         }
       });
@@ -174,7 +174,7 @@ export class CharacterController {
     const deathAnim = this.animationManager.getAnimationByName("Death");
     if (deathAnim) {
       deathAnim.play(false);
-      console.log("CharacterController: Playing Death animation");
+      // // console.log("CharacterController: Playing Death animation");
     } else {
       console.warn("CharacterController: Death animation not found");
     }

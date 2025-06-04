@@ -22,26 +22,8 @@ export class Player {
 
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator, game?: Game) {
     this.game = game!;
-    /*
-    if (this.isSheathed) {
-      this.posOffset = new Vector3(0, 0, -0.21);
-      this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
-    } else {
-      this.posOffset = new Vector3(0.8, 0.05, 0.05);
-      this.rotOffset = new Vector3(Math.PI, 0, 0);
-    }*/
-      this.posOffset = new Vector3(0, 0, -0.21);
-      this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
-    
-   /* this.addItem(new Item(
-      "sword1",
-      scene,
-      assetManager.getAssetContainer("dragon_slayer"),
-      shadowGenerator,
-      this.posOffset,
-      this.rotOffset,
-      new Vector3(1.2, 1.2, 1.2)
-    )); */
+    this.posOffset = new Vector3(0, 0, -0.21);
+    this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
   }
 
   public getMaxHP(): number {
@@ -75,7 +57,6 @@ export class Player {
   public reset(): void {
     this.currentHP = this.maxHP;
     this.isDead = false;
-    // Note: Could extend to reset position, inventory, crystals, or quests if needed
     console.log("Player: Reset HP to max and cleared isDead state");
   }
 
@@ -117,9 +98,29 @@ export class Player {
     this.isSheathed = false;
   }
 
+  
   public incrementCrystalCount(): void {
     this.collectedCrystals++;
     console.log(`Player: Incrementing crystal count, now ${this.collectedCrystals}/${this.totalCrystals}, activeQuests=${this.activeQuests.map(q => `${q.getId()}:${q.getState().status}`).join(", ")}`);
+    this.activeQuests.forEach(quest => {
+      if (quest.type === "COLLECT" && quest.getState().status === "inProgress") {
+        quest.updateProgress(1); // Increment by 1 for each crystal
+        console.log(`Player: Updated COLLECT quest ${quest.getId()} - progress ${quest.getState().collectedCrystals}/${quest.requiredCrystals}, completed=${quest.isCompletedStatus()}`);
+      this.updateNPCQuest(quest);
+      }
+    });
+    this.checkQuestCompletion();
+  }
+
+  public incrementEnemyKills(): void { // New: Increment kills for KILL quests
+    console.log(`Player: Incrementing enemy kills`);
+    this.activeQuests.forEach(quest => {
+      if (quest.type === "KILL") { // Fixed: Use quest.type
+        quest.updateProgress(1); // Update progress by 1 kill
+        console.log(`Player: Updated KILL quest ${quest.getId()} progress`);
+        this.updateNPCQuest(quest);
+      }
+    });
     this.checkQuestCompletion();
   }
 
@@ -159,7 +160,8 @@ export class Player {
       quest.setState({
         ...quest.getState(),
         status: "completed",
-        collectedCrystals: quest.getRequiredCrystals(),
+        collectedCrystals: quest.type === "COLLECT" ? quest.requiredCrystals : quest.getState().collectedCrystals, // Fixed: Use quest.type
+        enemiesKilled: quest.type === "KILL" ? quest.requiredEnemies : quest.getState().enemiesKilled, // Fixed: Use quest.requiredEnemies
         isCompleted: true
       });
       this.activeQuests = this.activeQuests.filter(q => q.getId() !== questId);
@@ -195,20 +197,16 @@ export class Player {
 
   private checkQuestCompletion(): void {
     this.activeQuests.forEach(quest => {
-      if (!quest.isCompletedStatus()) {
-        quest.updateProgress(this.collectedCrystals);
-        console.log(`Player: Checking quest ${quest.getId()} - progress ${this.collectedCrystals}/${quest.getRequiredCrystals()}, completed=${quest.isCompletedStatus()}`);
-        if (quest.isCompletedStatus()) {
-          quest.setState({
-            ...quest.getState(),
-            status: "completed",
-            isCompleted: true
-          });
-          this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
-          this.completedQuests.push(quest);
-          console.log(`Player: Completed quest ${quest.getId()}`);
-          this.updateNPCQuest(quest);
-        }
+      if (quest.isCompletedStatus() && quest.getState().status !== "completed") {
+        quest.setState({
+          ...quest.getState(),
+          status: "completed",
+          isCompleted: true
+        });
+        this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
+        this.completedQuests.push(quest);
+        console.log(`Player: Completed quest ${quest.getId()}`);
+        this.updateNPCQuest(quest);
       }
     });
   }

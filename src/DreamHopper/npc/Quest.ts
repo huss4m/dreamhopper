@@ -1,107 +1,137 @@
+export type QuestType = "COLLECT" | "KILL";
+
 export interface QuestState {
-    id: string;
-    status: "available" | "inProgress" | "completed" | "turnedIn"; // Added turnedIn
-    collectedCrystals: number;
-    isCompleted?: boolean;
+  id: string;
+  status: "available" | "inProgress" | "completed" | "turnedIn";
+  collectedCrystals?: number; // For COLLECT quests
+  enemiesKilled?: number; // For KILL quests
+  isCompleted?: boolean;
+}
+
+export class Quest {
+  public state: QuestState;
+
+  constructor(
+    public id: string,
+    public title: string,
+    public description: string,
+    public inProgressText: string,
+    public completedText: string,
+    public requiredCrystals: number,
+    public requiredEnemies: number, // New: For KILL quests
+    public turnedInText: string,
+    public type: QuestType, // New: Quest type
+    public nextQuestId: string | null // New: Next quest in the questline
+  ) {
+    this.state = {
+      id: this.id,
+      status: "available",
+      collectedCrystals: type === "COLLECT" ? 0 : undefined,
+      enemiesKilled: type === "KILL" ? 0 : undefined,
+      isCompleted: false,
+    };
   }
-  
-  export class Quest {
-    public state: QuestState;
-  
-    constructor(
-      public id: string,
-      public title: string,
-      public description: string,
-      public inProgressText: string,
-      public completedText: string,
-      public requiredCrystals: number,
-      public turnedInText: string // Added turnedInText
-    ) {
-      this.state = {
-        id: this.id,
-        status: "available",
-        collectedCrystals: 0,
-        isCompleted: false,
-      };
+
+  public accept(): void {
+    if (this.state.status === "available") {
+      this.state.status = "inProgress";
+      console.log(`Quest ${this.id}: Accepted, status set to inProgress`);
     }
-  
-    public getId(): string {
-      return this.id;
+  }
+
+  public updateProgress(amount: number): void {
+    if (this.state.status !== "inProgress") {
+      console.log(`Quest ${this.id}: Cannot update progress, status is ${this.state.status}`);
+      return;
     }
-  
-    public getTitle(): string {
-      return this.title;
+
+    if (amount <= 0) {
+      console.warn(`Quest ${this.id}: Invalid progress amount ${amount}, ignoring`);
+      return;
     }
-  
-    public getDescription(): string {
-      return this.description;
-    }
-  
-    public getInProgressText(): string {
-      return this.inProgressText || `Progress: ${this.state.collectedCrystals}/${this.requiredCrystals} crystals collected.`;
-    }
-  
-    public getCompletedText(): string {
-      return this.completedText || "Quest completed! Thank you for collecting the crystals.";
-    }
-  
-    public getTurnedInText(): string { // Added getTurnedInText
-      return this.turnedInText || "Thank you for completing the quest!";
-    }
-  
-    public getRequiredCrystals(): number {
-      return this.requiredCrystals;
-    }
-  
-    public getState(): QuestState {
-      return { ...this.state };
-    }
-  
-    public setState(state: QuestState): void {
-      console.log(`Quest ${this.id}: Setting state to`, state);
-      this.state = { ...state };
-      if (this.state.status === "completed" || this.state.status === "turnedIn") { // Updated to include turnedIn
-        this.state.isCompleted = true;
+
+    if (this.type === "COLLECT") {
+      const newCrystals = (this.state.collectedCrystals || 0) + Math.min(amount, 1); // Safeguard: Cap at 1
+      this.state.collectedCrystals = Math.min(newCrystals, this.requiredCrystals); // Cap at requiredCrystals
+      console.log(`Quest ${this.id}: Collected ${Math.min(amount, 1)} crystals, total: ${this.state.collectedCrystals}/${this.requiredCrystals}`);
+      if (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0) {
+        this.complete();
+      }
+    } else if (this.type === "KILL") {
+      this.state.enemiesKilled = (this.state.enemiesKilled || 0) + amount;
+      console.log(`Quest ${this.id}: Defeated ${amount} enemies, total: ${this.state.enemiesKilled}/${this.requiredEnemies}`);
+      if (this.state.enemiesKilled >= this.requiredEnemies && this.requiredEnemies > 0) {
+        this.complete();
       }
     }
-  
-    public accept(): void {
-      if (this.state.status === "available") {
-        this.state.status = "inProgress";
-        console.log(`Quest ${this.id}: Accepted, status set to inProgress`);
-      }
-    }
-  
-    public complete(): void {
+  }
+
+  public complete(): void {
+    if (this.state.status === "inProgress") {
       this.state.status = "completed";
       this.state.isCompleted = true;
       console.log(`Quest ${this.id}: Completed`);
     }
-  
-    public turnIn(): void { // Added turnIn
-      if (this.state.status === "completed") {
-        this.state.status = "turnedIn";
-        this.state.isCompleted = true;
-        console.log(`Quest ${this.id}: Turned in`);
-      }
-    }
-  
-    public updateProgress(collectedCrystals: number): void {
-      if (this.state.status === "inProgress") {
-        this.state.collectedCrystals = collectedCrystals;
-        console.log(`Quest ${this.id}: Progress updated to ${collectedCrystals}/${this.requiredCrystals}`);
-        if (collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0) {
-          this.complete();
-        }
-      }
-    }
-  
-    public isCompletedStatus(): boolean {
-      return this.state.status === "completed" || this.state.status === "turnedIn" || // Updated to include turnedIn
-             (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0);
-    }
-  
-    public isTakenStatus(): boolean {
-      return this.state.status === "inProgress";
+  }
+
+  public turnIn(): void {
+    if (this.state.status === "completed") {
+      this.state.status = "turnedIn";
+      console.log(`Quest ${this.id}: Turned in`);
     }
   }
+public isCompletedStatus(): boolean {
+    const isComplete =
+      this.state.status === "completed" ||
+      this.state.status === "turnedIn" ||
+      (this.type === "COLLECT" &&
+       this.state.collectedCrystals !== undefined &&
+       this.state.collectedCrystals >= this.requiredCrystals &&
+       this.requiredCrystals > 0) ||
+      (this.type === "KILL" &&
+       this.state.enemiesKilled !== undefined &&
+       this.state.enemiesKilled >= this.requiredEnemies &&
+       this.requiredEnemies > 0);
+
+    console.log(`Quest ${this.id}: isCompletedStatus check - status: ${this.state.status}, collectedCrystals: ${this.state.collectedCrystals}/${this.requiredCrystals}, enemiesKilled: ${this.state.enemiesKilled}/${this.state.enemiesKilled}, isComplete: ${isComplete}`);
+    return isComplete;
+  }
+
+
+  public getNextQuestId(): string | null {
+    return this.nextQuestId;
+  }
+
+  public getId(): string {
+    return this.id;
+  }
+
+  public getState(): QuestState {
+    return this.state;
+  }
+
+  public setState(state: QuestState): void {
+    this.state = { ...state };
+    console.log(`Quest ${this.id}: State updated to`, this.state);
+  }
+
+  public getTitle(): string {
+    return this.title;
+  }
+
+  public getDescription(): string {
+    return this.description;
+  }
+
+  public getInProgressText(): string {
+    return this.inProgressText;
+  }
+
+  public getCompletedText(): string {
+    return this.completedText;
+  }
+
+  public getTurnedInText(): string {
+    return this.turnedInText;
+  }
+}

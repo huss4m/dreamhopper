@@ -44,7 +44,7 @@ export class EnemyPhysicsController {
         separationWeight: 3,
       };
       this.agentIndex = this.crowd.addAgent(this.navDummy.position, agentParams, this.navDummy);
-      console.log(`EnemyPhysicsController: Added agent ${this.agentIndex} at`, this.navDummy.position);
+      // // // // // // // // // // // // console.log(`EnemyPhysicsController: Added agent ${this.agentIndex} at`, this.navDummy.position);
     } else {
       console.warn("EnemyPhysicsController: Navigation plugin or crowd not available");
     }
@@ -318,7 +318,7 @@ export class EnemyPhysicsController {
       try {
         const y = physicsAggregate.body.getLinearVelocity().y;
         physicsAggregate.body.setLinearVelocity(new Vector3(0, y, 0));
-        console.log("EnemyPhysicsController: All movement stopped");
+        // // // // // // // // // // // // console.log("EnemyPhysicsController: All movement stopped");
       } catch (e) {
         console.warn("stopAllMovement: Failed to reset velocity", e);
       }

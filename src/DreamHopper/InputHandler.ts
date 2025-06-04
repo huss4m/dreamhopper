@@ -53,7 +53,7 @@ export class InputHandler {
       const response = await fetch('./controls/keybindings.json');
       if (!response.ok) throw new Error(`Failed to load keybindings: ${response.status}`);
       this.layouts = (await response.json()).layouts;
-      console.log('InputHandler: Loaded layouts:', this.layouts);
+      // console.log('InputHandler: Loaded layouts:', this.layouts);
 
       // Set default layout
       for (const [layoutName, layout] of Object.entries(this.layouts)) {
@@ -63,7 +63,7 @@ export class InputHandler {
           break;
         }
       }
-      console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
+      // console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
 
       this.setupKeyboardControls();
       this.setupPointerControls();
@@ -72,7 +72,7 @@ export class InputHandler {
     } catch (error) {
       console.error('InputHandler: Error loading keybindings:', error);
       this.keyBindings["T"] = { key: "T", action: "openQuestDialog" };
-      console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
+      // console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
       return false;
     }
   }
@@ -92,7 +92,7 @@ export class InputHandler {
         key = '1';
       }
 
-      //console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
+      //// console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
       }

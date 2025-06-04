@@ -71,7 +71,7 @@ export class HoverHandler {
     mesh.getChildMeshes().forEach((child) => {
       child.isPickable = true;
       child.isVisible = true;
-      console.log(`Configured child: ${child.name}, isVisible: ${child.isVisible}, isPickable: ${child.isPickable}`);
+      // console.log(`Configured child: ${child.name}, isVisible: ${child.isVisible}, isPickable: ${child.isPickable}`);
     });
 
     // Initialize ActionManager for mesh and children
@@ -99,29 +99,29 @@ export class HoverHandler {
       if (this.isHovered) return; // Prevent re-applying
       this.isHovered = true;
       if (highlightMesh && isMesh(highlightMesh)) {
-        console.log(`Applying highlight to children of ${highlightMesh.name}`);
+        // console.log(`Applying highlight to children of ${highlightMesh.name}`);
         highlightMesh.getChildMeshes().forEach((m) => {
           if (isMesh(m) && !Tags.GetTags(m)?.includes("hitbox")) {
-            console.log(`Highlighting child: ${m.name}`);
+            // // console.log(`Highlighting child: ${m.name}`);
             this.highlightLayer!.addMesh(m, this.config.highlightColor!, true);
           }
         });
         canvas.setAttribute("data-hover", "true");
-        console.log(`Set data-hover=true, cursor: ${customCursorStyle}`);
+        // // console.log(`Set data-hover=true, cursor: ${customCursorStyle}`);
       }
     };
     const removeHighlight = () => {
       if (!this.isHovered) return; // Prevent re-removing
       this.isHovered = false;
       if (highlightMesh && isMesh(highlightMesh)) {
-        console.log(`Removing highlight from children of ${highlightMesh.name}`);
+        // console.log(`Removing highlight from children of ${highlightMesh.name}`);
         highlightMesh.getChildMeshes().forEach((m) => {
           if (isMesh(m)) {
             this.highlightLayer!.removeMesh(m);
           }
         });
         canvas.removeAttribute("data-hover");
-        console.log(`Removed data-hover`);
+        // console.log(`Removed data-hover`);
       }
     };
 
@@ -153,6 +153,6 @@ export class HoverHandler {
         cursor: ${customCursorStyle} !important;
       }
     `, 0);
-    console.log(`Added cursor style: ${customCursorStyle}`);
+    // console.log(`Added cursor style: ${customCursorStyle}`);
   }
 }

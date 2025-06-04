@@ -19,11 +19,12 @@ export class NPC implements Hoverable, Targettable {
   private physicsController: NPCPhysicsController | null = null;
   private hoverHandler: HoverHandler;
   private targetCircle: Mesh | null = null;
-  private hitboxMesh: Mesh | null = null; // New hitbox property
+  private hitboxMesh: Mesh | null = null;
   private questMarker: Sprite | null = null;
   private questMarkerObserver: any | null = null;
   private dialogToggleObserver: any | null = null;
-  private quest: Quest | null = null;
+  private quests: Quest[] = []; // Changed: Array for questline
+  private currentQuestIndex = 0; // New: Tracks active quest
 
   isTargetted = false;
 
@@ -43,7 +44,7 @@ export class NPC implements Hoverable, Targettable {
     highlightLayer: HighlightLayer,
     targetingSystem: TargetingSystem,
     private game: Game,
-    quest: Quest | null = null
+    initialQuest: Quest | null = null // Changed: Renamed for clarity
   ) {
     this.id = uuidv4();
     this.highlightLayer = highlightLayer;
@@ -51,7 +52,10 @@ export class NPC implements Hoverable, Targettable {
     this.shadowGenerator = shadowGenerator;
     this.position = position;
     this.animationManager = new NPCAnimationManager(this.scene);
-    this.quest = quest;
+    if (initialQuest) {
+      this.quests.push(initialQuest); // Initialize questline with first quest
+      console.log(`NPC ${this.id}: Assigned initial quest ${initialQuest.getId()}`);
+    }
 
     const hoverConfig: HoverConfig = {
       highlightColor: Color3.Yellow(),
@@ -117,8 +121,7 @@ export class NPC implements Hoverable, Targettable {
 
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
-      this.npcMesh.isPickable = true;  // Keep pickable for consistency, adjust if needed
-      
+      this.npcMesh.isPickable = true;
 
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
@@ -128,40 +131,35 @@ export class NPC implements Hoverable, Targettable {
           mat.albedoColor = mat.albedoColor || new Color3(1, 1, 1);
           mat.reflectivityColor = new Color3(0.3, 0.3, 0.3);
           mat.microSurface = 0.8;
-         
-          
-        
         }
         mesh.checkCollisions = true;
-        mesh.isPickable = true; // Child meshes pickable, adjust if needed
+        mesh.isPickable = true;
       });
 
-      
       if (this.shadowGenerator) {
         this.shadowGenerator.addShadowCaster(this.npcMesh!);
         this.npcMesh!.getChildMeshes().forEach(m => this.shadowGenerator.addShadowCaster(m));
       }
-        
 
       // Create hitbox
       this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
         height: 2,
         width: 1,
       }, this.scene);
-      this.hitboxMesh.parent = this.npcMesh; // Parent to NPC mesh to follow it
-      this.hitboxMesh.position = new Vector3(0, 1, 0); // Centered at NPC's midpoint
+      this.hitboxMesh.parent = this.npcMesh;
+      this.hitboxMesh.position = new Vector3(0, 1, 0);
       this.hitboxMesh.checkCollisions = false;
-      this.hitboxMesh.isPickable = true; // Pickable for targeting
-      this.hitboxMesh.isVisible = false; // Invisible hitbox
+      this.hitboxMesh.isPickable = true;
+      this.hitboxMesh.isVisible = false;
 
       const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
-      hitboxMaterial.alpha = 0; // Fully transparent
+      hitboxMaterial.alpha = 0;
       this.hitboxMesh.material = hitboxMaterial;
 
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, `npcID:${this.id} hitbox`);
 
-      this.shadowGenerator.removeShadowCaster(this.hitboxMesh); // No shadows for hitbox
+      this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
 
       Tags.EnableFor(this.npcMesh);
       Tags.AddTagsTo(this.npcMesh, `npcID:${this.id}`);
@@ -173,11 +171,10 @@ export class NPC implements Hoverable, Targettable {
       this.setupPhysics();
       this.animationManager.initialize(animationGroups);
 
-      // Update hoverable to use hitbox for hovering
       const hoverable: Hoverable = {
-        getMesh: () => this.hitboxMesh, // Use hitbox for hover detection
+        getMesh: () => this.hitboxMesh,
         getScene: () => this.scene,
-        getHighlightMesh: () => this.npcMesh, // Highlight the NPC mesh
+        getHighlightMesh: () => this.npcMesh,
       };
       this.hoverHandler.setupHover(hoverable);
 
@@ -321,19 +318,33 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public updateQuestMarker(): void {
-    if (!this.quest) {
-      console.log(`NPC ${this.id}: No quest, clearing marker`);
+    const currentQuest = this.getQuest();
+    if (!currentQuest) {
+      console.log(`NPC ${this.id}: No quest available, clearing marker`);
       this.setQuestMarker(null);
       return;
     }
-    const state = this.quest.getState();
-    console.log(`NPC ${this.id}: Updating quest marker, quest=${this.quest.getId()}, status=${state.status}`);
+
+    const state = currentQuest.getState();
+    console.log(`NPC ${this.id}: Updating marker for quest ${currentQuest.getId()}, status: ${state.status}`);
+
     if (state.status === "completed") {
-      this.setQuestMarker("completed");
-    } else if (state.status === "inProgress" || state.status === "turnedIn") { // Added turnedIn
-      this.setQuestMarker(null);
-    } else {
-      this.setQuestMarker("available");
+      this.setQuestMarker("completed"); // Show question mark
+    } else if (state.status === "turnedIn" && currentQuest.getNextQuestId()) {
+      // Advance to next quest in the questline
+      const nextQuest = this.quests.find(q => q.getId() === currentQuest.getNextQuestId());
+      if (nextQuest) {
+        this.currentQuestIndex = this.quests.indexOf(nextQuest);
+        console.log(`NPC ${this.id}: Advanced to quest ${nextQuest.getId()}`);
+        this.setQuestMarker("available"); // Show exclamation mark for next quest
+      } else {
+        console.log(`NPC ${this.id}: Next quest ${currentQuest.getNextQuestId()} not found, clearing marker`);
+        this.setQuestMarker(null);
+      }
+    } else if (state.status === "inProgress" || state.status === "turnedIn") {
+      this.setQuestMarker(null); // No marker during progress or after turn-in (if no next quest)
+    } else if (state.status === "available") {
+      this.setQuestMarker("available"); // Show exclamation mark
     }
   }
 
@@ -427,12 +438,18 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public getQuest(): Quest | null {
-    return this.quest;
+    return this.quests[this.currentQuestIndex] || null; // Changed: Return quest at current index
   }
 
-  public setQuest(quest: Quest): void {
-    this.quest = quest;
-    console.log(`NPC ${this.id}: Set quest to ${quest.getId()}, status: ${quest.getState().status}`);
+   public setQuest(quest: Quest): void {
+    if (!this.quests.find(q => q.getId() === quest.getId())) {
+      this.quests.push(quest);
+      console.log(`NPC ${this.id}: Added quest ${quest.getId()}, questline length: ${this.quests.length}`);
+    } else {
+      const index = this.quests.findIndex(q => q.getId() === quest.getId());
+      this.quests[index] = quest;
+      console.log(`NPC ${this.id}: Updated quest ${quest.getId()} in questline`);
+    }
     this.updateQuestMarker();
   }
 
@@ -465,7 +482,7 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public getMesh(): Mesh | null {
-    return this.hitboxMesh; // Return hitbox for targeting
+    return this.hitboxMesh;
   }
 
   public getScene(): Scene {
@@ -497,7 +514,7 @@ export class NPC implements Hoverable, Targettable {
 
     if (this.hitboxMesh) {
       this.hitboxMesh.dispose();
-      this.hitboxMesh = null; // Dispose hitbox
+      this.hitboxMesh = null;
     }
 
     if (this.questMarker) {
@@ -525,8 +542,9 @@ export class NPC implements Hoverable, Targettable {
 
     this.animationManager.dispose();
     this.npcSkeleton = null;
-    this.quest = null;
-    console.log(`NPC ${this.id}: Disposed`);
+    this.quests = []; // Changed: Clear questline
+    this.currentQuestIndex = 0; // New: Reset index
+    console.log(`NPC ${this.id}: Disposed, questline cleared`);
   }
 
   public moveTo(position: Vector3): void {
@@ -546,7 +564,8 @@ export class NPC implements Hoverable, Targettable {
       this.physicsController.stopWandering();
     }
   }
+
   public getHighlightMesh(): Mesh | null {
-    return this.npcMesh; // Return NPC mesh for highlighting
+    return this.npcMesh;
   }
 }

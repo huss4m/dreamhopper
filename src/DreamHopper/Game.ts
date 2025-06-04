@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect, DefaultRenderingPipeline, ColorGradingTexture, ColorCurves, Tags } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, HighlightLayer, Scene, Vector3, Observable, DirectionalLight, HemisphericLight, CascadedShadowGenerator, SceneLoader, PBRMaterial, PhysicsAggregate, PhysicsShapeType, Color3, Texture, MeshBuilder, Mesh, Color4, ParticleSystem, CubeTexture, Quaternion, Matrix, Vector2, Ray, HavokPlugin, Light, StandardMaterial, GroundBuilder, GroundMesh, VolumetricLightScatteringPostProcess, GizmoManager, ShaderMaterial, Material, Effect, DefaultRenderingPipeline, ColorGradingTexture, ColorCurves, Tags, IDisposable } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { CharacterController } from "./player/CharacterController";
 import { InputHandler } from "./InputHandler";
@@ -15,6 +15,7 @@ import { NPC } from "./npc/NPC";
 import { CharacterCameraController } from "./player/CharacterCameraController";
 import { RecastJSPlugin } from "@babylonjs/core";
 import Recast from "recast-detour";
+import { Enemy } from "./enemy/Enemy";
 //import { Inspector } from "@babylonjs/inspector"
 
 
@@ -52,9 +53,11 @@ export class Game {
   private treeColliders: Mesh[] = [];
   public ground!: GroundMesh;
   private boundaryWalls: Mesh[] = [];
+  
 
   private navigationPlugin: RecastJSPlugin | null = null;
   private crowd: any | null = null; // Will hold the crowd instance
+    
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, { audioEngine: true });
@@ -1112,6 +1115,11 @@ private async createGrass(grassCount: number): Promise<void> {
       console.log("Game: Enemies initialized");
       onStepComplete();
 
+        this.gameManager.getEnemies().forEach(enemy => {
+        this.observeEnemyDeath(enemy);
+      });
+      
+
       this.characterController = new CharacterController(
         this.scene,
         this.canvas,
@@ -1174,6 +1182,20 @@ private async createGrass(grassCount: number): Promise<void> {
       throw error;
     }
   }
+public observeEnemyDeath(enemy: Enemy): void {
+    enemy.onDeath.addOnce(({ id, position }) => {
+      if (this.characterController) {
+        const player = this.characterController.getPlayer();
+        player.incrementEnemyKills();
+        console.log(`Game: Enemy ${id} killed at position`, position, `notified player`);
+        this.gameManager.scheduleEnemyRespawn(id, position);
+      }
+    });
+    console.log(`Game: Observing onDeath for enemy ${enemy.getId()}`);
+  }
+
+
+  
 
   public getCharacterController(): CharacterController | null {
     return this.characterController;
@@ -1304,19 +1326,44 @@ private async createGrass(grassCount: number): Promise<void> {
   public handleQuestTurnIn(): void {
     if (this.currentQuest && this.characterController) {
       const player = this.characterController.getPlayer();
+      const currentQuestId = this.currentQuest.getId();
       player.turnInQuest(this.currentQuest);
+
+      let nextQuest: Quest | null = null;
+      const nextQuestId = this.currentQuest.getNextQuestId();
+      if (nextQuestId) {
+        nextQuest = this.gameManager.getQuestById(nextQuestId);
+        if (!nextQuest) {
+          console.warn(`Game: Next quest ${nextQuestId} not found`);
+        }
+      }
+
       this.gameManager.getNPCs().forEach(npc => {
-        if (npc.getQuest()?.getId() === this.currentQuest!.getId()) {
-          const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === this.currentQuest!.getId());
+        const npcQuest = npc.getQuest();
+        if (npcQuest?.getId() === currentQuestId) {
+          const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === currentQuestId);
           if (playerQuest) {
             npc.setQuest(playerQuest);
-            console.log(`Game: Updated NPC quest ${this.currentQuest!.getId()} to status: ${playerQuest.getState().status}`);
+            console.log(`Game: Updated NPC quest ${currentQuestId} to status: ${playerQuest.getState().status}`);
             npc.updateQuestMarker();
+          }
+          // New: Assign next quest to NPC if available
+          if (nextQuest && !player.getTurnedInQuests().some(q => q.getId() === nextQuestId)) {
+            npc.setQuest(nextQuest);
+            npc.updateQuestMarker();
+            console.log(`Game: Assigned next quest ${nextQuestId} to NPC ${npc.getId()}`);
           }
         }
       });
-      this.currentQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === this.currentQuest!.getId()) || this.currentQuest;
-      console.log(`Game: Updated currentQuest after turn-in to ${this.currentQuest!.getId()}, status: ${this.currentQuest!.getState().status}`);
+
+      this.currentQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === currentQuestId) || this.currentQuest;
+      if (nextQuest && !player.getTurnedInQuests().some(q => q.getId() === nextQuestId)) {
+        this.currentQuest = nextQuest;
+        console.log(`Game: Updated currentQuest to next quest ${nextQuestId}, status: ${nextQuest.getState().status}`);
+      } else {
+        console.log(`Game: Updated currentQuest after turn-in to ${this.currentQuest!.getId()}, status: ${this.currentQuest!.getState().status}`);
+      }
+
       this.showQuestDialog = false;
       this.onQuestDialogToggled.notifyObservers(false);
     }
@@ -1404,6 +1451,12 @@ private async createGrass(grassCount: number): Promise<void> {
 
   public dispose(): void {
     try {
+
+
+   
+      console.log("Game: Cleared enemy death subscriptions");
+
+      
       this.characterController?.dispose();
       this.gameManager?.dispose();
       this.targetingSystem?.dispose();

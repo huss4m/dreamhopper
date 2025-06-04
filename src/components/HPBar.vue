@@ -72,9 +72,9 @@ export default defineComponent({
   width: 440px;
   box-shadow: 0 0 25px #dab6ff77, 0 0 16px #9b5de5dd;
   font-family: 'Marcellus SC', serif;
-  backdrop-filter: blur(11px);
+  /* Réduction du flou */
+  backdrop-filter: blur(4px);
 }
-
 .portrait-wrapper {
   position: relative;
   width: 75px;

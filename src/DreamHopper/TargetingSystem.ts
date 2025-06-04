@@ -64,16 +64,16 @@ export class TargetingSystem {
           }
 
           if (targetId && this.targetMap[targetId]) {
-            console.log("TargetingSystem: Selected target", targetId, this.targetMap[targetId]);
+            // // console.log("TargetingSystem: Selected target", targetId, this.targetMap[targetId]);
             const selectedTarget = this.targetMap[targetId];
             if (this.currentTarget !== selectedTarget) {
               if (this.currentTarget) {
                 this.currentTarget.setTargetted(false);
-                console.log("TargetingSystem: Untargeting target", this.currentTarget.getId());
+                // // console.log("TargetingSystem: Untargeting target", this.currentTarget.getId());
               }
               this.currentTarget = selectedTarget;
               this.currentTarget.setTargetted(true);
-              console.log("TargetingSystem: Targeting target", this.currentTarget.getId());
+              // // console.log("TargetingSystem: Targeting target", this.currentTarget.getId());
               this.selectedNewTarget = true;
             }
             return;
@@ -86,7 +86,7 @@ export class TargetingSystem {
 
           if (deltaAlpha < this.angleThreshold && deltaBeta < this.angleThreshold) {
             this.currentTarget.setTargetted(false);
-            console.log("TargetingSystem: Untargeting target due to click without panning", this.currentTarget.getId());
+            // console.log("TargetingSystem: Untargeting target due to click without panning", this.currentTarget.getId());
             this.currentTarget = null;
           }
         }

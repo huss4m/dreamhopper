@@ -2,7 +2,7 @@
   <main>
     <canvas ref="canvas"></canvas>
     <CastingBar v-if="animationManager" :animation-manager="animationManager" />
-    <DreamCrystalCounter v-if="dreamCrystalManager" :dream-crystal-manager="dreamCrystalManager" />
+    
     <QuestDialog
       :visible="dialogState.visible"
       :quest="dialogState.quest"
@@ -16,6 +16,10 @@
       v-if="playerHP"
       :current-h-p="playerHP.currentHP"
       :max-h-p="playerHP.maxHP"
+    />
+    <QuestLog
+      v-if="activeQuests"
+      :quests="activeQuests"
     />
     <DeathScreen
       :visible="isDeathScreenVisible"
@@ -37,6 +41,7 @@ import DreamCrystalCounter from "./DreamCrystalCounter.vue";
 import DeathScreen from "./DeathScreen.vue";
 import QuestDialog from "./QuestDialog.vue";
 import HPBar from "./HPBar.vue";
+import QuestLog from "./QuestLog.vue";
 import { Quest } from "@/DreamHopper/npc/Quest";
 import { Vector3 } from "@babylonjs/core";
 import HelpDialog from "./HelpDialog.vue";
@@ -45,9 +50,9 @@ export default defineComponent({
   name: "DreamHopper",
   components: {
     CastingBar,
-    DreamCrystalCounter,
     QuestDialog,
     HPBar,
+    QuestLog,
     DeathScreen,
     HelpDialog,
   },
@@ -56,6 +61,7 @@ export default defineComponent({
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
     const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null);
+    const activeQuests = ref<Quest[]>([]); // New: Store player's active quests
     const isDeathScreenVisible = ref(false);
     let gameInstance: Game | null = null;
 
@@ -70,6 +76,7 @@ export default defineComponent({
       if (gameInstance) {
         gameInstance.handleQuestAccept();
         dialogState.questKey++;
+        updateActiveQuests(); // Update quests on accept
       }
     };
 
@@ -84,7 +91,7 @@ export default defineComponent({
       console.log("DreamHopper: Quest dialog closed!");
       if (gameInstance) {
         gameInstance.handleQuestClose();
-        dialogState.visible = false; // smooth close
+        dialogState.visible = false;
       }
     };
 
@@ -93,6 +100,7 @@ export default defineComponent({
       if (gameInstance) {
         gameInstance.handleQuestTurnIn();
         dialogState.questKey++;
+        updateActiveQuests(); // Update quests on turn-in
       }
     };
 
@@ -110,6 +118,17 @@ export default defineComponent({
           gameInstance.getCharacterController()!.animationManager.stopAllAnimations();
           isDeathScreenVisible.value = false;
           console.log("DreamHopper: Player respawned, death screen hidden");
+          updateActiveQuests(); // Update quests on restart
+        }
+      }
+    };
+
+    // Update active quests from player
+    const updateActiveQuests = () => {
+      if (gameInstance) {
+        const player = gameInstance.getCharacterController()?.getPlayer();
+        if (player) {
+          activeQuests.value = player.getActiveQuests();
         }
       }
     };
@@ -138,6 +157,7 @@ export default defineComponent({
         animationManager.value = gameInstance.getAnimationManager();
         dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
         playerHP.value = gameInstance.getPlayerHP();
+        updateActiveQuests(); // Initialize active quests
 
         dialogState.visible = gameInstance.getShowQuestDialog();
         dialogState.quest = gameInstance.getCurrentQuest();
@@ -146,6 +166,7 @@ export default defineComponent({
           dialogState.visible = isVisible;
           dialogState.quest = gameInstance!.getCurrentQuest();
           dialogState.questKey++;
+          updateActiveQuests(); // Update quests on dialog toggle
         });
 
         const player = gameInstance.getCharacterController()?.getPlayer();
@@ -155,6 +176,11 @@ export default defineComponent({
           });
         }
 
+        // Poll for quest updates (temporary, until observable is added)
+        const questInterval = setInterval(() => {
+          updateActiveQuests();
+        }, 500);
+
         const hpInterval = setInterval(() => {
           if (gameInstance) {
             playerHP.value = gameInstance.getPlayerHP();
@@ -163,6 +189,7 @@ export default defineComponent({
 
         onUnmounted(() => {
           clearInterval(hpInterval);
+          clearInterval(questInterval);
         });
 
         // Show help dialog after 5 seconds (if not dismissed)
@@ -179,6 +206,7 @@ export default defineComponent({
       (newStatus) => {
         if (newStatus) {
           dialogState.questKey++;
+          updateActiveQuests(); // Update quests on status change
         }
       }
     );
@@ -196,6 +224,7 @@ export default defineComponent({
       dreamCrystalManager,
       dialogState,
       playerHP,
+      activeQuests,
       isDeathScreenVisible,
       handleAccept,
       handleDeny,

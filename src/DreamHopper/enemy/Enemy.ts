@@ -33,6 +33,7 @@ export class Enemy implements Hoverable, Targettable {
   private isNPC = false;
   private maxHP = 100;
   private currentHP = 100;
+  public onDeath: Observable<{ id: string; position: Vector3 }> = new Observable(); // New: Observable for KILL quest
 
   isTargetted = false;
   isTransformed = false;
@@ -86,7 +87,7 @@ export class Enemy implements Hoverable, Targettable {
 
   private setupBehavior(): void {
   if (this.isNPC) {
-    console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+  // // // // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
     return;
   }
 
@@ -111,7 +112,7 @@ export class Enemy implements Hoverable, Targettable {
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.startWandering();
-        console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
+        //// // // console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
       }
       return; // Skip further processing
     }
@@ -122,7 +123,7 @@ export class Enemy implements Hoverable, Targettable {
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-        console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
+       // // // // console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
       }
       return;
     }
@@ -132,13 +133,13 @@ export class Enemy implements Hoverable, Targettable {
       this.isAggroed = true;
       this.isAttacking = false;
       this.physicsController.stopAllMovement();
-      console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
+      //// // // console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
     } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
       this.isAggroed = false;
       this.isAttacking = false;
       this.physicsController.stopAllMovement();
       this.startWandering();
-      console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+      //// // // console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
     }
 
     if (this.isAggroed) {
@@ -152,17 +153,17 @@ export class Enemy implements Hoverable, Targettable {
           this.isAttacking = true;
           const animationName = this.animationManager.getAnimationByName("NightmareBolt") ? "NightmareBolt" : "Idle";
           this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
-          console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animationName}`);
+        //  // // // console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animationName}`);
         }
       } else {
         if (this.isAttacking) {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
-          console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
+         // // // // console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
         }
         this.moveTo(playerMesh.position);
         this.animationManager.playAnimation("Run");
-        console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
+       // // // // console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
       }
     } else {
       const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
@@ -177,7 +178,7 @@ export class Enemy implements Hoverable, Targettable {
 
   private setupHealthBar(isNPC = false): void {
     if (isNPC) {
-      console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
+      // // // console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
       return;
     }
 
@@ -209,7 +210,7 @@ export class Enemy implements Hoverable, Targettable {
       this.healthBarPlane.alwaysSelectAsActiveMesh = false;
 
       this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
-      console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
+      // // // console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
 
       this.healthBarBackground = new Rectangle(`healthBarBg_${this.id}`);
       this.healthBarBackground.width = "100%";
@@ -245,7 +246,7 @@ export class Enemy implements Hoverable, Targettable {
       });
 
       this.updateHealthBar();
-      console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
+      // // // console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
     } catch (error) {
       console.error(`Enemy ${this.id}: Failed to setup dreamland health bar`, error);
     }
@@ -255,7 +256,7 @@ export class Enemy implements Hoverable, Targettable {
     if (this.healthBarFill) {
       const hpRatio = Math.max(0, this.currentHP / this.maxHP);
       this.healthBarFill.width = `${hpRatio * 100}%`;
-      console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
+      // // console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
     }
   }
 
@@ -274,7 +275,7 @@ export class Enemy implements Hoverable, Targettable {
     }
     this.healthBarFill = null;
     this.healthBarBackground = null;
-    console.log(`Enemy ${this.id}: Health bar disposed`);
+    // // console.log(`Enemy ${this.id}: Health bar disposed`);
   }
 
   public async loadCharacter(name: string): Promise<void> {
@@ -329,7 +330,7 @@ export class Enemy implements Hoverable, Targettable {
 
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
-      console.log(`Hitbox: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
+      // // console.log(`Hitbox: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
 
       this.hitboxMesh.receiveShadows = false;
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
@@ -346,7 +347,7 @@ export class Enemy implements Hoverable, Targettable {
       };
       this.hoverHandler.setupHover(hoverable);
 
-      console.log(`Enemy ${this.id}: Character loaded successfully`);
+      // // console.log(`Enemy ${this.id}: Character loaded successfully`);
     } catch (error) {
       console.error(`Failed to load character for Enemy ${this.id}`, error);
     }
@@ -376,7 +377,7 @@ export class Enemy implements Hoverable, Targettable {
     this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig, this.game, this);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
-    console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
+    // // console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
   }
 
   private duplicate(container: AssetContainer, position: Vector3) {
@@ -550,15 +551,15 @@ export class Enemy implements Hoverable, Targettable {
 
   public takeDamage(damage: number): void {
     if (this.isNPC) {
-      console.log(`Enemy ${this.id}: Ignoring damage, already an NPC`);
+      // // console.log(`Enemy ${this.id}: Ignoring damage, already an NPC`);
       return;
     }
     this.currentHP = Math.max(0, this.currentHP - damage);
-    console.log(`Enemy ${this.id}: Took ${damage} damage, current HP: ${this.currentHP}/${this.maxHP}`);
+    // // console.log(`Enemy ${this.id}: Took ${damage} damage, current HP: ${this.currentHP}/${this.maxHP}`);
     this.updateHealthBar();
     if (this.isDead() && !this.isTransformed) {
       this.swapToNPCModel();
-      console.log(`Enemy ${this.id}: HP reached 0, transforming to NPC`);
+      // // console.log(`Enemy ${this.id}: HP reached 0, transforming to NPC`);
     }
   }
 
@@ -593,7 +594,7 @@ export class Enemy implements Hoverable, Targettable {
     }
     this.animationManager.dispose();
     this.enemySkeleton = null;
-    console.log(`Enemy ${this.id}: Disposed`);
+    // // console.log(`Enemy ${this.id}: Disposed`);
   }
 
   public moveTo(position: Vector3): void {
@@ -619,7 +620,7 @@ export class Enemy implements Hoverable, Targettable {
 
   public async swapToNPCModel(): Promise<void> {
     if (this.isTransformed) {
-      console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
+     // // // console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
       return;
     }
 
@@ -629,22 +630,23 @@ export class Enemy implements Hoverable, Targettable {
     }
 
     try {
-      console.log(`Enemy ${this.id}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
+      //// // console.log(`Enemy ${this.id}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
       const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
-      console.log(`Enemy ${this.id}: Current position for respawn`, currentPosition);
+     // // // console.log(`Enemy ${this.id}: Current position for respawn`, currentPosition);
+      this.onDeath.notifyObservers({ id: this.id, position: currentPosition });
       const wasWandering = this.isAggroed ? false : true;
 
       if (this.behaviorObserver) {
         this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
         this.behaviorObserver = null;
-        console.log(`Enemy ${this.id}: Removed behavior observer`);
+        // // console.log(`Enemy ${this.id}: Removed behavior observer`);
       }
 
       if (this.physicsController) {
         this.physicsController.stopAllMovement();
         this.physicsController.dispose();
         this.physicsController = null;
-        console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
+        // // console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
       }
 
       if (this.targetCircle) {
@@ -653,17 +655,17 @@ export class Enemy implements Hoverable, Targettable {
         }
         this.targetCircle.dispose();
         this.targetCircle = null;
-        console.log(`Enemy ${this.id}: Disposed target circle`);
+        // // console.log(`Enemy ${this.id}: Disposed target circle`);
       }
 
       if (this.hitboxMesh) {
-        console.log(`Enemy ${this.id}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
+        // // console.log(`Enemy ${this.id}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
         this.hitboxMesh.dispose();
         this.hitboxMesh = null;
       }
 
       this.disposeHealthBar();
-      console.log(`Enemy ${this.id}: Disposed health bar`);
+      // // console.log(`Enemy ${this.id}: Disposed health bar`);
 
       if (this.enemyMesh && this.highlightLayer && !this.enemyMesh.isDisposed()) {
         this.highlightLayer.removeMesh(this.enemyMesh);
@@ -672,18 +674,19 @@ export class Enemy implements Hoverable, Targettable {
             this.highlightLayer.removeMesh(mesh);
           }
         });
-        console.log(`Enemy ${this.id}: Removed highlight layer from mesh`);
+        // // console.log(`Enemy ${this.id}: Removed highlight layer from mesh`);
       }
 
       if (this.enemyMesh) {
         this.enemyMesh.dispose();
         this.enemyMesh = null;
-        console.log(`Enemy ${this.id}: Disposed enemy mesh`);
+        // // console.log(`Enemy ${this.id}: Disposed enemy mesh`);
       }
 
       this.animationManager.dispose();
+      this.onDeath.clear();
       this.enemySkeleton = null;
-      console.log(`Enemy ${this.id}: Disposed animation manager and skeleton`);
+      // // console.log(`Enemy ${this.id}: Disposed animation manager and skeleton`);
 
       const npcAssetContainer = this.assetManager.getAssetContainer("plushUnicorn");
       if (!npcAssetContainer) {
@@ -696,7 +699,7 @@ export class Enemy implements Hoverable, Targettable {
       this.enemyMesh = clones.rootNodes[0] as Mesh;
       this.enemySkeleton = clones.skeletons[0];
       const animationGroups = clones.animationGroups || [];
-      console.log(`Enemy ${this.id}: Loaded plushUnicorn model`);
+      // // console.log(`Enemy ${this.id}: Loaded plushUnicorn model`);
 
       this.enemyMesh.position = currentPosition;
       this.enemyMesh.checkCollisions = true;
@@ -717,7 +720,7 @@ export class Enemy implements Hoverable, Targettable {
         Tags.EnableFor(mesh);
         Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
       });
-      console.log(`Enemy ${this.id}: Set up tags for unicorn mesh`);
+      // // console.log(`Enemy ${this.id}: Set up tags for unicorn mesh`);
 
       this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
         height: 0.4,
@@ -735,16 +738,16 @@ export class Enemy implements Hoverable, Targettable {
 
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
-      console.log(`Enemy ${this.id}: Unicorn hitbox created, height: 0.4, width: 0.3, isPickable: ${this.hitboxMesh.isPickable}, isVisible: ${this.hitboxMesh.isVisible}, material alpha: ${hitboxMaterial.alpha}`);
+      // // console.log(`Enemy ${this.id}: Unicorn hitbox created, height: 0.4, width: 0.3, isPickable: ${this.hitboxMesh.isPickable}, isVisible: ${this.hitboxMesh.isVisible}, material alpha: ${hitboxMaterial.alpha}`);
 
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
 
       this.setupPhysics();
       this.animationManager.initialize(animationGroups);
-      console.log(`Enemy ${this.id}: Initialized physics and animations`);
+      // // console.log(`Enemy ${this.id}: Initialized physics and animations`);
 
       this.setupHealthBar(true);
-      console.log(`Enemy ${this.id}: Set up hidden health bar`);
+      // // // console.log(`Enemy ${this.id}: Set up hidden health bar`);
 
       const hoverable: Hoverable = {
         getMesh: () => this.hitboxMesh,
@@ -752,7 +755,7 @@ export class Enemy implements Hoverable, Targettable {
         getHighlightMesh: () => this.enemyMesh,
       };
       this.hoverHandler.setupHover(hoverable);
-      console.log(`Enemy ${this.id}: Set up hover handler`);
+      // // // console.log(`Enemy ${this.id}: Set up hover handler`);
 
       if (this.isTargetted) {
         if (!this.highlightLayer) {
@@ -760,7 +763,7 @@ export class Enemy implements Hoverable, Targettable {
           this.isTargetted = false;
         } else {
           this.setTargetted(true);
-          console.log(`Enemy ${this.id}: Reapplied targeting`);
+          // // // console.log(`Enemy ${this.id}: Reapplied targeting`);
         }
       }
 
@@ -768,26 +771,26 @@ export class Enemy implements Hoverable, Targettable {
       this.isAggroed = false;
       this.isAttacking = false;
       this.isTransformed = true;
-      console.log(`Enemy ${this.id}: Set NPC state`);
+      // // // console.log(`Enemy ${this.id}: Set NPC state`);
 
       this.physicsController!.stopAllMovement();
       this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-      console.log(`Enemy ${this.id}: Set to Idle as NPC`);
+      // // // console.log(`Enemy ${this.id}: Set to Idle as NPC`);
 
       if (wasWandering) {
         this.physicsController!.startWandering();
         this.animationManager.playAnimation("Run", 1.0, undefined, undefined, true);
-        console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
+        // // // console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
       }
 
       if (this.game?.gameManager) {
         this.game.gameManager.scheduleEnemyRespawn(this.id, currentPosition);
-        console.log(`Enemy ${this.id}: Scheduled respawn in 60 seconds at position`, currentPosition);
+        // // // console.log(`Enemy ${this.id}: Scheduled respawn in 60 seconds at position`, currentPosition);
       } else {
         console.error(`Enemy ${this.id}: Cannot schedule respawn, game or gameManager is undefined`);
       }
 
-      console.log(`Enemy ${this.id}: Completed transformation to plushUnicorn at position`, currentPosition);
+      // // // console.log(`Enemy ${this.id}: Completed transformation to plushUnicorn at position`, currentPosition);
     } catch (error) {
       console.error(`Enemy ${this.id}: Failed to swap model to NPC`, error);
     }
@@ -820,13 +823,13 @@ private hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
   const hit = this.scene.pickWithRay(ray, (mesh) => {
     const isObstacle = Tags.MatchesQuery(mesh, "obstacle");
     checkedMeshCount++;
-    console.log(`Enemy ${this.id}: Raycast checked mesh ${mesh.name}, isObstacle: ${isObstacle}`);
+    // // // console.log(`Enemy ${this.id}: Raycast checked mesh ${mesh.name}, isObstacle: ${isObstacle}`);
     return isObstacle;
   });
 
   const hasLOS = !hit || !hit.hit;
   this.lastHasLOS = hasLOS; // Cache result
-  console.log(`Enemy ${this.id}: LOS check - distance: ${distance.toFixed(2)}, hasLOS: ${hasLOS}, hit mesh: ${hit?.pickedMesh?.name || "none"}, checked meshes: ${checkedMeshCount}`);
+  // // // console.log(`Enemy ${this.id}: LOS check - distance: ${distance.toFixed(2)}, hasLOS: ${hasLOS}, hit mesh: ${hit?.pickedMesh?.name || "none"}, checked meshes: ${checkedMeshCount}`);
   return hasLOS;
 }
 }

@@ -14,7 +14,7 @@ export class GameManager {
   private dreamCrystalManager: DreamCrystalManager | null = null;
   private characterMesh: Mesh | null = null;
   private quests: Quest[] = [];
-  private respawnTimers: Map<string, number> = new Map(); // Use number for browser timers
+  private respawnTimers: Map<string, number> = new Map();
 
   constructor(
     private scene: Scene,
@@ -25,81 +25,124 @@ export class GameManager {
     public game: Game
   ) {}
 
+   // New: Add getQuestById method
+  public getQuestById(questId: string): Quest | null {
+    const quest = this.quests.find(q => q.getId() === questId);
+    if (!quest) {
+      console.warn(`GameManager: Quest ${questId} not found`);
+      return null;
+    }
+    return quest;
+  }
+
   public setCharacterMesh(mesh: Mesh): void {
     console.log("GameManager: Setting character mesh:", mesh.name);
     this.characterMesh = mesh;
   }
 
   public async initializeNPCs(savedPositions?: Vector3[], savedQuestStates?: QuestState[]): Promise<NPC[]> {
-    const configData = await this.assetManager.loadJson("./game_config.json");
-    const npcPositions = configData.npcs?.map((pos: { x: number, y: number, z: number }) => 
-      new Vector3(pos.x, pos.y, pos.z)) || [];
+  const configData = await this.assetManager.loadJson("./game_config.json");
+  const npcPositions = configData.npcs?.map((pos: { x: number, y: number, z: number }) => 
+    new Vector3(pos.x, pos.y, pos.z)) || [];
 
-    const questData = await this.assetManager.loadJson("./quests/quests.json");
-    console.log("GameManager: Loaded quests:", questData);
-    this.quests = questData.map((q: any) => new Quest(
-      q.id,
-      q.title,
-      q.description,
-      q.inProgressText,
-      q.completedText,
-      q.requiredCrystals,
-      q.turnedInText || "Thank you for completing the quest!" // Added turnedInText
-    ));
+  const questData = await this.assetManager.loadJson("./quests/quests.json");
+  console.log("GameManager: Loaded quests:", questData);
+  this.quests = questData.map((q: any) => new Quest(
+    q.id,
+    q.title,
+    q.description,
+    q.inProgressText,
+    q.completedText,
+    q.requiredCrystals,
+    q.requiredEnemies,
+    q.turnedInText,
+    q.type,
+    q.nextQuestId
+  ));
 
-    const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;
+  const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;
 
-    this.npcs = positionsToUse.map((position: Vector3, index: number) => {
-      const quest = this.quests[index] || null;
-      const npc = new NPC(
-        this.scene,
-        "npc",
-        this.assetManager,
-        this.shadowGenerator,
-        position,
-        this.highlightLayer,
-        this.targetingSystem,
-        this.game,
-        quest
-      );
-      console.log(`GameManager: NPC ${index} assigned quest ${quest?.getId() || 'none'}`);
-      if (quest && savedQuestStates) {
-        const state = savedQuestStates.find(s => s.id === quest.getId());
-        if (state) {
-          quest.setState(state);
+  this.npcs = positionsToUse.map((position: Vector3, index: number) => {
+    let initialQuest: Quest | null = null;
+    if (index === 0) { // Assign questline to first NPC
+      initialQuest = this.quests.find(q => q.getId() === "quest1") || null;
+      if (!initialQuest) {
+        console.warn(`GameManager: Quest 'quest1' not found for NPC ${index}`); // New: Warn if quest1 missing
+      }
+    }
+
+    const npc = new NPC(
+      this.scene,
+      "npc",
+      this.assetManager,
+      this.shadowGenerator,
+      position,
+      this.highlightLayer,
+      this.targetingSystem,
+      this.game,
+      initialQuest
+    );
+
+    if (initialQuest) {
+      // Assign full questline
+      let currentQuest = initialQuest;
+      while (currentQuest.getNextQuestId()) {
+        const nextQuestId = currentQuest.getNextQuestId();
+        const nextQuest = this.quests.find(q => q.getId() === nextQuestId);
+        if (nextQuest) {
+          npc.setQuest(nextQuest);
+          currentQuest = nextQuest;
+          console.log(`GameManager: NPC ${index} added quest ${nextQuest.getId()} to questline`);
+        } else {
+          console.warn(`GameManager: Next quest ${nextQuestId} not found for NPC ${index}`); // Changed: Warn for missing next quest
+          break;
         }
       }
-      return npc;
-    });
+      console.log(`GameManager: NPC ${index} assigned questline starting with ${initialQuest.getId()}`);
 
-    this.npcs.forEach((npc, index) => {
-      const npcMesh = npc.getMesh();
-      if (npcMesh) {
-        //this.shadowGenerator.addShadowCaster(npcMesh, true);
-        npcMesh.receiveShadows = true;
-       
-        console.log(`GameManager: NPC ${index} mesh added to shadow generator:`, npcMesh.name);
-      } else {
-        console.warn(`GameManager: NPC ${index} mesh not found for shadow generator`);
+      // Apply saved quest states
+      if (savedQuestStates) {
+        let quest: Quest | null = initialQuest;
+        while (quest) {
+          const state = savedQuestStates.find(s => s.id === quest!.getId());
+          if (state) {
+            quest.setState(state);
+            console.log(`GameManager: Applied saved state to quest ${quest.getId()} for NPC ${index}:`, state);
+          }
+          const nextQuestId = quest.getNextQuestId();
+          quest = nextQuestId ? this.quests.find(q => q.getId() === nextQuestId) || null : null; // Changed: Handle undefined
+        }
       }
-    });
+    } else {
+      console.log(`GameManager: NPC ${index} assigned no quest`);
+    }
 
-    return this.npcs;
-  }
-  
-public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
-    // Clear any existing timer for this enemy
+    return npc;
+  });
+
+  this.npcs.forEach((npc, index) => {
+    const npcMesh = npc.getMesh();
+    if (npcMesh) {
+      npcMesh.receiveShadows = true;
+      console.log(`GameManager: NPC ${index} mesh added to shadow generator:`, npcMesh.name);
+    } else {
+      console.warn(`GameManager: NPC ${index} mesh not found for shadow generator`);
+    }
+  });
+
+  return this.npcs;
+}
+
+  public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
     if (this.respawnTimers.has(enemyId)) {
       clearTimeout(this.respawnTimers.get(enemyId)!);
       this.respawnTimers.delete(enemyId);
       console.log(`GameManager: Cleared existing respawn timer for enemy ${enemyId}`);
     }
 
-    // Start new 60-second timer
     const timer = setTimeout(async () => {
       console.log(`GameManager: Respawning enemy ${enemyId} at position`, position);
 
-      // Remove the old enemy (NPC) from the enemies array
       const oldEnemyIndex = this.enemies.findIndex(enemy => enemy.getId() === enemyId);
       if (oldEnemyIndex !== -1) {
         const oldEnemy = this.enemies[oldEnemyIndex];
@@ -110,7 +153,6 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
         console.warn(`GameManager: Enemy ${enemyId} not found in enemies array for respawn`);
       }
 
-      // Create new enemy at original position
       const newEnemy = new Enemy(
         this.scene,
         "enemy",
@@ -123,27 +165,24 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
       );
       this.enemies.push(newEnemy);
 
-      // Setup shadows for the new enemy
+      this.game.observeEnemyDeath(newEnemy);
+
       const enemyMesh = newEnemy.getMesh();
       if (enemyMesh) {
-        //this.shadowGenerator.addShadowCaster(enemyMesh, true);
         enemyMesh.receiveShadows = true;
-        
-       
-        
         console.log(`GameManager: Respawned enemy ${enemyId} mesh added to shadow generator:`, enemyMesh.name);
       } else {
         console.warn(`GameManager: Respawned enemy ${enemyId} mesh not found for shadow generator`);
       }
 
-      // Remove timer from tracking
       this.respawnTimers.delete(enemyId);
       console.log(`GameManager: Enemy ${enemyId} respawned successfully at position`, position);
-    }, 60000); // 60 seconds
+    }, 60000);
 
     this.respawnTimers.set(enemyId, timer);
     console.log(`GameManager: Scheduled respawn for enemy ${enemyId} in 60 seconds`);
   }
+
   async initializeEnemies(savedPositions?: Vector3[]): Promise<Enemy[]> {
     const configData = await this.assetManager.loadJson("./game_config.json");
     const enemyPositions = configData.enemies?.map((pos: { x: number, y: number, z: number }) => 
@@ -167,9 +206,7 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
     this.enemies.forEach((enemy, index) => {
       const enemyMesh = enemy.getMesh();
       if (enemyMesh) {
-        //this.shadowGenerator.addShadowCaster(enemyMesh, true);
         enemyMesh.receiveShadows = true;
-        
         console.log(`GameManager: Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
         console.log(`GameManager: Enemy ${index} ID:`, enemy.getId());
       } else {
@@ -201,15 +238,13 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
       throw new Error("GameManager: Ground mesh 'Plane' not found");
     }
 
-  
-
     const adjustedPositions = stateToUse.positions.map((pos: Vector3, index: number) => {
       const height = groundMesh.getHeightAtCoordinates(pos.x, pos.z);
       if (height === undefined || isNaN(height)) {
         throw new Error(`GameManager: Invalid height for crystal ${index} at (${pos.x}, ${pos.z})`);
       }
       console.log(`GameManager: Crystal ${index} at (${pos.x}, ${pos.z}) placed at y=${height} using getHeightAtCoordinates`);
-      return new Vector3(pos.x, height + 1, pos.z); // Add 1 unit offset above ground
+      return new Vector3(pos.x, height + 1, pos.z);
     });
 
     this.dreamCrystalManager = new DreamCrystalManager(
@@ -222,7 +257,6 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
 
     return this.dreamCrystalManager;
   }
-
 
   getNPCs(): NPC[] {
     return this.npcs;
@@ -274,6 +308,5 @@ public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
       console.log(`GameManager: Cancelled respawn timer for enemy ${enemyId}`);
     });
     this.respawnTimers.clear();
-
   }
 }
