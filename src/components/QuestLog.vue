@@ -6,10 +6,17 @@
         Aucune quête en cours.
       </div>
       <div v-else class="quest-list">
-        <div v-for="quest in quests" :key="quest.getId()" class="quest-item">
+        <div
+          v-for="quest in quests"
+          :key="quest.getId()"
+          class="quest-item"
+        >
           <h3 class="quest-title">{{ quest.getTitle() }}</h3>
           <p class="quest-description">{{ quest.getInProgressText() }}</p>
-          <div class="quest-progress">
+          <div v-if="quest.getState().status === 'completed'" class="quest-completed">
+            <span class="pulsing-text">Quête accomplie.</span>
+          </div>
+          <div v-else class="quest-progress">
             <span v-if="quest.type === 'COLLECT'">
               Fragments de rêve: {{ quest.getState().collectedCrystals || 0 }}/{{ quest.requiredCrystals }}
             </span>
@@ -70,7 +77,7 @@ export default defineComponent({
 }
 
 .quest-log-panel {
-  background: rgba(30, 30, 60, 0.9); /* More visible */
+  background: rgba(30, 30, 60, 0.9);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 16px;
@@ -78,6 +85,7 @@ export default defineComponent({
   width: 320px;
   box-shadow: 0 0 16px rgba(90, 180, 255, 0.5), 0 0 32px rgba(100, 200, 255, 0.3);
   color: #ffffff;
+  overflow: hidden; /* Prevent scrollbar from animation */
 }
 
 .panel-title {
@@ -106,6 +114,26 @@ export default defineComponent({
   border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
+.pulsing-text {
+  display: inline-block;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .quest-title {
   font-size: 18px;
   font-weight: bold;
@@ -118,6 +146,15 @@ export default defineComponent({
   font-size: 14px;
   color: #e6f7ff;
   margin: 6px 0;
+}
+
+.quest-completed {
+  font-size: 14px;
+  color: #ffd700;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.7);
+  margin-top: 10px;
 }
 
 .quest-progress {
@@ -174,9 +211,9 @@ export default defineComponent({
   .quest-description {
     font-size: 13px;
   }
-  .quest-progress span {
+  .quest-progress span,
+  .quest-completed {
     font-size: 12px;
   }
 }
-
 </style>

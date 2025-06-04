@@ -1,11 +1,11 @@
 <template>
   <main>
-    <canvas ref="canvas"></canvas>
+    <canvas ref="canvas" tabindex="0"></canvas>
     <CastingBar v-if="animationManager" :animation-manager="animationManager" />
-    
     <QuestDialog
       :visible="dialogState.visible"
       :quest="dialogState.quest"
+      :canvas="canvas"
       @accept="handleAccept"
       @deny="handleDeny"
       @close="handleClose"
@@ -37,14 +37,13 @@
 import { defineComponent, ref, onMounted, onUnmounted, reactive, watch } from "vue";
 import { Game } from "@/DreamHopper/Game";
 import CastingBar from "./CastingBar.vue";
-import DreamCrystalCounter from "./DreamCrystalCounter.vue";
 import DeathScreen from "./DeathScreen.vue";
 import QuestDialog from "./QuestDialog.vue";
 import HPBar from "./HPBar.vue";
+import HelpDialog from "./HelpDialog.vue";
 import QuestLog from "./QuestLog.vue";
 import { Quest } from "@/DreamHopper/npc/Quest";
-import { Vector3 } from "@babylonjs/core";
-import HelpDialog from "./HelpDialog.vue";
+import { Vector3, Observer } from "@babylonjs/core";
 
 export default defineComponent({
   name: "DreamHopper",
@@ -61,9 +60,10 @@ export default defineComponent({
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
     const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null);
-    const activeQuests = ref<Quest[]>([]); // New: Store player's active quests
+    const activeQuests = ref<Quest[]>([]);
     const isDeathScreenVisible = ref(false);
     let gameInstance: Game | null = null;
+    let questObserver: Observer<Quest> | null = null;
 
     const dialogState = reactive({
       visible: false,
@@ -76,7 +76,6 @@ export default defineComponent({
       if (gameInstance) {
         gameInstance.handleQuestAccept();
         dialogState.questKey++;
-        updateActiveQuests(); // Update quests on accept
       }
     };
 
@@ -100,7 +99,6 @@ export default defineComponent({
       if (gameInstance) {
         gameInstance.handleQuestTurnIn();
         dialogState.questKey++;
-        updateActiveQuests(); // Update quests on turn-in
       }
     };
 
@@ -115,25 +113,24 @@ export default defineComponent({
             characterMesh.position = new Vector3(5, 5, 0);
           }
           gameInstance.getCharacterController()?.playIdleAnimation();
-          gameInstance.getCharacterController()!.animationManager.stopAllAnimations();
+          gameInstance.getCharacterController()?.animationManager.stopAllAnimations();
           isDeathScreenVisible.value = false;
           console.log("DreamHopper: Player respawned, death screen hidden");
-          updateActiveQuests(); // Update quests on restart
+          activeQuests.value = [];
         }
       }
     };
 
-    // Update active quests from player
     const updateActiveQuests = () => {
       if (gameInstance) {
         const player = gameInstance.getCharacterController()?.getPlayer();
         if (player) {
           activeQuests.value = player.getActiveQuests();
+          console.log(`DreamHopper: Updated activeQuests, count: ${activeQuests.value.length}`);
         }
       }
     };
 
-    // === HelpDialog state ===
     const showHelpDialog = ref(false);
     const helpDialogPermanentlyDismissed = ref(false);
 
@@ -157,7 +154,7 @@ export default defineComponent({
         animationManager.value = gameInstance.getAnimationManager();
         dreamCrystalManager.value = gameInstance.getDreamCrystalManager();
         playerHP.value = gameInstance.getPlayerHP();
-        updateActiveQuests(); // Initialize active quests
+        updateActiveQuests();
 
         dialogState.visible = gameInstance.getShowQuestDialog();
         dialogState.quest = gameInstance.getCurrentQuest();
@@ -166,20 +163,21 @@ export default defineComponent({
           dialogState.visible = isVisible;
           dialogState.quest = gameInstance!.getCurrentQuest();
           dialogState.questKey++;
-          updateActiveQuests(); // Update quests on dialog toggle
         });
 
         const player = gameInstance.getCharacterController()?.getPlayer();
         if (player) {
+          questObserver = player.onQuestStateChanged.add((quest) => {
+            console.log(`DreamHopper: Quest ${quest.getId()} state changed, status: ${quest.getState().status}`);
+            updateActiveQuests();
+          });
+
           player.onDeathObservable.add(() => {
             isDeathScreenVisible.value = true;
+            activeQuests.value = [];
+            console.log("DreamHopper: Player died, cleared activeQuests");
           });
         }
-
-        // Poll for quest updates (temporary, until observable is added)
-        const questInterval = setInterval(() => {
-          updateActiveQuests();
-        }, 500);
 
         const hpInterval = setInterval(() => {
           if (gameInstance) {
@@ -189,10 +187,12 @@ export default defineComponent({
 
         onUnmounted(() => {
           clearInterval(hpInterval);
-          clearInterval(questInterval);
+          if (player && questObserver) {
+            player.onQuestStateChanged.remove(questObserver);
+            console.log("DreamHopper: Unsubscribed from onQuestStateChanged");
+          }
         });
 
-        // Show help dialog after 5 seconds (if not dismissed)
         setTimeout(() => {
           if (!helpDialogPermanentlyDismissed.value) {
             showHelpDialog.value = true;
@@ -206,7 +206,6 @@ export default defineComponent({
       (newStatus) => {
         if (newStatus) {
           dialogState.questKey++;
-          updateActiveQuests(); // Update quests on status change
         }
       }
     );

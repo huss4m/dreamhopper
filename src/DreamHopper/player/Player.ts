@@ -15,6 +15,7 @@ export class Player {
   private currentHP = 100;
   private isDead = false;
   public onDeathObservable = new Observable<void>();
+  public onQuestStateChanged = new Observable<Quest>();
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
@@ -107,6 +108,7 @@ export class Player {
         quest.updateProgress(1); // Increment by 1 for each crystal
         console.log(`Player: Updated COLLECT quest ${quest.getId()} - progress ${quest.getState().collectedCrystals}/${quest.requiredCrystals}, completed=${quest.isCompletedStatus()}`);
       this.updateNPCQuest(quest);
+      this.onQuestStateChanged.notifyObservers(quest);
       }
     });
     this.checkQuestCompletion();
@@ -119,6 +121,7 @@ export class Player {
         quest.updateProgress(1); // Update progress by 1 kill
         console.log(`Player: Updated KILL quest ${quest.getId()} progress`);
         this.updateNPCQuest(quest);
+        this.onQuestStateChanged.notifyObservers(quest);
       }
     });
     this.checkQuestCompletion();
@@ -151,6 +154,7 @@ export class Player {
       this.activeQuests.push(quest);
       console.log(`Player: Accepted quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
+      this.onQuestStateChanged.notifyObservers(quest);
     }
   }
 
@@ -177,9 +181,11 @@ export class Player {
     if (quest.getState().status === "completed") {
       quest.turnIn();
       this.completedQuests = this.completedQuests.filter(q => q.getId() !== quest.getId());
+      this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId()); // Ensure removal from activeQuest
       this.turnedInQuests.push(quest);
       console.log(`Player: Turned in quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
+      this.onQuestStateChanged.notifyObservers(quest);
     }
   }
 
@@ -207,6 +213,7 @@ export class Player {
         this.completedQuests.push(quest);
         console.log(`Player: Completed quest ${quest.getId()}`);
         this.updateNPCQuest(quest);
+        this.onQuestStateChanged.notifyObservers(quest);
       }
     });
   }
@@ -262,6 +269,7 @@ export class Player {
 
   public dispose(): void {
     this.onDeathObservable.clear();
+    this.onQuestStateChanged.clear();
     this.inventory.forEach(item => item.dispose());
     this.inventory = [];
     this.activeQuests = [];
