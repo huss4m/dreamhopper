@@ -64,6 +64,7 @@ export default defineComponent({
     const isDeathScreenVisible = ref(false);
     let gameInstance: Game | null = null;
     let questObserver: Observer<Quest> | null = null;
+    let hpObserver: Observer<{ currentHP: number; maxHP: number }> | null = null;
 
     const dialogState = reactive({
       visible: false,
@@ -116,7 +117,8 @@ export default defineComponent({
           gameInstance.getCharacterController()?.animationManager.stopAllAnimations();
           isDeathScreenVisible.value = false;
           console.log("DreamHopper: Player respawned, death screen hidden");
-          activeQuests.value = [];
+          // Sync active quests after reset instead of clearing them
+          updateActiveQuests();
         }
       }
     };
@@ -174,24 +176,14 @@ export default defineComponent({
 
           player.onDeathObservable.add(() => {
             isDeathScreenVisible.value = true;
-            activeQuests.value = [];
-            console.log("DreamHopper: Player died, cleared activeQuests");
+            console.log("DreamHopper: Player died");
+          });
+
+          hpObserver = player.onHPChanged.add((hp) => {
+            playerHP.value = { currentHP: hp.currentHP, maxHP: hp.maxHP };
+            console.log(`DreamHopper: Player HP updated to ${hp.currentHP}/${hp.maxHP}`);
           });
         }
-
-        const hpInterval = setInterval(() => {
-          if (gameInstance) {
-            playerHP.value = gameInstance.getPlayerHP();
-          }
-        }, 500);
-
-        onUnmounted(() => {
-          clearInterval(hpInterval);
-          if (player && questObserver) {
-            player.onQuestStateChanged.remove(questObserver);
-            console.log("DreamHopper: Unsubscribed from onQuestStateChanged");
-          }
-        });
 
         setTimeout(() => {
           if (!helpDialogPermanentlyDismissed.value) {
@@ -212,6 +204,15 @@ export default defineComponent({
 
     onUnmounted(() => {
       if (gameInstance) {
+        const player = gameInstance.getCharacterController()?.getPlayer();
+        if (player && questObserver) {
+          player.onQuestStateChanged.remove(questObserver);
+          console.log("DreamHopper: Unsubscribed from onQuestStateChanged");
+        }
+        if (player && hpObserver) {
+          player.onHPChanged.remove(hpObserver);
+          console.log("DreamHopper: Unsubscribed from onHPChanged");
+        }
         gameInstance.dispose();
         gameInstance = null;
       }

@@ -11,28 +11,28 @@ import { EnemyAnimationManager } from "./EnemyAnimationManager";
 import { Game } from "../Game";
 
 export class Enemy implements Hoverable, Targettable {
-  private id: string;
-  private enemyMesh: Mesh | null = null;
-  private enemySkeleton: Skeleton | null = null;
-  private animationManager: EnemyAnimationManager;
-  private physicsController: EnemyPhysicsController | null = null;
-  private hoverHandler: HoverHandler;
-  private hoverConfig: HoverConfig;
-  private targetCircle: Mesh | null = null;
-  private hitboxMesh: Mesh | null = null;
-  private healthBarPlane: Mesh | null = null;
-  private healthBarTexture: AdvancedDynamicTexture | null = null;
-  private healthBarFill: Rectangle | null = null;
-  private healthBarBackground: Rectangle | null = null;
-  private healthBarObserver: any = null;
-  private aggroRadius = 20;
-  private attackRange = 10;
-  private isAggroed = false;
-  private isAttacking = false;
-  private behaviorObserver: any = null;
-  private isNPC = false;
-  private maxHP = 100;
-  private currentHP = 100;
+  protected id: string;
+  protected enemyMesh: Mesh | null = null;
+  protected enemySkeleton: Skeleton | null = null;
+  protected animationManager: EnemyAnimationManager;
+  protected physicsController: EnemyPhysicsController | null = null;
+  protected hoverHandler: HoverHandler;
+  protected hoverConfig: HoverConfig;
+  protected targetCircle: Mesh | null = null;
+  protected hitboxMesh: Mesh | null = null;
+  protected healthBarPlane: Mesh | null = null;
+  protected healthBarTexture: AdvancedDynamicTexture | null = null;
+  protected healthBarFill: Rectangle | null = null;
+  protected healthBarBackground: Rectangle | null = null;
+  protected healthBarObserver: any = null;
+  protected aggroRadius = 20;
+  protected attackRange = 10;
+  protected isAggroed = false;
+  protected isAttacking = false;
+  protected behaviorObserver: any = null;
+  protected isNPC = false;
+  protected maxHP = 100;
+  protected currentHP = 100;
   public onDeath: Observable<{ id: string; position: Vector3 }> = new Observable(); // New: Observable for KILL quest
 
   isTargetted = false;
@@ -42,16 +42,16 @@ export class Enemy implements Hoverable, Targettable {
   shadowGenerator!: CascadedShadowGenerator;
   highlightLayer: HighlightLayer;
   position: Vector3;
-  private game: Game;
+  protected game: Game;
 
 
-  private lastLOSCheckTime = 0;
-  private losCheckInterval = 500; // Check LOS every 500ms
-  private lastHasLOS: boolean | null = null;
+  protected lastLOSCheckTime = 0;
+  protected losCheckInterval = 500; 
+  protected lastHasLOS: boolean | null = null;
 
   
   constructor(
-    private scene: Scene,
+    protected scene: Scene,
     name: string,
     assetManager: AssetManager,
     shadowGenerator: CascadedShadowGenerator,
@@ -85,7 +85,7 @@ export class Enemy implements Hoverable, Targettable {
     this.setupBehavior();
   }
 
-  private setupBehavior(): void {
+  protected setupBehavior(): void {
   if (this.isNPC) {
   // // // // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
     return;
@@ -176,7 +176,7 @@ export class Enemy implements Hoverable, Targettable {
   });
 }
 
-  private setupHealthBar(isNPC = false): void {
+  protected setupHealthBar(isNPC = false): void {
     if (isNPC) {
       // // // console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
       return;
@@ -252,7 +252,7 @@ export class Enemy implements Hoverable, Targettable {
     }
   }
 
-  private updateHealthBar(): void {
+  protected updateHealthBar(): void {
     if (this.healthBarFill) {
       const hpRatio = Math.max(0, this.currentHP / this.maxHP);
       this.healthBarFill.width = `${hpRatio * 100}%`;
@@ -260,7 +260,7 @@ export class Enemy implements Hoverable, Targettable {
     }
   }
 
-  private disposeHealthBar(): void {
+  protected disposeHealthBar(): void {
     if (this.healthBarObserver) {
       this.scene.onBeforeRenderObservable.remove(this.healthBarObserver);
       this.healthBarObserver = null;
@@ -353,7 +353,7 @@ export class Enemy implements Hoverable, Targettable {
     }
   }
 
-  private setupPhysics(): void {
+  protected setupPhysics(): void {
     if (!this.enemyMesh) {
       console.error(`Cannot setup physics: Enemy mesh is null for Enemy ${this.id}`);
       return;
@@ -380,7 +380,7 @@ export class Enemy implements Hoverable, Targettable {
     // // console.log(`Enemy ${this.id}: PhysicsController initialized, instance: ${this.physicsController}`);
   }
 
-  private duplicate(container: AssetContainer, position: Vector3) {
+  protected duplicate(container: AssetContainer, position: Vector3) {
     const entries = container.instantiateModelsToScene(undefined, false, { doNotInstantiate: false });
 
     const rootMesh = entries.rootNodes[0] as Mesh;
@@ -530,7 +530,11 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   public getMesh(): Mesh | null {
-    return this.enemyMesh;
+    return this.hitboxMesh;
+  }
+
+   public getHitbox(): Mesh | null {
+    return this.hitboxMesh;
   }
 
   public getScene(): Scene {
@@ -603,7 +607,7 @@ export class Enemy implements Hoverable, Targettable {
     }
   }
 
-  public startWandering(maxDistance = 10): void {
+  public startWandering(maxDistance = 2): void {
     if (!this.physicsController) {
       console.warn(`Enemy ${this.id}: Cannot start wandering, physicsController is null`);
       return;
@@ -799,7 +803,7 @@ export class Enemy implements Hoverable, Targettable {
 
 
 
-private hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
+protected hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
   if (!this.enemyMesh || !playerMesh) {
     console.warn(`Enemy ${this.id}: LOS check failed - enemyMesh or playerMesh is null`);
     return false;
@@ -817,6 +821,8 @@ private hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
   const direction = playerPos.subtract(enemyPos);
   const distance = direction.length();
   const ray = new Ray(enemyPos, direction.normalize(), distance);
+
+
 
   // Perform raycast, only hitting meshes tagged as "obstacle"
   let checkedMeshCount = 0;

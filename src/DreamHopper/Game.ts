@@ -16,12 +16,14 @@ import { CharacterCameraController } from "./player/CharacterCameraController";
 import { RecastJSPlugin } from "@babylonjs/core";
 import Recast from "recast-detour";
 import { Enemy } from "./enemy/Enemy";
+import { BossEnemy } from "./enemy/BossEnemy";
 //import { Inspector } from "@babylonjs/inspector"
 
 
 export interface SceneState {
   npcPositions?: Vector3[];
   enemyPositions?: Vector3[];
+  bossPositions?: Vector3[];
   questStates?: QuestState[];
 }
 
@@ -57,6 +59,7 @@ export class Game {
 
   private navigationPlugin: RecastJSPlugin | null = null;
   private crowd: any | null = null; // Will hold the crowd instance
+  observedEnemies  = new Set();
     
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -81,13 +84,15 @@ export class Game {
     });
 
 
+
+
 /*
     Inspector.Show(this.scene, {
   embedMode: true, 
 });
 
-
 */ 
+
   }
 
   private async initialize(): Promise<void> {
@@ -1107,11 +1112,12 @@ private async createGrass(grassCount: number): Promise<void> {
         this
       );
 
-      const savedState: SceneState = { npcPositions: [], enemyPositions: [], questStates: [] };
+      const savedState: SceneState = { npcPositions: [], enemyPositions: [], bossPositions: [], questStates: [] };
       await this.gameManager.initializeNPCs(savedState.npcPositions, savedState.questStates);
       console.log("Game: NPCs initialized");
       onStepComplete();
       await this.gameManager.initializeEnemies(savedState.enemyPositions);
+      await this.gameManager.initializeBosses(savedState.bossPositions);
       console.log("Game: Enemies initialized");
       onStepComplete();
 
@@ -1183,18 +1189,29 @@ private async createGrass(grassCount: number): Promise<void> {
     }
   }
 public observeEnemyDeath(enemy: Enemy): void {
+    const enemyId = enemy.getId();
+    if (this.observedEnemies.has(enemyId)) {
+      console.log(`Game: Already observing enemy ${enemyId}, skipping duplicate observer`);
+      return;
+    }
+    this.observedEnemies.add(enemyId);
+
     enemy.onDeath.addOnce(({ id, position }) => {
       if (this.characterController) {
         const player = this.characterController.getPlayer();
-        player.incrementEnemyKills();
-        console.log(`Game: Enemy ${id} killed at position`, position, `notified player`);
-        this.gameManager.scheduleEnemyRespawn(id, position);
+        const enemyType = enemy instanceof BossEnemy ? "BossEnemy" : "Enemy";
+        player.incrementEnemyKills(enemyType);
+        console.log(`Game: ${enemyType} ${id} killed at position`, position, `notified player`);
+        this.observedEnemies.delete(id); // Clean up after death
+        if (enemyType === "BossEnemy") {
+          this.gameManager.scheduleBossRespawn(id, position);
+        } else {
+          this.gameManager.scheduleEnemyRespawn(id, position);
+        }
       }
     });
-    console.log(`Game: Observing onDeath for enemy ${enemy.getId()}`);
+    console.log(`Game: Observing onDeath for ${enemy instanceof BossEnemy ? "BossEnemy" : "Enemy"} ${enemyId}`);
   }
-
-
   
 
   public getCharacterController(): CharacterController | null {

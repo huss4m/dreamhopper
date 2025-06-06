@@ -16,6 +16,11 @@
       "filename": "enemy.glb"
     },
     {
+      "name": "boss",
+      "rootUrl": "./models/",
+      "filename": "boss.glb"
+    },
+    {
       "name": "dreamCrystal",
       "rootUrl": "./models/",
       "filename": "dream_crystal.glb"

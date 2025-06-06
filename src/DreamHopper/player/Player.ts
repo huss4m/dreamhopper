@@ -16,6 +16,7 @@ export class Player {
   private isDead = false;
   public onDeathObservable = new Observable<void>();
   public onQuestStateChanged = new Observable<Quest>();
+  public onHPChanged = new Observable<{ currentHP: number; maxHP: number }>();
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
@@ -58,6 +59,7 @@ export class Player {
   public reset(): void {
     this.currentHP = this.maxHP;
     this.isDead = false;
+    this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     console.log("Player: Reset HP to max and cleared isDead state");
   }
 
@@ -114,18 +116,18 @@ export class Player {
     this.checkQuestCompletion();
   }
 
-  public incrementEnemyKills(): void { // New: Increment kills for KILL quests
-    console.log(`Player: Incrementing enemy kills`);
-    this.activeQuests.forEach(quest => {
-      if (quest.type === "KILL") { // Fixed: Use quest.type
-        quest.updateProgress(1); // Update progress by 1 kill
-        console.log(`Player: Updated KILL quest ${quest.getId()} progress`);
-        this.updateNPCQuest(quest);
-        this.onQuestStateChanged.notifyObservers(quest);
-      }
-    });
-    this.checkQuestCompletion();
-  }
+  public incrementEnemyKills(enemyType: "Enemy" | "BossEnemy"): void {
+  console.log(`Player: Incrementing enemy kills for type ${enemyType}`);
+  this.activeQuests.forEach(quest => {
+    if (quest.type === "KILL") {
+      quest.updateProgress(1, enemyType); // Explicitly pass amount = 1
+      console.log(`Player: Updated KILL quest ${quest.getId()} progress for ${enemyType}, enemiesKilled: ${quest.getState().enemiesKilled}`);
+      this.updateNPCQuest(quest);
+      this.onQuestStateChanged.notifyObservers(quest);
+    }
+  });
+  this.checkQuestCompletion();
+}
 
   public setTotalCrystals(total: number): void {
     this.totalCrystals = total;
@@ -267,9 +269,27 @@ export class Player {
     });
   }
 
+   public takeDamage(damage: number): void {
+    this.currentHP = Math.max(0, Math.min(this.currentHP - damage, this.maxHP));
+    console.log(`Player: Took ${damage} damage, HP updated to ${this.currentHP}/${this.maxHP}`);
+    this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
+    if (this.currentHP === 0 && !this.isDead) {
+      this.isDead = true;
+      console.log("Player is Dead!");
+      this.onDeathObservable.notifyObservers();
+      const characterController = this.game?.getCharacterController();
+      if (characterController) {
+        characterController.playDeathAnimation();
+      } else {
+        console.warn("Player: Cannot play Death animation, CharacterController not found");
+      }
+    }
+  }
+
   public dispose(): void {
     this.onDeathObservable.clear();
     this.onQuestStateChanged.clear();
+    this.onHPChanged.clear();
     this.inventory.forEach(item => item.dispose());
     this.inventory = [];
     this.activeQuests = [];

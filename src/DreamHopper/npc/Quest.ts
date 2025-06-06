@@ -21,7 +21,8 @@ export class Quest {
     public requiredEnemies: number, // New: For KILL quests
     public turnedInText: string,
     public type: QuestType, // New: Quest type
-    public nextQuestId: string | null // New: Next quest in the questline
+    public nextQuestId: string | null, 
+    public requiredEnemyType?: "Enemy" | "BossEnemy"
   ) {
     this.state = {
       id: this.id,
@@ -30,6 +31,7 @@ export class Quest {
       enemiesKilled: type === "KILL" ? 0 : undefined,
       isCompleted: false,
     };
+    console.log(`Quest ${id}: Constructed with requiredEnemyType=${this.requiredEnemyType}`); // Debug
   }
 
   public accept(): void {
@@ -39,32 +41,42 @@ export class Quest {
     }
   }
 
-  public updateProgress(amount: number): void {
-    if (this.state.status !== "inProgress") {
-      console.log(`Quest ${this.id}: Cannot update progress, status is ${this.state.status}`);
+  public updateProgress(amount: number, enemyType?: "Enemy" | "BossEnemy"): void {
+  if (this.state.status !== "inProgress") {
+    console.log(`Quest ${this.id}: Cannot update progress, status is ${this.state.status}`);
+    return;
+  }
+  if (amount <= 0) {
+    console.warn(`Quest ${this.id}: Invalid progress amount ${amount}, ignoring`);
+    return;
+  }
+  if (this.type === "COLLECT") {
+    const newCrystals = (this.state.collectedCrystals || 0) + Math.min(amount, 1);
+    this.state.collectedCrystals = Math.min(newCrystals, this.requiredCrystals);
+    console.log(`Quest ${this.id}: Collected ${Math.min(amount, 1)} crystals, total: ${this.state.collectedCrystals}/${this.requiredCrystals}`);
+    if (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0) {
+      this.complete();
+    }
+  } else if (this.type === "KILL") {
+    // Log incoming parameters for debugging
+    console.log(`Quest ${this.id}: Processing kill, enemyType=${enemyType}, requiredEnemyType=${this.requiredEnemyType}`);
+    // Only count kills if enemyType matches requiredEnemyType
+    if (this.requiredEnemyType && enemyType !== this.requiredEnemyType) {
+      console.log(`Quest ${this.id}: Killed enemy type ${enemyType}, but requires ${this.requiredEnemyType}, ignoring`);
       return;
     }
-
-    if (amount <= 0) {
-      console.warn(`Quest ${this.id}: Invalid progress amount ${amount}, ignoring`);
+    // If no requiredEnemyType, default to counting only "Enemy" kills
+    if (!this.requiredEnemyType && enemyType !== "Enemy") {
+      console.log(`Quest ${this.id}: Killed enemy type ${enemyType}, but no requiredEnemyType set, requires Enemy, ignoring`);
       return;
     }
-
-    if (this.type === "COLLECT") {
-      const newCrystals = (this.state.collectedCrystals || 0) + Math.min(amount, 1); // Safeguard: Cap at 1
-      this.state.collectedCrystals = Math.min(newCrystals, this.requiredCrystals); // Cap at requiredCrystals
-      console.log(`Quest ${this.id}: Collected ${Math.min(amount, 1)} crystals, total: ${this.state.collectedCrystals}/${this.requiredCrystals}`);
-      if (this.state.collectedCrystals >= this.requiredCrystals && this.requiredCrystals > 0) {
-        this.complete();
-      }
-    } else if (this.type === "KILL") {
-      this.state.enemiesKilled = (this.state.enemiesKilled || 0) + amount;
-      console.log(`Quest ${this.id}: Defeated ${amount} enemies, total: ${this.state.enemiesKilled}/${this.requiredEnemies}`);
-      if (this.state.enemiesKilled >= this.requiredEnemies && this.requiredEnemies > 0) {
-        this.complete();
-      }
+    this.state.enemiesKilled = (this.state.enemiesKilled || 0) + amount;
+    console.log(`Quest ${this.id}: Defeated ${amount} ${enemyType || "enemies"}, total: ${this.state.enemiesKilled}/${this.requiredEnemies}`);
+    if (this.state.enemiesKilled >= this.requiredEnemies && this.requiredEnemies > 0) {
+      this.complete();
     }
   }
+}
 
   public complete(): void {
     if (this.state.status === "inProgress") {

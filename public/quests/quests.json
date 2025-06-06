@@ -6,7 +6,7 @@
     "inProgressText": "Allez, Dreamhopper. Que votre lumière perce les ténèbres de Dreamland. Vous avez déjà accompli une partie du chemin. Mais tous les Fragments de Rêve n’ont pas encore été retrouvés.",
     "completedText": "Je ressens l’équilibre revenir… Vous avez retrouvé les Fragments de Rêve. Dreamland vous doit la vie.",
     "turnedInText": "Merci, Dreamhopper. Grâce à vous, les Perdus reposent enfin, apaisés… sous forme de licornes en peluche. Dreamland se souviendra de vous.",
-    "requiredCrystals": 12,
+    "requiredCrystals": 1,
     "requiredEnemies": 0,
     "type": "COLLECT",
     "nextQuestId": "quest2"
@@ -21,6 +21,19 @@
     "requiredCrystals": 0,
     "requiredEnemies": 5,
     "type": "KILL",
-    "nextQuestId": null
-  }
+    "nextQuestId": "quest3"
+  },
+  {
+  "id": "quest3",
+  "title": "Chasseur de Cauchemar",
+  "description": "Un puissant Cauchemar, le maître des Perdus, rôde dans Dreamland. Transformez-le pour restaurer la paix dans les rêves.",
+  "inProgressText": "Le Cauchemar est toujours là, défiant votre lumière. Continuez, Dreamhopper, et mettez fin à sa terreur !",
+  "completedText": "Le Cauchemar est vaincu ! Dreamland respire à nouveau, grâce à votre courage.",
+  "turnedInText": "Vous avez triomphé du Cauchemar, Dreamhopper. Votre légende grandit dans Dreamland.",
+  "requiredCrystals": 0,
+  "requiredEnemies": 1,
+  "type": "KILL",
+  "nextQuestId": null,
+  "requiredEnemyType": "BossEnemy"
+}
 ]

@@ -3,26 +3,26 @@ import { Game } from "../Game";
 import { Enemy } from "./Enemy";
 
 export class EnemyAnimationManager {
-  private animationGroups: AnimationGroup[] = [];
-  private currentAnimationName: string | null = null;
-  private isBlending = false;
-  private blendFrameId: number | null = null;
-  private nightmareBoltSpawned = false;
-  private lastProgress = 0;
-  private loopCount = 0;
-  private lastBoltTime = 0;
-  private footstepSounds: Sound[] = [];
-  private footstepFrames: number[] = [];
-  private footstepObserver: any = null;
-  private castBoltSound: Sound | null = null;
-  private boltLaunchSound: Sound | null = null;
-  private nightmareBoltSound: Sound | null = null;
+  protected animationGroups: AnimationGroup[] = [];
+  protected currentAnimationName: string | null = null;
+  protected isBlending = false;
+  protected blendFrameId: number | null = null;
+  protected nightmareBoltSpawned = false;
+  protected lastProgress = 0;
+  protected loopCount = 0;
+  protected lastBoltTime = 0;
+  protected footstepSounds: Sound[] = [];
+  protected footstepFrames: number[] = [];
+  protected footstepObserver: any = null;
+  protected castBoltSound: Sound | null = null;
+  protected boltLaunchSound: Sound | null = null;
+  protected nightmareBoltSound: Sound | null = null;
   public onNightmareBoltAnimationState = new Observable<{ isRunning: boolean; progress?: number }>();
 
   constructor(
-    private scene: Scene,
-    private game?: Game,
-    private enemy?: Enemy
+    protected scene: Scene,
+    protected game?: Game,
+    protected enemy?: Enemy
   ) {}
 
   public initialize(animationGroups: AnimationGroup[]): void {
@@ -48,7 +48,7 @@ export class EnemyAnimationManager {
     this.setupNightmareBoltDetection();
   }
 
-  private loadFootstepSounds(): void {
+  protected loadFootstepSounds(): void {
     // console.log("EnemyAnimationManager: Starting loadFootstepSounds");
     const soundFiles = [
       "./sfx/footstep1.wav",
@@ -92,7 +92,7 @@ export class EnemyAnimationManager {
     }
   }
 
-  private preloadNightmareBoltSounds(): void {
+  protected preloadNightmareBoltSounds(): void {
     const enemyMesh = this.enemy?.getEnemyMesh();
     if (!enemyMesh) {
       console.warn("EnemyAnimationManager: Enemy mesh not available for NightmareBolt sound preloading");
@@ -156,7 +156,7 @@ export class EnemyAnimationManager {
     );
   }
 
-  private setupNightmareBoltDetection(): void {
+  protected setupNightmareBoltDetection(): void {
     const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
     if (nightmareBoltAnim) {
       // console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
@@ -173,7 +173,7 @@ export class EnemyAnimationManager {
     }
   }
 
-  private spawnNightmareBoltSphere(): void {
+  protected spawnNightmareBoltSphere(): void {
     if (Date.now() - this.lastBoltTime < 2000) {
       // console.log("EnemyAnimationManager: NightmareBolt on cooldown");
       return;
@@ -310,10 +310,10 @@ export class EnemyAnimationManager {
         if (characterController) {
           const player = characterController.getPlayer();
           if (player) {
-            const currentHP = player.getCurrentHP();
+            // const currentHP = player.getCurrentHP();
             // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
             const damage = Math.floor(Math.random() * (10 - 5 + 1)) + 5;
-            player.setHP(currentHP - damage);
+            player.takeDamage(damage);
             // console.log(`EnemyAnimationManager: Applied ${damage} damage to player, new HP: ${player.getCurrentHP()}`);
           } else {
             console.error("EnemyAnimationManager: Player instance not found");
