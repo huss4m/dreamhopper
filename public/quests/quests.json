@@ -9,7 +9,8 @@
     "requiredCrystals": 12,
     "requiredEnemies": 0,
     "type": "COLLECT",
-    "nextQuestId": "quest2"
+    "nextQuestId": "quest2",
+    "xpReward": 1000
   },
   {
     "id": "quest2",
@@ -21,7 +22,8 @@
     "requiredCrystals": 0,
     "requiredEnemies": 6,
     "type": "KILL",
-    "nextQuestId": "quest3"
+    "nextQuestId": "quest3",
+    "xpReward": 1500
   },
   {
   "id": "quest3",
@@ -34,6 +36,7 @@
   "requiredEnemies": 1,
   "type": "KILL",
   "nextQuestId": null,
-  "requiredEnemyType": "BossEnemy"
+  "requiredEnemyType": "BossEnemy",
+  "xpReward": 3000
 }
 ]

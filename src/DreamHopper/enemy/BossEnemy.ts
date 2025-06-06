@@ -27,7 +27,7 @@ export class BossEnemy extends Enemy {
     this.aggroRadius = 25;
     this.maxHP = 250;
     this.currentHP = 250;
-  
+    this.xpReward = 500;
 
   }
 

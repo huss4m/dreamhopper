@@ -5,6 +5,9 @@
       <div class="portrait">
         <img src="../assets/model.png" alt="Character Portrait" class="portrait-image" />
       </div>
+      <div class="level-display">
+        <span class="level-text">{{ level }}</span>
+      </div>
     </div>
     <div class="bar-section">
       <div class="unit-name">🌙 Essence</div>
@@ -35,6 +38,10 @@ export default defineComponent({
       required: true,
     },
     maxHP: {
+      type: Number,
+      required: true,
+    },
+    level: {
       type: Number,
       required: true,
     },
@@ -205,6 +212,34 @@ export default defineComponent({
   pointer-events: none;
   z-index: 1;
   opacity: 0.1;
+}
+.level-display {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at center, #e9d5ff, #c084fc);
+  border: 2px solid #f3ccff;
+  border-radius: 50%;
+  padding: 4px 8px;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 8px #f3ccffaa,
+    0 0 14px #d8b4feaa,
+    inset 0 0 4px #fff5ff66;
+  z-index: 5;
+}
+
+.level-text {
+  color: #4b006e;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 0 2px #ffe9ff, 0 0 4px #ffffff88;
+  font-family: 'Marcellus SC', serif;
 }
 
 /* 🔮 Animations */

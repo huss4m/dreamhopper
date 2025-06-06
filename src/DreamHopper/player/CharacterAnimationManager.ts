@@ -334,8 +334,12 @@ export class CharacterAnimationManager {
       console.log("No target or target mesh not found, moving sphere in character's forward direction");
     }
     const speed = 10;
-    const DREAMBOLT_MIN_DAMAGE = 20;
-    const DREAMBOLT_MAX_DAMAGE = 40;
+    const BASE_DREAMBOLT_MIN_DAMAGE = 20;
+    const BASE_DREAMBOLT_MAX_DAMAGE = 40;
+    const playerLevel = this.characterController?.getPlayer().getLevel() || 1;
+    const DREAMBOLT_MIN_DAMAGE = BASE_DREAMBOLT_MIN_DAMAGE + (playerLevel - 1) * 5; // New: Scale with level
+    const DREAMBOLT_MAX_DAMAGE = BASE_DREAMBOLT_MAX_DAMAGE + (playerLevel - 1) * 5; // New: Scale with level
+    console.log(`Dreambolt damage range at level ${playerLevel}: ${DREAMBOLT_MIN_DAMAGE}–${DREAMBOLT_MAX_DAMAGE}`);
     const renderCallback = (eventData: Scene, eventState: EventState) => {
       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
       const moveDistance = speed * deltaTime;
@@ -347,7 +351,6 @@ export class CharacterAnimationManager {
           const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
           if (enemyId) {
             console.log(`Dreambolt hit hitbox with enemyID: ${enemyId}`);
-            // Check both enemies and bosses
             let target: Enemy | BossEnemy | undefined;
             target = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
             if (!target) {

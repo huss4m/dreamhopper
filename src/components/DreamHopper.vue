@@ -13,10 +13,17 @@
       :key="dialogState.questKey"
     />
     <HPBar
-      v-if="playerHP"
-      :current-h-p="playerHP.currentHP"
-      :max-h-p="playerHP.maxHP"
-    />
+  v-if="playerHP && xpData"
+  :current-h-p="playerHP.currentHP"
+  :max-h-p="playerHP.maxHP"
+  :level="xpData.level"
+/>
+    <XPBar
+    v-if="xpData"
+    :current-x-p="xpData.currentXP"
+    :max-x-p="xpData.maxXP"
+    :level="xpData.level"
+  />
     <QuestLog
       v-if="activeQuests"
       :quests="activeQuests"
@@ -40,6 +47,7 @@ import CastingBar from "./CastingBar.vue";
 import DeathScreen from "./DeathScreen.vue";
 import QuestDialog from "./QuestDialog.vue";
 import HPBar from "./HPBar.vue";
+import XPBar from "./XPBar.vue";
 import HelpDialog from "./HelpDialog.vue";
 import QuestLog from "./QuestLog.vue";
 import { Quest } from "@/DreamHopper/npc/Quest";
@@ -54,6 +62,7 @@ export default defineComponent({
     QuestLog,
     DeathScreen,
     HelpDialog,
+    XPBar,
   },
   setup() {
     const canvas = ref<HTMLCanvasElement | null>(null);
@@ -65,6 +74,11 @@ export default defineComponent({
     let gameInstance: Game | null = null;
     let questObserver: Observer<Quest> | null = null;
     let hpObserver: Observer<{ currentHP: number; maxHP: number }> | null = null;
+
+
+    const xpData = ref<{ currentXP: number; maxXP: number; level: number } | null>(null); // New: Ref for XP data
+    let xpObserver: Observer<{ currentXP: number; maxXP: number }> | null = null; // New: Observer for XP changes
+    let levelObserver: Observer<{ level: number }> | null = null; // New: Observer for level changes
 
     const dialogState = reactive({
       visible: false,
@@ -183,6 +197,28 @@ export default defineComponent({
             playerHP.value = { currentHP: hp.currentHP, maxHP: hp.maxHP };
             console.log(`DreamHopper: Player HP updated to ${hp.currentHP}/${hp.maxHP}`);
           });
+
+
+
+          xpData.value = {
+            currentXP: player.getCurrentXP(),
+            maxXP: player.getMaxXP(),
+            level: player.getLevel(),
+          };
+          xpObserver = player.onXPChanged.add((xp) => {
+            xpData.value = {
+              currentXP: xp.currentXP,
+              maxXP: xp.maxXP,
+              level: xpData.value?.level || 1,
+            };
+            console.log(`DreamHopper: XP updated to ${xp.currentXP}/${xp.maxXP}`);
+          });
+          levelObserver = player.onLevelChanged.add((levelData) => {
+            if (xpData.value) {
+              xpData.value.level = levelData.level;
+            }
+            console.log(`DreamHopper: Level updated to ${levelData.level}`);
+          });
         }
 
         setTimeout(() => {
@@ -213,6 +249,15 @@ export default defineComponent({
           player.onHPChanged.remove(hpObserver);
           console.log("DreamHopper: Unsubscribed from onHPChanged");
         }
+
+        if (player && xpObserver) {
+            player.onXPChanged.remove(xpObserver);
+            console.log("DreamHopper: Unsubscribed from onXPChanged");
+          }
+          if (player && levelObserver) {
+            player.onLevelChanged.remove(levelObserver);
+            console.log("DreamHopper: Unsubscribed from onLevelChanged");
+          }
         gameInstance.dispose();
         gameInstance = null;
       }
@@ -234,6 +279,7 @@ export default defineComponent({
       showHelpDialog,
       helpDialogSteps,
       closeHelpDialog,
+      xpData,
     };
   },
 });

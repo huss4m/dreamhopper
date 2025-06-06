@@ -22,7 +22,8 @@ export class Quest {
     public turnedInText: string,
     public type: QuestType, // New: Quest type
     public nextQuestId: string | null, 
-    public requiredEnemyType?: "Enemy" | "BossEnemy"
+    public requiredEnemyType?: "Enemy" | "BossEnemy",
+    public xpReward = 0
   ) {
     this.state = {
       id: this.id,
@@ -40,6 +41,10 @@ export class Quest {
       console.log(`Quest ${this.id}: Accepted, status set to inProgress`);
     }
   }
+
+  public getXPReward() { 
+    return this.xpReward; 
+  } 
 
   public updateProgress(amount: number, enemyType?: "Enemy" | "BossEnemy"): void {
   if (this.state.status !== "inProgress") {

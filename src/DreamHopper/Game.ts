@@ -1196,6 +1196,11 @@ public observeEnemyDeath(enemy: Enemy): void {
     }
     this.observedEnemies.add(enemyId);
 
+    if (this.characterController) {
+    const player = this.characterController.getPlayer();
+    player.subscribeToEnemyDeath(enemy); // New: Subscribe for XP awards
+  }
+
     enemy.onDeath.addOnce(({ id, position }) => {
       if (this.characterController) {
         const player = this.characterController.getPlayer();

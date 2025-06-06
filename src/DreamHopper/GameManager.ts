@@ -60,7 +60,8 @@ export class GameManager {
     q.turnedInText,
     q.type,
     q.nextQuestId,
-    q.requiredEnemyType
+    q.requiredEnemyType,
+    q.xpReward
   ));
 
   const positionsToUse = savedPositions?.length ? savedPositions : npcPositions;

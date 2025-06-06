@@ -49,7 +49,8 @@ export class Enemy implements Hoverable, Targettable {
   protected losCheckInterval = 500; 
   protected lastHasLOS: boolean | null = null;
 
-  
+  public xpReward = 1200;
+
   constructor(
     protected scene: Scene,
     name: string,
