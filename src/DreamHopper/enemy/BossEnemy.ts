@@ -23,8 +23,8 @@ export class BossEnemy extends Enemy {
   ) {
     super(scene, name, assetManager, shadowGenerator, position, highlightLayer, targetingSystem, game);
    
-    this.attackRange = 20;
-    this.aggroRadius = 30;
+    this.attackRange = 15;
+    this.aggroRadius = 25;
     this.maxHP = 250;
     this.currentHP = 250;
   
