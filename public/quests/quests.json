@@ -6,7 +6,7 @@
     "inProgressText": "Allez, Dreamhopper. Que votre lumière perce les ténèbres de Dreamland. Vous avez déjà accompli une partie du chemin. Mais tous les Fragments de Rêve n’ont pas encore été retrouvés.",
     "completedText": "Je ressens l’équilibre revenir… Vous avez retrouvé les Fragments de Rêve. Dreamland vous doit la vie.",
     "turnedInText": "Merci, Dreamhopper. Grâce à vous, les Perdus reposent enfin, apaisés… sous forme de licornes en peluche. Dreamland se souviendra de vous.",
-    "requiredCrystals": 1,
+    "requiredCrystals": 12,
     "requiredEnemies": 0,
     "type": "COLLECT",
     "nextQuestId": "quest2"
@@ -19,7 +19,7 @@
     "completedText": "Le silence revient, fragile mais réel… Grâce à vous, l'écho des Perdus s'estompe, ils ne tourmenteront plus Dreamland.",
     "turnedInText": "Merci, Dreamhopper. Dreamland n'oubliera pas votre lumière.",
     "requiredCrystals": 0,
-    "requiredEnemies": 5,
+    "requiredEnemies": 6,
     "type": "KILL",
     "nextQuestId": "quest3"
   },
