@@ -119,66 +119,103 @@ export default defineComponent({
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Petrona:wght@500;700&family=Quicksand:wght@400;600&display=swap');
+
 .quest-dialog {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 400px;
-  background: rgba(0, 0, 50, 0.9);
-  border: 2px solid #ffd700;
-  border-radius: 15px;
-  padding: 20px;
+  width: 480px;
+  padding: 36px 42px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #1e1739 0%, #2a204d 100%);
+  box-shadow:
+    0 12px 30px rgba(40, 20, 80, 0.7),
+    inset 0 0 18px rgba(170, 120, 255, 0.08);
+  border: 2px solid rgba(110, 90, 180, 0.3);
+  color: #d6d1f3;
+  font-family: 'Quicksand', sans-serif;
+  animation: fadeInDream 0.5s ease-out;
   z-index: 10000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-family: "Roboto Condensed", sans-serif;
-  display: block;
-  visibility: visible;
+}
+
+@keyframes fadeInDream {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -56%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .dialog-content {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-}
-
-h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #ffd700;
+  gap: 20px;
   text-align: center;
 }
 
-p {
+h2 {
+  font-family: 'Petrona', serif;
+  font-size: 28px;
+  color: #c4b1ff;
+  text-shadow: 0 0 6px rgba(160, 120, 255, 0.4);
   margin: 0;
-  font-size: 16px;
+}
+
+p {
+  font-size: 16.5px;
+  font-weight: 500;
+  color: #cabff3;
   line-height: 1.6;
-  color: #e0e0e0;
+  white-space: pre-line;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 18px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 12px rgba(180, 140, 255, 0.05);
 }
 
 .buttons {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 button {
-  padding: 10px 20px;
-  background: #2196f3;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+  background: linear-gradient(145deg, #5c4d9a, #6e5db6);
+  border: 2px solid #7e6fd0;
+  border-radius: 14px;
+  padding: 10px 28px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #e7e2ff;
+  box-shadow: 0 4px 12px rgba(120, 90, 200, 0.3);
+  transition: all 0.3s ease;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
+  user-select: none;
 }
 
 button:hover {
-  background: #21cbf3;
+  background: linear-gradient(145deg, #6e5db6, #8772dd);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 18px rgba(160, 120, 255, 0.4);
 }
 
 button:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
+  box-shadow: inset 0 3px 8px rgba(80, 60, 160, 0.5);
 }
+
+button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 24px 6px #9b8defaa,
+    inset 0 0 18px 6px #7c6dd4bb;
+}
+
 </style>

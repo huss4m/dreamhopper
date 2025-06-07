@@ -839,4 +839,9 @@ protected hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
   // // // console.log(`Enemy ${this.id}: LOS check - distance: ${distance.toFixed(2)}, hasLOS: ${hasLOS}, hit mesh: ${hit?.pickedMesh?.name || "none"}, checked meshes: ${checkedMeshCount}`);
   return hasLOS;
 }
+
+
+public isCastingNightmareBolt(): boolean {
+  return this.animationManager.getAnimationByName("NightmareBolt")?.isPlaying || false;
+}
 }
