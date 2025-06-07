@@ -106,7 +106,7 @@ export class Enemy implements Hoverable, Targettable {
 
     // Distance-based culling
     const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-    const cullingDistance = this.aggroRadius * 2; // 40 units
+    const cullingDistance = 110;
     if (distanceToPlayer > cullingDistance) {
       if (this.isAggroed || this.isAttacking) {
         this.isAggroed = false;
@@ -825,6 +825,16 @@ protected hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
   const ray = new Ray(enemyPos, direction.normalize(), distance);
 
 
+  /*
+  const rayHelper = new RayHelper(ray);
+  rayHelper.show(this.scene, new Color3(1, 0, 0));  
+
+  
+  setTimeout(() => {
+    rayHelper.hide();
+    rayHelper.dispose();
+  }, 500);
+  */
 
   // Perform raycast, only hitting meshes tagged as "obstacle"
   let checkedMeshCount = 0;
