@@ -88,7 +88,7 @@ export class Enemy implements Hoverable, Targettable {
 
   protected setupBehavior(): void {
   if (this.isNPC) {
-  // // // // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+    console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
     return;
   }
 
@@ -113,7 +113,7 @@ export class Enemy implements Hoverable, Targettable {
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.startWandering();
-        //// // // console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
+        console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
       }
       return; // Skip further processing
     }
@@ -124,7 +124,7 @@ export class Enemy implements Hoverable, Targettable {
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-       // // // // console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
+        console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
       }
       return;
     }
@@ -134,13 +134,13 @@ export class Enemy implements Hoverable, Targettable {
       this.isAggroed = true;
       this.isAttacking = false;
       this.physicsController.stopAllMovement();
-      //// // // console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
+      console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
     } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
       this.isAggroed = false;
       this.isAttacking = false;
       this.physicsController.stopAllMovement();
       this.startWandering();
-      //// // // console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+      console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
     }
 
     if (this.isAggroed) {
@@ -154,22 +154,23 @@ export class Enemy implements Hoverable, Targettable {
           this.isAttacking = true;
           const animationName = this.animationManager.getAnimationByName("NightmareBolt") ? "NightmareBolt" : "Idle";
           this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
-        //  // // // console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animationName}`);
+          console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animationName}`);
         }
       } else {
         if (this.isAttacking) {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
-         // // // // console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
+          console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
         }
         this.moveTo(playerMesh.position);
         this.animationManager.playAnimation("Run");
-       // // // // console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
+        console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
       }
     } else {
+      // Wandering animation logic
       const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
       if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
-        this.animationManager.playAnimation("Run");
+        this.animationManager.playAnimation("Run", 1.0, undefined, undefined, false);
       } else {
         this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
       }

@@ -159,8 +159,11 @@ export class EnemyPhysicsController {
     });
   }
 
-  public startWandering(maxDistance = 10): void {
-  if (!this.mesh || !this.physicsController || !this.crowd || this.agentIndex === -1) return;
+  public startWandering(maxDistance = 2): void {
+  if (!this.mesh || !this.physicsController || !this.crowd || this.agentIndex === -1) {
+    console.warn(`EnemyPhysicsController: Cannot start wandering - mesh, physicsController, crowd, or agentIndex missing`);
+    return;
+  }
 
   this.stopWandering();
 
@@ -168,55 +171,52 @@ export class EnemyPhysicsController {
 
   const moveToNextTarget = () => {
     const randomDirection = this.generateRandomDirection();
-    const distance = 5 + Math.random() * (maxDistance - 5);
+    const distance = 2; // Fixed distance of 2 units
     const roughTarget = this.mesh.position.add(randomDirection.scale(distance));
 
     let finalTarget = roughTarget;
 
-    // Make sure target is on the navmesh
+    // Ensure target is on the navmesh
     if (this.navigationPlugin) {
       const closest = this.navigationPlugin.getClosestPoint(roughTarget);
       if (closest) {
         finalTarget = closest;
       } else {
-        console.warn("startWandering: No valid navmesh point for target");
+        console.warn("startWandering: No valid navmesh point for target, retrying");
+        setTimeout(moveToNextTarget, 1000); // Retry after 1 second if no valid point
         return;
       }
     }
 
     this.crowd.agentGoto(this.agentIndex, finalTarget);
-    //this.enemy.getAnimationManager().playAnimation("Run");
-
     waitingForNextTarget = false;
   };
 
   this.wanderObserver = this.scene.onBeforeRenderObservable.add(() => {
     const aggregate = this.physicsController.getPhysicsAggregate();
-    if (!aggregate || !this.crowd) return;
+    if (!aggregate || !this.crowd) {
+      console.warn("startWandering: Physics aggregate or crowd is null, stopping");
+      this.stopWandering();
+      return;
+    }
 
     const agentVelocity = this.crowd.getAgentVelocity(this.agentIndex);
 
-    if (agentVelocity.lengthSquared() < 0.01) {
-      if (!waitingForNextTarget) {
-        waitingForNextTarget = true;
-
-      
-        setTimeout(() => {
-          moveToNextTarget();
-        }, 3000); // Delay before wandering again
-      }
-    } else {
+    if (agentVelocity.lengthSquared() < 0.01 && !waitingForNextTarget) {
+      waitingForNextTarget = true;
+      setTimeout(() => {
+        moveToNextTarget();
+      }, 3000); // Idle for 3 seconds before picking a new target
+    } else if (agentVelocity.lengthSquared() >= 0.01) {
       // Smooth rotation toward velocity
       const flatVel = new Vector3(agentVelocity.x, 0, agentVelocity.z);
       if (flatVel.lengthSquared() > 0.05) {
         const desiredAngle = Math.atan2(flatVel.x, flatVel.z) + Math.PI;
         const targetRotation = Quaternion.RotationAxis(Vector3.Up(), desiredAngle);
-
-        // Interpolate rotation smoothly
         this.mesh.rotationQuaternion = Quaternion.Slerp(
           this.mesh.rotationQuaternion ?? Quaternion.Identity(),
           targetRotation,
-          0.1 // Smooth factor (tweak as needed)
+          0.1 // Smooth rotation
         );
       }
 
@@ -226,6 +226,7 @@ export class EnemyPhysicsController {
         aggregate.body.setLinearVelocity(horizVel);
       } catch (e) {
         console.warn("startWandering: Failed to set velocity", e);
+        this.stopWandering();
       }
     }
   });
