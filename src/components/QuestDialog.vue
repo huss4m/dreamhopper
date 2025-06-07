@@ -119,28 +119,29 @@ export default defineComponent({
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Petrona:wght@500;700&family=Quicksand:wght@400;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Quicksand:wght@400;600&display=swap");
 
 .quest-dialog {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 480px;
+  width: 500px;
   padding: 36px 42px;
-  border-radius: 22px;
-  background: linear-gradient(145deg, #1e1739 0%, #2a204d 100%);
+  border-radius: 20px;
+  background: rgba(30, 30, 60, 0.92);
+  backdrop-filter: blur(14px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    0 12px 30px rgba(40, 20, 80, 0.7),
-    inset 0 0 18px rgba(170, 120, 255, 0.08);
-  border: 2px solid rgba(110, 90, 180, 0.3);
-  color: #d6d1f3;
-  font-family: 'Quicksand', sans-serif;
-  animation: fadeInDream 0.5s ease-out;
+    0 0 18px rgba(90, 180, 255, 0.35),
+    0 0 32px rgba(100, 200, 255, 0.2);
+  color: #f0f8ff;
+  font-family: "Quicksand", sans-serif;
+  animation: dialogFade 0.5s ease;
   z-index: 10000;
 }
 
-@keyframes fadeInDream {
+@keyframes dialogFade {
   from {
     opacity: 0;
     transform: translate(-50%, -56%);
@@ -159,23 +160,24 @@ export default defineComponent({
 }
 
 h2 {
-  font-family: 'Petrona', serif;
-  font-size: 28px;
-  color: #c4b1ff;
-  text-shadow: 0 0 6px rgba(160, 120, 255, 0.4);
+  font-family: "Cinzel Decorative", cursive;
+  font-size: 26px;
+  font-weight: 700;
   margin: 0;
+  color: #bfcaff; /* dreamy bluish-lavender */
+  text-shadow: 0 0 8px rgba(190, 210, 255, 0.6);
 }
 
 p {
-  font-size: 16.5px;
+  font-size: 15px;
   font-weight: 500;
-  color: #cabff3;
+  color: #e2f1ff;
   line-height: 1.6;
-  white-space: pre-line;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 20px;
   border-radius: 14px;
-  box-shadow: inset 0 0 12px rgba(180, 140, 255, 0.05);
+  box-shadow: inset 0 0 10px rgba(200, 220, 255, 0.05);
+  white-space: pre-line;
 }
 
 .buttons {
@@ -186,36 +188,57 @@ p {
 }
 
 button {
-  background: linear-gradient(145deg, #5c4d9a, #6e5db6);
-  border: 2px solid #7e6fd0;
+  background: linear-gradient(to right, #4fc3f7, #1976d2);
+  border: none;
   border-radius: 14px;
   padding: 10px 28px;
-  font-family: 'Quicksand', sans-serif;
+  font-family: "Quicksand", sans-serif;
   font-size: 15.5px;
   font-weight: 600;
-  color: #e7e2ff;
-  box-shadow: 0 4px 12px rgba(120, 90, 200, 0.3);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(79, 195, 247, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.05);
   transition: all 0.3s ease;
   cursor: pointer;
   user-select: none;
 }
 
 button:hover {
-  background: linear-gradient(145deg, #6e5db6, #8772dd);
+  background: linear-gradient(to right, #6ec6ff, #2196f3);
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 6px 18px rgba(160, 120, 255, 0.4);
+  box-shadow: 0 0 14px rgba(100, 200, 255, 0.5);
 }
 
 button:active {
-  transform: scale(0.94);
-  box-shadow: inset 0 3px 8px rgba(80, 60, 160, 0.5);
+  transform: scale(0.95);
+  box-shadow: inset 0 4px 10px rgba(25, 118, 210, 0.4);
 }
 
 button:focus-visible {
   outline: none;
   box-shadow:
-    0 0 24px 6px #9b8defaa,
-    inset 0 0 18px 6px #7c6dd4bb;
+    0 0 18px rgba(120, 180, 255, 0.6),
+    inset 0 0 10px rgba(150, 200, 255, 0.3);
 }
+
+@media (max-width: 600px) {
+  .quest-dialog {
+    width: 90%;
+    padding: 24px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+
+  button {
+    padding: 10px 22px;
+    font-size: 14px;
+  }
+}
+
 
 </style>
