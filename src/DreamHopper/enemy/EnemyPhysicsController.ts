@@ -40,7 +40,7 @@ export class EnemyPhysicsController {
         maxAcceleration: 8.0,
         maxSpeed: 3,
         collisionQueryRange: 3,
-        pathOptimizationRange: 50,
+        pathOptimizationRange: 0,
         separationWeight: 3,
       };
       this.agentIndex = this.crowd.addAgent(this.navDummy.position, agentParams, this.navDummy);
