@@ -49,6 +49,9 @@ export class Enemy implements Hoverable, Targettable {
   protected losCheckInterval = 500; 
   protected lastHasLOS: boolean | null = null;
 
+  private lastHealthBarUpdateTime = 0;
+  private healthBarUpdateInterval = 100;
+
   public xpReward = 200;
 
   constructor(
@@ -106,7 +109,7 @@ export class Enemy implements Hoverable, Targettable {
 
     // Distance-based culling
     const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-    const cullingDistance = 110;
+    const cullingDistance = 40;
     if (distanceToPlayer > cullingDistance) {
       if (this.isAggroed || this.isAttacking) {
         this.isAggroed = false;
@@ -178,89 +181,130 @@ export class Enemy implements Hoverable, Targettable {
   });
 }
 
+  protected setupHealthBarObserver(): void {
+  const nearUpdateInterval = 100; // Update nearby health bars every 100ms
+  const farUpdateInterval = 500; // Update distant health bars every 500ms
+  const visibilityDistance = 30; // Show health bars within 30 units
+  const hitboxHeight = 2.0;
+  const yOffset = 0.2;
+  let floatPhase = 0;
+
+  this.healthBarObserver = this.scene.onBeforeRenderObservable.add(() => {
+    if (!this.healthBarPlane || !this.hitboxMesh || this.hitboxMesh.isDisposed()) {
+      console.warn(`Enemy ${this.id}: Health bar update skipped - plane or hitbox disposed`);
+      this.disposeHealthBar();
+      return;
+    }
+
+    const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
+    if (!playerMesh) {
+      this.healthBarPlane.isVisible = false;
+      return;
+    }
+
+    const currentTime = performance.now();
+    const distanceToPlayer = Vector3.Distance(this.enemyMesh!.position, playerMesh.position);
+    const isRelevant = this.isTargetted || this.isAggroed || distanceToPlayer <= visibilityDistance;
+    this.healthBarUpdateInterval = distanceToPlayer > visibilityDistance ? farUpdateInterval : nearUpdateInterval;
+
+    // Hide health bar if not relevant
+    if (!isRelevant) {
+      this.healthBarPlane.isVisible = false;
+      return;
+    }
+
+    // Only update if enough time has passed
+    if (currentTime - this.lastHealthBarUpdateTime < this.healthBarUpdateInterval) {
+      return;
+    }
+    this.lastHealthBarUpdateTime = currentTime;
+
+    // Update position with floating effect
+    this.healthBarPlane.isVisible = true;
+    this.hitboxMesh.computeWorldMatrix(true);
+    const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
+    floatPhase += this.scene.getEngine().getDeltaTime() * 0.002;
+    const floatY = Math.sin(floatPhase) * 0.05;
+    this.healthBarPlane.position = new Vector3(
+      this.hitboxMesh.absolutePosition.x,
+      hitboxTopY + yOffset + floatY,
+      this.hitboxMesh.absolutePosition.z
+    );
+  });
+}
+
   protected setupHealthBar(isNPC = false): void {
-    if (isNPC) {
-      // // // console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
-      return;
-    }
-
-    if (!this.enemyMesh || !this.hitboxMesh) {
-      console.error(`Enemy ${this.id}: Cannot setup health bar, enemy mesh or hitbox is null`);
-      return;
-    }
-
-    try {
-      const hitboxHeight = 2.0;
-      const yOffset = 0.2;
-      this.hitboxMesh.computeWorldMatrix(true);
-      const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
-
-      this.healthBarPlane = MeshBuilder.CreatePlane(`healthBar_${this.id}`, {
-        width: 1.5,
-        height: 0.15,
-      }, this.scene);
-
-      this.healthBarPlane.position = new Vector3(
-        this.hitboxMesh.absolutePosition.x,
-        hitboxTopY + yOffset,
-        this.hitboxMesh.absolutePosition.z
-      );
-      this.healthBarPlane.isPickable = false;
-      this.healthBarPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
-      this.healthBarPlane.isVisible = true;
-      this.healthBarPlane.renderingGroupId = 0;
-      this.healthBarPlane.alwaysSelectAsActiveMesh = false;
-
-      this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
-      // // // console.log(`Enemy ${this.id}: Health bar texture created, resolution: 768x96`);
-
-      this.healthBarBackground = new Rectangle(`healthBarBg_${this.id}`);
-      this.healthBarBackground.width = "100%";
-      this.healthBarBackground.height = "100%";
-      this.healthBarBackground.thickness = 1;
-      this.healthBarBackground.color = "rgba(255, 255, 255, 0.4)";
-      this.healthBarBackground.background = "rgba(200, 160, 255, 0.2)";
-      this.healthBarBackground.cornerRadius = 150;
-      this.healthBarTexture.addControl(this.healthBarBackground);
-
-      this.healthBarFill = new Rectangle(`healthBarFill_${this.id}`);
-      this.healthBarFill.width = `${(this.currentHP / this.maxHP) * 100}%`;
-      this.healthBarFill.height = "90%";
-      this.healthBarFill.horizontalAlignment = Rectangle.HORIZONTAL_ALIGNMENT_LEFT;
-      this.healthBarFill.background = "rgba(33, 184, 221, 0.95)";
-      this.healthBarFill.thickness = 0;
-      this.healthBarFill.cornerRadius = 90;
-      this.healthBarTexture.addControl(this.healthBarFill);
-
-      let floatPhase = 0;
-      this.healthBarObserver = this.scene.onBeforeRenderObservable.add(() => {
-        if (this.healthBarPlane && this.hitboxMesh && !this.hitboxMesh.isDisposed()) {
-          this.hitboxMesh.computeWorldMatrix(true);
-          const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
-          floatPhase += this.scene.getEngine().getDeltaTime() * 0.002;
-          const floatY = Math.sin(floatPhase) * 0.05;
-          this.healthBarPlane.position = new Vector3(
-            this.hitboxMesh.absolutePosition.x,
-            hitboxTopY + yOffset + floatY,
-            this.hitboxMesh.absolutePosition.z
-          );
-        }
-      });
-
-      this.updateHealthBar();
-      // // // console.log(`Enemy ${this.id}: Dreamland health bar setup complete!`);
-    } catch (error) {
-      console.error(`Enemy ${this.id}: Failed to setup dreamland health bar`, error);
-    }
+  if (isNPC) {
+    console.log(`Enemy ${this.id}: Skipping health bar setup for NPC`);
+    return;
   }
+
+  if (!this.enemyMesh || !this.hitboxMesh) {
+    console.error(`Enemy ${this.id}: Cannot setup health bar, enemy mesh or hitbox is null`);
+    return;
+  }
+
+  try {
+    const hitboxHeight = 2.0;
+    const yOffset = 0.2;
+    this.hitboxMesh.computeWorldMatrix(true);
+    const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
+
+    this.healthBarPlane = MeshBuilder.CreatePlane(`healthBar_${this.id}`, {
+      width: 1.5,
+      height: 0.15,
+    }, this.scene);
+
+    this.healthBarPlane.position = new Vector3(
+      this.hitboxMesh.absolutePosition.x,
+      hitboxTopY + yOffset,
+      this.hitboxMesh.absolutePosition.z
+    );
+    this.healthBarPlane.isPickable = false;
+    this.healthBarPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    this.healthBarPlane.isVisible = false; // Start invisible
+    this.healthBarPlane.renderingGroupId = 0;
+    this.healthBarPlane.alwaysSelectAsActiveMesh = false;
+
+    this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
+
+    this.healthBarBackground = new Rectangle(`healthBarBg_${this.id}`);
+    this.healthBarBackground.width = "100%";
+    this.healthBarBackground.height = "100%";
+    this.healthBarBackground.thickness = 1;
+    this.healthBarBackground.color = "rgba(255, 255, 255, 0.4)";
+    this.healthBarBackground.background = "rgba(200, 160, 255, 0.2)";
+    this.healthBarBackground.cornerRadius = 150;
+    this.healthBarTexture.addControl(this.healthBarBackground);
+
+    this.healthBarFill = new Rectangle(`healthBarFill_${this.id}`);
+    this.healthBarFill.width = `${(this.currentHP / this.maxHP) * 100}%`;
+    this.healthBarFill.height = "90%";
+    this.healthBarFill.horizontalAlignment = Rectangle.HORIZONTAL_ALIGNMENT_LEFT;
+    this.healthBarFill.background = "rgba(33, 184, 221, 0.95)";
+    this.healthBarFill.thickness = 0;
+    this.healthBarFill.cornerRadius = 90;
+    this.healthBarTexture.addControl(this.healthBarFill);
+
+    // Initialize update timing
+    this.lastHealthBarUpdateTime = 0;
+    this.healthBarUpdateInterval = 100; // Default to 100ms, adjusted in observer
+
+    this.setupHealthBarObserver();
+    this.updateHealthBar();
+    console.log(`Enemy ${this.id}: Health bar setup complete`);
+  } catch (error) {
+    console.error(`Enemy ${this.id}: Failed to setup health bar`, error);
+  }
+}
 
   protected updateHealthBar(): void {
-    if (this.healthBarFill) {
-      const hpRatio = Math.max(0, this.currentHP / this.maxHP);
-      this.healthBarFill.width = `${hpRatio * 100}%`;
-      // // console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}, alignment: left`);
-    }
+  if (this.healthBarFill && this.healthBarPlane?.isVisible) {
+    const hpRatio = Math.max(0, this.currentHP / this.maxHP);
+    this.healthBarFill.width = `${hpRatio * 100}%`;
+    console.log(`Enemy ${this.id}: Health bar updated, HP: ${this.currentHP}/${this.maxHP}, fill width: ${this.healthBarFill.width}`);
   }
+}
 
   protected disposeHealthBar(): void {
     if (this.healthBarObserver) {

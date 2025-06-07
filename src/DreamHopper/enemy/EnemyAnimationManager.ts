@@ -391,6 +391,9 @@ export class EnemyAnimationManager {
     toFrame?: number,
     loop = true
   ): void {
+
+   
+    
     const newAnim = this.getAnimationByName(name);
     if (!newAnim) {
       console.warn(`Animation group '${name}' not found`);
