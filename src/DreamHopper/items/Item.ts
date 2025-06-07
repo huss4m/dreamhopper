@@ -40,12 +40,12 @@ export class Item {
         throw new Error(`Asset container for '${this.name}' not found or has no meshes.`);
       }
 
-      console.log(`Loaded meshes for ${this.name}:`, assetContainer.meshes.map((m, i) => `Index ${i}: ${m.name}`));
+      // console.log(`Loaded meshes for ${this.name}:`, assetContainer.meshes.map((m, i) => `Index ${i}: ${m.name}`));
 
       // Clone meshes instead of reparenting
       assetContainer.meshes.forEach((mesh, index) => {
         if (index === 0) {
-          console.log(`Skipping mesh at index 0: ${mesh.name}`);
+          // console.log(`Skipping mesh at index 0: ${mesh.name}`);
           return;
         }
         const clonedMesh = mesh.clone(`${mesh.name}_clone`, this.parentMesh); // Clone and parent to parentMesh

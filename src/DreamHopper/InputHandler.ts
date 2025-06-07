@@ -53,7 +53,7 @@ export class InputHandler {
       const response = await fetch('./controls/keybindings.json');
       if (!response.ok) throw new Error(`Failed to load keybindings: ${response.status}`);
       this.layouts = (await response.json()).layouts;
-      // console.log('InputHandler: Loaded layouts:', this.layouts);
+      // // console.log('InputHandler: Loaded layouts:', this.layouts);
 
       // Set default layout
       for (const [layoutName, layout] of Object.entries(this.layouts)) {
@@ -63,7 +63,7 @@ export class InputHandler {
           break;
         }
       }
-      // console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
+      // // console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
 
       this.setupKeyboardControls();
       this.setupPointerControls();
@@ -72,7 +72,7 @@ export class InputHandler {
     } catch (error) {
       console.error('InputHandler: Error loading keybindings:', error);
       this.keyBindings["T"] = { key: "T", action: "openQuestDialog" };
-      // console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
+      // // console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
       return false;
     }
   }
@@ -92,7 +92,7 @@ export class InputHandler {
         key = '1';
       }
 
-      //// console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
+      //// // console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
         this.keyStates[key] = isDown;
       }
@@ -185,23 +185,23 @@ export class InputHandler {
             if (playerMesh && npcMesh) {
               const distance = Vector3.Distance(playerMesh.position, /*npcMesh.position*/ new Vector3(5,1,5));
               if (distance <= 5) {
-                console.log(`InputHandler: Toggling quest dialog for NPC (distance: ${distance.toFixed(2)} units)`);
+                // console.log(`InputHandler: Toggling quest dialog for NPC (distance: ${distance.toFixed(2)} units)`);
                 this.game.toggleQuestDialog();
                 if (this.game.getShowQuestDialog()) {
                   this.lastDialogTargetId = targetingSystem.getCurrentTarget()?.getId() || null;
-                  console.log(`InputHandler: Dialog opened for NPC ID: ${this.lastDialogTargetId}`);
+                  // console.log(`InputHandler: Dialog opened for NPC ID: ${this.lastDialogTargetId}`);
                 } else {
                   this.lastDialogTargetId = null;
-                  console.log("InputHandler: Dialog closed or not opened");
+                  // console.log("InputHandler: Dialog closed or not opened");
                 }
               } else {
-                console.log(`InputHandler: Cannot toggle quest dialog; NPC too far (distance: ${distance.toFixed(2)} units)`);
+                // console.log(`InputHandler: Cannot toggle quest dialog; NPC too far (distance: ${distance.toFixed(2)} units)`);
               }
             } else {
-              console.log("InputHandler: Cannot toggle quest dialog; player or NPC mesh not found");
+              // console.log("InputHandler: Cannot toggle quest dialog; player or NPC mesh not found");
             }
           } else {
-            console.log("InputHandler: Cannot toggle quest dialog; no NPC targeted");
+            // console.log("InputHandler: Cannot toggle quest dialog; no NPC targeted");
           }
         }
         break;
@@ -209,7 +209,7 @@ export class InputHandler {
         if (!this.wasLayoutTogglePressed) {
           this.currentLayout = this.currentLayout === "AZERTY" ? "QWERTY" : "AZERTY";
           this.keyBindings = this.layouts[this.currentLayout].bindings;
-          console.log(`InputHandler: Switched to ${this.currentLayout} layout`);
+          // console.log(`InputHandler: Switched to ${this.currentLayout} layout`);
         }
         break;
     }
@@ -237,13 +237,13 @@ export class InputHandler {
         !playerMesh ||
         !npcMesh
       ) {
-        console.log("InputHandler: Closing quest dialog; NPC no longer targeted or meshes unavailable");
+        // console.log("InputHandler: Closing quest dialog; NPC no longer targeted or meshes unavailable");
         this.game.toggleQuestDialog();
         this.lastDialogTargetId = null;
       } else {
         const distance = Vector3.Distance(playerMesh.position, new Vector3(5,1,5));
         if (distance > 5) {
-          console.log(`InputHandler: Closing quest dialog; player too far from NPC (distance: ${distance.toFixed(2)} units)`);
+          // console.log(`InputHandler: Closing quest dialog; player too far from NPC (distance: ${distance.toFixed(2)} units)`);
           this.game.toggleQuestDialog();
           this.lastDialogTargetId = null;
         }
@@ -276,7 +276,7 @@ export class InputHandler {
     }
 
     if (this.keyStates["T"] && !this.wasQuestDialogPressed) {
-      console.log("InputHandler: T key pressed, executing openQuestDialog");
+      // console.log("InputHandler: T key pressed, executing openQuestDialog");
       const questDialogBinding = this.keyBindings["T"];
       if (questDialogBinding) this.executeAction(questDialogBinding);
       this.wasQuestDialogPressed = true;
@@ -322,7 +322,7 @@ export class InputHandler {
     if (isDreamboltPlaying) {
       const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
       if (hasMovement) {
-        console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
+        // console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
         this.characterController.animationManager.cancelDreambolt();
       }
     }

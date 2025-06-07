@@ -55,7 +55,7 @@ export class ItemAttachmentManager {
    
       itemMesh.parent = null;
   
-      console.log(`Item '${item.getName()}' detached from bone.`);
+      // console.log(`Item '${item.getName()}' detached from bone.`);
     } catch (err) {
       console.error(`Error detaching item '${item.getName()}':`, err);
     }

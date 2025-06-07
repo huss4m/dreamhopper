@@ -1,4 +1,4 @@
-import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, HighlightLayer, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion, Animation } from "@babylonjs/core";
+import { AbstractMesh, ActionManager, AnimationGroup, AssetContainer, CascadedShadowGenerator, Color3, DynamicTexture, ExecuteCodeAction, Mesh, MeshBuilder, PBRMaterial, PointerEventTypes, Scene, Skeleton, Sprite, SpriteManager, StandardMaterial, Tags, Texture, Vector3, Observable, Quaternion, Animation } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Image as GUIImage } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
 import { Hoverable, HoverHandler, HoverConfig } from "../HoverableSystem";
@@ -30,7 +30,6 @@ export class NPC implements Hoverable, Targettable {
 
   assetManager!: AssetManager;
   shadowGenerator!: CascadedShadowGenerator;
-  highlightLayer: HighlightLayer;
   static availableSpriteManager: SpriteManager | null = null;
   static completedSpriteManager: SpriteManager | null = null;
   position: Vector3;
@@ -41,31 +40,24 @@ export class NPC implements Hoverable, Targettable {
     assetManager: AssetManager,
     shadowGenerator: CascadedShadowGenerator,
     position: Vector3,
-    highlightLayer: HighlightLayer,
     targetingSystem: TargetingSystem,
     private game: Game,
     initialQuest: Quest | null = null // Changed: Renamed for clarity
   ) {
     this.id = uuidv4();
-    this.highlightLayer = highlightLayer;
     this.assetManager = assetManager;
     this.shadowGenerator = shadowGenerator;
     this.position = position;
     this.animationManager = new NPCAnimationManager(this.scene);
     if (initialQuest) {
       this.quests.push(initialQuest); // Initialize questline with first quest
-      console.log(`NPC ${this.id}: Assigned initial quest ${initialQuest.getId()}`);
+      // console.log(`NPC ${this.id}: Assigned initial quest ${initialQuest.getId()}`);
     }
 
     const hoverConfig: HoverConfig = {
-      highlightColor: Color3.Yellow(),
       customCursorUrl: "./images/cursorTargetAlly.png",
-      innerGlow: true,
-      outerGlow: false,
-      blurHorizontalSize: 0.5,
-      blurVerticalSize: 0.5,
     };
-    this.hoverHandler = new HoverHandler(this.scene, this.highlightLayer, hoverConfig);
+    this.hoverHandler = new HoverHandler(this.scene, hoverConfig);
 
     targetingSystem.registerTarget(this);
 
@@ -98,12 +90,12 @@ export class NPC implements Hoverable, Targettable {
     const direction = playerMesh.position.subtract(this.npcMesh.position);
     direction.y = 0;
     if (direction.lengthSquared() < 0.01) {
-      console.log(`NPC ${this.id}: Player too close, skipping rotation`);
+      // console.log(`NPC ${this.id}: Player too close, skipping rotation`);
       return;
     }
 
     this.physicsController.orientToForwardDirection(direction);
-    console.log(`NPC ${this.id}: Rotated to face player`);
+    // console.log(`NPC ${this.id}: Rotated to face player`);
   }
 
   public async loadCharacter(name: string, position: Vector3): Promise<void> {
@@ -121,7 +113,7 @@ export class NPC implements Hoverable, Targettable {
 
       this.npcMesh.position = position;
       this.npcMesh.checkCollisions = true;
-      this.npcMesh.isPickable = true;
+      this.npcMesh.isPickable = false;
 
       this.npcMesh.getChildMeshes().forEach((mesh) => {
         const mat = mesh.material as PBRMaterial;
@@ -133,7 +125,7 @@ export class NPC implements Hoverable, Targettable {
           mat.microSurface = 0.8;
         }
         mesh.checkCollisions = true;
-        mesh.isPickable = true;
+        mesh.isPickable = false;
       });
 
       if (this.shadowGenerator) {
@@ -174,7 +166,6 @@ export class NPC implements Hoverable, Targettable {
       const hoverable: Hoverable = {
         getMesh: () => this.hitboxMesh,
         getScene: () => this.scene,
-        getHighlightMesh: () => this.npcMesh,
       };
       this.hoverHandler.setupHover(hoverable);
 
@@ -215,14 +206,14 @@ export class NPC implements Hoverable, Targettable {
 
     const rootMesh = entries.rootNodes[0] as Mesh;
     this.npcMesh = rootMesh;
-    this.npcMesh.isPickable = true;
+    this.npcMesh.isPickable = false;
     this.npcSkeleton = entries.skeletons[0];
     rootMesh.setEnabled(true);
     rootMesh.position = position;
 
     entries.rootNodes[0].getChildMeshes().forEach((mesh: AbstractMesh) => {
       mesh.setEnabled(true);
-      mesh.isPickable = true;
+      mesh.isPickable = false;
     });
 
     entries.animationGroups.forEach((animGroup) => {
@@ -242,11 +233,11 @@ export class NPC implements Hoverable, Targettable {
       }
       this.questMarker.dispose();
       this.questMarker = null;
-      console.log(`NPC ${this.id}: Cleared existing quest marker`);
+      // console.log(`NPC ${this.id}: Cleared existing quest marker`);
     }
 
     if (!markerType || !this.npcMesh) {
-      console.log(`NPC ${this.id}: No quest marker set (markerType=${markerType}, npcMesh=${!!this.npcMesh})`);
+      // console.log(`NPC ${this.id}: No quest marker set (markerType=${markerType}, npcMesh=${!!this.npcMesh})`);
       return;
     }
 
@@ -261,7 +252,7 @@ export class NPC implements Hoverable, Targettable {
             { width: 512, height: 512 },
             this.scene
           );
-          console.log(`NPC ${this.id}: Created availableSpriteManager`);
+          // console.log(`NPC ${this.id}: Created availableSpriteManager`);
         }
         spriteManager = NPC.availableSpriteManager;
       } else if (markerType === "completed") {
@@ -273,7 +264,7 @@ export class NPC implements Hoverable, Targettable {
             { width: 512, height: 512 },
             this.scene
           );
-          console.log(`NPC ${this.id}: Created completedSpriteManager`);
+          // console.log(`NPC ${this.id}: Created completedSpriteManager`);
         }
         spriteManager = NPC.completedSpriteManager;
       }
@@ -287,7 +278,7 @@ export class NPC implements Hoverable, Targettable {
       this.questMarker.width = 1;
       this.questMarker.height = 1;
       this.questMarker.isPickable = false;
-      console.log(`NPC ${this.id}: Created quest marker sprite for ${markerType}`);
+      // console.log(`NPC ${this.id}: Created quest marker sprite for ${markerType}`);
 
       this.npcMesh.refreshBoundingInfo();
       const boundingBox = this.npcMesh.getBoundingInfo().boundingBox;
@@ -311,7 +302,7 @@ export class NPC implements Hoverable, Targettable {
           this.questMarker.position = updatedHeadPosition;
         }
       });
-      console.log(`NPC ${this.id}: Quest marker set to ${markerType} at position`, headPosition);
+      // console.log(`NPC ${this.id}: Quest marker set to ${markerType} at position`, headPosition);
     } catch (error) {
       console.error(`NPC ${this.id}: Failed to set quest marker sprite for ${markerType}`, error);
     }
@@ -320,13 +311,13 @@ export class NPC implements Hoverable, Targettable {
   public updateQuestMarker(): void {
     const currentQuest = this.getQuest();
     if (!currentQuest) {
-      console.log(`NPC ${this.id}: No quest available, clearing marker`);
+      // console.log(`NPC ${this.id}: No quest available, clearing marker`);
       this.setQuestMarker(null);
       return;
     }
 
     const state = currentQuest.getState();
-    console.log(`NPC ${this.id}: Updating marker for quest ${currentQuest.getId()}, status: ${state.status}`);
+    // console.log(`NPC ${this.id}: Updating marker for quest ${currentQuest.getId()}, status: ${state.status}`);
 
     if (state.status === "completed") {
       this.setQuestMarker("completed"); // Show question mark
@@ -335,10 +326,10 @@ export class NPC implements Hoverable, Targettable {
       const nextQuest = this.quests.find(q => q.getId() === currentQuest.getNextQuestId());
       if (nextQuest) {
         this.currentQuestIndex = this.quests.indexOf(nextQuest);
-        console.log(`NPC ${this.id}: Advanced to quest ${nextQuest.getId()}`);
+        // console.log(`NPC ${this.id}: Advanced to quest ${nextQuest.getId()}`);
         this.setQuestMarker("available"); // Show exclamation mark for next quest
       } else {
-        console.log(`NPC ${this.id}: Next quest ${currentQuest.getNextQuestId()} not found, clearing marker`);
+        // console.log(`NPC ${this.id}: Next quest ${currentQuest.getNextQuestId()} not found, clearing marker`);
         this.setQuestMarker(null);
       }
     } else if (state.status === "inProgress" || state.status === "turnedIn") {
@@ -359,13 +350,13 @@ export class NPC implements Hoverable, Targettable {
         this.npcMesh.position.z
       );
 
-      console.log(`NPC ${this.id}: position:`, this.npcMesh.position);
-      console.log(`NPC ${this.id}: feet position:`, feetPosition);
-      console.log(`NPC ${this.id}: bounding box min:`, boundingBox.minimumWorld);
-      console.log(`NPC ${this.id}: bounding box max:`, boundingBox.maximumWorld);
+      // console.log(`NPC ${this.id}: position:`, this.npcMesh.position);
+      // console.log(`NPC ${this.id}: feet position:`, feetPosition);
+      // console.log(`NPC ${this.id}: bounding box min:`, boundingBox.minimumWorld);
+      // console.log(`NPC ${this.id}: bounding box max:`, boundingBox.maximumWorld);
 
       if (isTargetted) {
-        console.log(`NPC ${this.id}: Adding target circle at`, feetPosition);
+        // console.log(`NPC ${this.id}: Adding target circle at`, feetPosition);
         this.targetCircle = MeshBuilder.CreateDisc(`targetCircle_${this.id}`, {
           radius: 0.5,
           tessellation: 32,
@@ -411,13 +402,10 @@ export class NPC implements Hoverable, Targettable {
 
         this.targetCircle.metadata = { observer };
 
-        console.log(`NPC ${this.id}: Adding highlight to NPC and its children`);
-        this.highlightLayer.addMesh(this.npcMesh, Color3.Red(), true);
-        this.npcMesh.getChildMeshes().forEach((mesh) => {
-          this.highlightLayer.addMesh(mesh as Mesh, Color3.Red(), true);
-        });
+     
+
       } else {
-        console.log(`NPC ${this.id}: Removing target circle`);
+        // console.log(`NPC ${this.id}: Removing target circle`);
         if (this.targetCircle) {
           if (this.targetCircle.metadata?.observer) {
             this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
@@ -425,12 +413,6 @@ export class NPC implements Hoverable, Targettable {
           this.targetCircle.dispose();
           this.targetCircle = null;
         }
-
-        console.log(`NPC ${this.id}: Removing highlight from NPC and its children`);
-        this.highlightLayer.removeMesh(this.npcMesh);
-        this.npcMesh.getChildMeshes().forEach((mesh) => {
-          this.highlightLayer.removeMesh(mesh as Mesh);
-        });
       }
     } else {
       console.error(`NPC ${this.id}: Cannot set target circle or highlight, mesh is null`);
@@ -444,11 +426,11 @@ export class NPC implements Hoverable, Targettable {
    public setQuest(quest: Quest): void {
     if (!this.quests.find(q => q.getId() === quest.getId())) {
       this.quests.push(quest);
-      console.log(`NPC ${this.id}: Added quest ${quest.getId()}, questline length: ${this.quests.length}`);
+      // console.log(`NPC ${this.id}: Added quest ${quest.getId()}, questline length: ${this.quests.length}`);
     } else {
       const index = this.quests.findIndex(q => q.getId() === quest.getId());
       this.quests[index] = quest;
-      console.log(`NPC ${this.id}: Updated quest ${quest.getId()} in questline`);
+      // console.log(`NPC ${this.id}: Updated quest ${quest.getId()} in questline`);
     }
     this.updateQuestMarker();
   }
@@ -544,7 +526,7 @@ export class NPC implements Hoverable, Targettable {
     this.npcSkeleton = null;
     this.quests = []; // Changed: Clear questline
     this.currentQuestIndex = 0; // New: Reset index
-    console.log(`NPC ${this.id}: Disposed, questline cleared`);
+    // console.log(`NPC ${this.id}: Disposed, questline cleared`);
   }
 
   public moveTo(position: Vector3): void {

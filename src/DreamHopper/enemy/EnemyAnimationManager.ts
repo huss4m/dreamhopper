@@ -27,15 +27,15 @@ export class EnemyAnimationManager {
 
   public initialize(animationGroups: AnimationGroup[]): void {
     this.animationGroups = animationGroups;
-    // console.log(`Initializing EnemyAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+    // // console.log(`Initializing EnemyAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
-    // console.log("EnemyAnimationManager: Loading footstep sounds");
+    // // console.log("EnemyAnimationManager: Loading footstep sounds");
     this.loadFootstepSounds();
-    // console.log(`EnemyAnimationManager: Footstep sounds loaded, count: ${this.footstepSounds.length}`);
+    // // console.log(`EnemyAnimationManager: Footstep sounds loaded, count: ${this.footstepSounds.length}`);
 
-    // console.log("EnemyAnimationManager: Preloading NightmareBolt sounds");
+    // // console.log("EnemyAnimationManager: Preloading NightmareBolt sounds");
     this.preloadNightmareBoltSounds();
-    // console.log("EnemyAnimationManager: NightmareBolt sounds preloaded");
+    // // console.log("EnemyAnimationManager: NightmareBolt sounds preloaded");
 
     const idleAnim = this.getAnimationByName("Idle");
     if (idleAnim) {
@@ -49,7 +49,7 @@ export class EnemyAnimationManager {
   }
 
   protected loadFootstepSounds(): void {
-    // console.log("EnemyAnimationManager: Starting loadFootstepSounds");
+    // // console.log("EnemyAnimationManager: Starting loadFootstepSounds");
     const soundFiles = [
       "./sfx/footstep1.wav",
       "./sfx/footstep2.wav",
@@ -61,24 +61,24 @@ export class EnemyAnimationManager {
     if (!enemyMesh) {
       console.warn("EnemyAnimationManager: Enemy mesh not available for spatial sound attachment");
     } else {
-      // console.log(`EnemyAnimationManager: Attaching footstep sounds to enemy mesh at position ${enemyMesh.getAbsolutePosition().toString()}`);
+      // // console.log(`EnemyAnimationManager: Attaching footstep sounds to enemy mesh at position ${enemyMesh.getAbsolutePosition().toString()}`);
     }
 
     for (const file of soundFiles) {
-      // console.log(`EnemyAnimationManager: Attempting to load sound ${file}`);
+      // // console.log(`EnemyAnimationManager: Attempting to load sound ${file}`);
       const sound = new Sound(
         `footstep_${file.split('/').pop()}`,
         file,
         this.scene,
         () => {
-          // console.log(`EnemyAnimationManager: Loaded footstep sound ${file} (spatial: true, attached: ${!!enemyMesh})`);
+          // // console.log(`EnemyAnimationManager: Loaded footstep sound ${file} (spatial: true, attached: ${!!enemyMesh})`);
           this.footstepSounds.push(sound);
           if (enemyMesh) {
             sound.attachToMesh(enemyMesh);
-            // console.log(`EnemyAnimationManager: Attached footstep sound ${file} to enemy mesh`);
+            // // console.log(`EnemyAnimationManager: Attached footstep sound ${file} to enemy mesh`);
           }
           if (this.footstepSounds.length === soundFiles.length) {
-            // console.log(`EnemyAnimationManager: Successfully loaded ${this.footstepSounds.length} footstep sounds`);
+            // // console.log(`EnemyAnimationManager: Successfully loaded ${this.footstepSounds.length} footstep sounds`);
           }
         },
         {
@@ -99,13 +99,13 @@ export class EnemyAnimationManager {
       return;
     }
 
-    // console.log("EnemyAnimationManager: Preloading castBolt2.wav (cast sound)");
+    // // console.log("EnemyAnimationManager: Preloading castBolt2.wav (cast sound)");
     this.castBoltSound = new Sound(
       "castBoltSound",
       "./sfx/castBolt2.wav",
       this.scene,
       () => {
-        // console.log("EnemyAnimationManager: Cast bolt sound preloaded");
+        // // console.log("EnemyAnimationManager: Cast bolt sound preloaded");
         this.castBoltSound!.attachToMesh(enemyMesh);
       },
       {
@@ -117,13 +117,13 @@ export class EnemyAnimationManager {
       }
     );
 
-    // console.log("EnemyAnimationManager: Preloading boltLaunch.wav (whoosh sound)");
+    // // console.log("EnemyAnimationManager: Preloading boltLaunch.wav (whoosh sound)");
     this.boltLaunchSound = new Sound(
       "boltLaunchSound",
       "./sfx/boltLaunch.wav",
       this.scene,
       () => {
-        // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound preloaded");
+        // // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound preloaded");
         this.boltLaunchSound!.attachToMesh(enemyMesh);
         if (!this.boltLaunchSound!.isReady()) {
           console.warn("EnemyAnimationManager: Bolt launch (whoosh) sound not ready after preload");
@@ -138,13 +138,13 @@ export class EnemyAnimationManager {
       }
     );
 
-    // console.log("EnemyAnimationManager: Preloading bolt.mp3 (ambient bolt sound)");
+    // // console.log("EnemyAnimationManager: Preloading bolt.mp3 (ambient bolt sound)");
     this.nightmareBoltSound = new Sound(
       "nightmareBoltSound",
       "./sfx/bolt.wav",
       this.scene,
       () => {
-        // console.log("EnemyAnimationManager: NightmareBolt ambient sound preloaded");
+        // // console.log("EnemyAnimationManager: NightmareBolt ambient sound preloaded");
       },
       {
         autoplay: false,
@@ -159,13 +159,13 @@ export class EnemyAnimationManager {
   protected setupNightmareBoltDetection(): void {
     const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
     if (nightmareBoltAnim) {
-      // console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
+      // // console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
       nightmareBoltAnim.onAnimationGroupEndObservable.add(() => {
         this.onNightmareBoltAnimationState.notifyObservers({ isRunning: false });
-        // console.log(`EnemyAnimationManager: NightmareBolt animation ended, loopCount=${this.loopCount}`);
+        // // console.log(`EnemyAnimationManager: NightmareBolt animation ended, loopCount=${this.loopCount}`);
         if (this.castBoltSound) {
           this.castBoltSound.stop();
-          // console.log("EnemyAnimationManager: Cast bolt sound stopped on animation end");
+          // // console.log("EnemyAnimationManager: Cast bolt sound stopped on animation end");
         }
       });
     } else {
@@ -175,7 +175,7 @@ export class EnemyAnimationManager {
 
   protected spawnNightmareBoltSphere(): void {
     if (Date.now() - this.lastBoltTime < 2000) {
-      // console.log("EnemyAnimationManager: NightmareBolt on cooldown");
+      // // console.log("EnemyAnimationManager: NightmareBolt on cooldown");
       return;
     }
     this.lastBoltTime = Date.now();
@@ -202,9 +202,9 @@ export class EnemyAnimationManager {
       console.error("EnemyAnimationManager: Player hitbox mesh not found");
       return;
     }
-    // console.log(`EnemyAnimationManager: Found player hitbox: ${hitboxMesh.name}, position: ${hitboxMesh.getAbsolutePosition().toString()}`);
+    // // console.log(`EnemyAnimationManager: Found player hitbox: ${hitboxMesh.name}, position: ${hitboxMesh.getAbsolutePosition().toString()}`);
 
-    // console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
+    // // console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
 
     const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("nightmareBoltMat", this.scene);
@@ -241,11 +241,11 @@ export class EnemyAnimationManager {
     sphere.position = startPos;
     sphere.checkCollisions = true;
 
-    // console.log(`EnemyAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
+    // // console.log(`EnemyAnimationManager: Sphere spawned at position: ${sphere.position.toString()}`);
 
     // Play whoosh sound when sphere spawns
     if (this.boltLaunchSound && this.boltLaunchSound.isReady()) {
-      // console.log("EnemyAnimationManager: Playing boltLaunch.wav (whoosh sound)");
+      // // console.log("EnemyAnimationManager: Playing boltLaunch.wav (whoosh sound)");
       this.boltLaunchSound.play();
       if (!this.boltLaunchSound.isPlaying) {
         console.warn("EnemyAnimationManager: Bolt launch (whoosh) sound failed to play");
@@ -257,12 +257,12 @@ export class EnemyAnimationManager {
     // Play ambient bolt sound attached to sphere
     let sphereNightmareBoltSound: Sound | null = null;
     if (this.nightmareBoltSound) {
-      // console.log(`EnemyAnimationManager: Cloning preloaded nightmareBolt sound for sphere ${sphere.uniqueId}`);
+      // // console.log(`EnemyAnimationManager: Cloning preloaded nightmareBolt sound for sphere ${sphere.uniqueId}`);
       sphereNightmareBoltSound = this.nightmareBoltSound.clone();
       if (sphere && !sphere.isDisposed()) {
         sphereNightmareBoltSound!.attachToMesh(sphere);
         sphereNightmareBoltSound!.play();
-        // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound playing, attached to sphere ${sphere.uniqueId}`);
+        // // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound playing, attached to sphere ${sphere.uniqueId}`);
       } else {
         console.warn(`EnemyAnimationManager: Sphere ${sphere.uniqueId} disposed before nightmareBolt sound could be attached`);
         sphereNightmareBoltSound!.dispose();
@@ -279,20 +279,20 @@ export class EnemyAnimationManager {
     const hitboxPos = hitboxMesh.getAbsolutePosition();
     const adjustedPlayerPos = new Vector3(hitboxPos.x, hitboxCenterY, hitboxPos.z);
 
-    // console.log(`EnemyAnimationManager: Player hitbox bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${hitboxCenterY}`);
+    // // console.log(`EnemyAnimationManager: Player hitbox bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, centerY=${hitboxCenterY}`);
 
     if (hitboxCenterY - boundingBox.minimumWorld.y < 0.5) {
       adjustedPlayerPos.y = hitboxPos.y + 0.875;
-      // console.log(`EnemyAnimationManager: Warning: Player hitbox midpoint too low, using fallback y=${adjustedPlayerPos.y}`);
+      // // console.log(`EnemyAnimationManager: Warning: Player hitbox midpoint too low, using fallback y=${adjustedPlayerPos.y}`);
     }
 
     let moveDirection = adjustedPlayerPos.subtract(sphere.position);
     if (moveDirection.lengthSquared() > 0.0001) {
       moveDirection = moveDirection.normalize();
-      // console.log(`EnemyAnimationManager: Moving sphere toward player hitbox at adjusted position: ${adjustedPlayerPos.toString()}`);
+      // // console.log(`EnemyAnimationManager: Moving sphere toward player hitbox at adjusted position: ${adjustedPlayerPos.toString()}`);
     } else {
       moveDirection = forward;
-      // console.log("EnemyAnimationManager: Player hitbox at same position as sphere, using forward direction");
+      // // console.log("EnemyAnimationManager: Player hitbox at same position as sphere, using forward direction");
     }
 
     const speed = 20;
@@ -302,19 +302,19 @@ export class EnemyAnimationManager {
       const moveDistance = speed * deltaTime;
       sphere.position.addInPlace(moveDirection.scale(moveDistance));
 
-      // console.log(`EnemyAnimationManager: Sphere position: ${sphere.position.toString()}, Hitbox position: ${hitboxMesh.getAbsolutePosition().toString()}`);
+      // // console.log(`EnemyAnimationManager: Sphere position: ${sphere.position.toString()}, Hitbox position: ${hitboxMesh.getAbsolutePosition().toString()}`);
 
       if (sphere.intersectsMesh(hitboxMesh, true)) {
-        // console.log("EnemyAnimationManager: NightmareBolt hit player hitbox");
+        // // console.log("EnemyAnimationManager: NightmareBolt hit player hitbox");
         const characterController = this.game?.getCharacterController();
         if (characterController) {
           const player = characterController.getPlayer();
           if (player) {
             // const currentHP = player.getCurrentHP();
-            // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
+            // // console.log(`EnemyAnimationManager: Current HP before damage: ${currentHP}`);
             const damage = Math.floor(Math.random() * (10 - 5 + 1)) + 5;
             player.takeDamage(damage);
-            // console.log(`EnemyAnimationManager: Applied ${damage} damage to player, new HP: ${player.getCurrentHP()}`);
+            // // console.log(`EnemyAnimationManager: Applied ${damage} damage to player, new HP: ${player.getCurrentHP()}`);
           } else {
             console.error("EnemyAnimationManager: Player instance not found");
           }
@@ -327,11 +327,11 @@ export class EnemyAnimationManager {
         if (sphereNightmareBoltSound) {
           sphereNightmareBoltSound.stop();
           sphereNightmareBoltSound.dispose();
-          // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound for sphere ${sphere.uniqueId} stopped and disposed`);
+          // // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound for sphere ${sphere.uniqueId} stopped and disposed`);
         }
         if (this.boltLaunchSound) {
           this.boltLaunchSound.stop();
-          // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped");
+          // // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped");
         }
         this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
         return;
@@ -345,14 +345,14 @@ export class EnemyAnimationManager {
           if (sphereNightmareBoltSound) {
             sphereNightmareBoltSound.stop();
             sphereNightmareBoltSound.dispose();
-            // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound for sphere ${sphere.uniqueId} stopped and disposed due to timeout`);
+            // // console.log(`EnemyAnimationManager: Cloned nightmareBolt sound for sphere ${sphere.uniqueId} stopped and disposed due to timeout`);
           }
           if (this.boltLaunchSound) {
             this.boltLaunchSound.stop();
-            // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped due to timeout");
+            // // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped due to timeout");
           }
           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-          // console.log("EnemyAnimationManager: NightmareBolt timed out");
+          // // console.log("EnemyAnimationManager: NightmareBolt timed out");
         }
       }, 5000);
     };
@@ -363,7 +363,7 @@ export class EnemyAnimationManager {
   public cancelNightmareBolt(): void {
     const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
     if (nightmareBoltAnim && nightmareBoltAnim.isPlaying) {
-      // console.log("EnemyAnimationManager: Cancelling NightmareBolt animation");
+      // // console.log("EnemyAnimationManager: Cancelling NightmareBolt animation");
       nightmareBoltAnim.stop();
       this.onNightmareBoltAnimationState.notifyObservers({ isRunning: false });
       this.nightmareBoltSpawned = false;
@@ -375,7 +375,7 @@ export class EnemyAnimationManager {
       }
       if (this.castBoltSound) {
         this.castBoltSound.stop();
-        // console.log("EnemyAnimationManager: Cast bolt sound stopped on cancel");
+        // // console.log("EnemyAnimationManager: Cast bolt sound stopped on cancel");
       }
       if (this.getAnimationByName("Idle")) {
         this.getAnimationByName("Idle")!.play(true);
@@ -408,7 +408,7 @@ export class EnemyAnimationManager {
       this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
       this.footstepObserver = null;
       this.footstepFrames = [];
-      // console.log("EnemyAnimationManager: Cleared previous footstep observer");
+      // // console.log("EnemyAnimationManager: Cleared previous footstep observer");
     }
 
     const walkingAnimations = ["Run", "RunBackwards", "RightStrafe", "StrafeLeft"];
@@ -418,7 +418,7 @@ export class EnemyAnimationManager {
         (fromFrame ?? newAnim.from) + 0.25 * frameRange,
         (fromFrame ?? newAnim.from) + 0.75 * frameRange
       ];
-      // console.log(`EnemyAnimationManager: Set footstep sounds to play at frames ${this.footstepFrames} for animation '${name}'`);
+      // // console.log(`EnemyAnimationManager: Set footstep sounds to play at frames ${this.footstepFrames} for animation '${name}'`);
 
       this.footstepObserver = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
@@ -430,10 +430,10 @@ export class EnemyAnimationManager {
             if (currentFrame >= frame && currentFrame < frame + 1) {
               const soundIndex = Math.floor(Math.random() * this.footstepSounds.length);
               this.footstepSounds[soundIndex].play();
-              // console.log(`EnemyAnimationManager: Played footstep sound ${soundIndex + 1} at frame ${currentFrame} for animation '${name}'`);
+              // // console.log(`EnemyAnimationManager: Played footstep sound ${soundIndex + 1} at frame ${currentFrame} for animation '${name}'`);
               if (newAnim.isStarted && loop) {
                 this.footstepFrames[i] += frameRange;
-                // console.log(`EnemyAnimationManager: Shifted keyframe ${i} to ${this.footstepFrames[i]} for next loop`);
+                // // console.log(`EnemyAnimationManager: Shifted keyframe ${i} to ${this.footstepFrames[i]} for next loop`);
               }
             }
           }
@@ -441,11 +441,11 @@ export class EnemyAnimationManager {
           this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
           this.footstepObserver = null;
           this.footstepFrames = [];
-          // console.log(`EnemyAnimationManager: Animation '${name}' stopped, removed footstep observer`);
+          // // console.log(`EnemyAnimationManager: Animation '${name}' stopped, removed footstep observer`);
         }
       });
     } else {
-      // console.log(`EnemyAnimationManager: No footstep sounds for animation '${name}' (walkingAnimations: ${walkingAnimations.includes(name)}, sounds loaded: ${this.footstepSounds.length})`);
+      // // console.log(`EnemyAnimationManager: No footstep sounds for animation '${name}' (walkingAnimations: ${walkingAnimations.includes(name)}, sounds loaded: ${this.footstepSounds.length})`);
     }
 
     if (name === "NightmareBolt") {
@@ -474,7 +474,7 @@ export class EnemyAnimationManager {
       const dot = Vector3.Dot(forward, toPlayer);
       const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
 
-      // console.log(`EnemyAnimationManager: NightmareBolt player angle: ${angle * (180 / Math.PI)} deg`);
+      // // console.log(`EnemyAnimationManager: NightmareBolt player angle: ${angle * (180 / Math.PI)} deg`);
 
       if (angle > Math.PI / 2) {
         console.warn(`EnemyAnimationManager: Cannot cast NightmareBolt; player is outside front 180° arc`);
@@ -483,7 +483,7 @@ export class EnemyAnimationManager {
 
       // Play cast sound when NightmareBolt animation starts
       if (this.castBoltSound && this.castBoltSound.isReady()) {
-        // console.log("EnemyAnimationManager: Playing castBolt2.wav (cast sound)");
+        // // console.log("EnemyAnimationManager: Playing castBolt2.wav (cast sound)");
         this.castBoltSound.play();
         if (!this.castBoltSound.isPlaying) {
           console.warn("EnemyAnimationManager: Cast bolt sound failed to play");
@@ -537,7 +537,7 @@ export class EnemyAnimationManager {
       this.loopCount = 0;
       this.nightmareBoltSpawned = false;
       this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress: 0 });
-      // // console.log("EnemyAnimationManager: NightmareBolt animation started, loopCount=0, notified observers");
+      // // // console.log("EnemyAnimationManager: NightmareBolt animation started, loopCount=0, notified observers");
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -550,12 +550,12 @@ export class EnemyAnimationManager {
           if (progress < this.lastProgress && this.lastProgress > 0.9) {
             this.loopCount++;
             this.nightmareBoltSpawned = false;
-            // // console.log(`EnemyAnimationManager: Detected NightmareBolt animation loop reset, loopCount=${this.loopCount}, resetting nightmareBoltSpawned`);
+            // // // console.log(`EnemyAnimationManager: Detected NightmareBolt animation loop reset, loopCount=${this.loopCount}, resetting nightmareBoltSpawned`);
             // Replay cast sound at start of new loop
             if (this.castBoltSound && this.castBoltSound.isReady()) {
               this.castBoltSound.stop(); // Ensure previous instance is stopped
               this.castBoltSound.play();
-              // // console.log(`EnemyAnimationManager: Replaying castBolt2.wav (cast sound) for loop ${this.loopCount}`);
+              // // // console.log(`EnemyAnimationManager: Replaying castBolt2.wav (cast sound) for loop ${this.loopCount}`);
               if (!this.castBoltSound.isPlaying) {
                 console.warn("EnemyAnimationManager: Cast bolt sound failed to play on loop reset");
               }
@@ -565,25 +565,25 @@ export class EnemyAnimationManager {
           }
           this.lastProgress = progress;
 
-          // // console.log(`EnemyAnimationManager: NightmareBolt progress=${progress.toFixed(2)}, frame=${currentFrame}, nightmareBoltSpawned=${this.nightmareBoltSpawned}, loopCount=${this.loopCount}`);
+          // // // console.log(`EnemyAnimationManager: NightmareBolt progress=${progress.toFixed(2)}, frame=${currentFrame}, nightmareBoltSpawned=${this.nightmareBoltSpawned}, loopCount=${this.loopCount}`);
 
           this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress });
           if (progress >= 0.5 && !this.nightmareBoltSpawned) {
-            // // console.log(`EnemyAnimationManager: NightmareBolt animation reached 50%, spawning sphere, loopCount=${this.loopCount}`);
+            // // // console.log(`EnemyAnimationManager: NightmareBolt animation reached 50%, spawning sphere, loopCount=${this.loopCount}`);
             if (this.castBoltSound) {
               this.castBoltSound.stop();
-              // // console.log("EnemyAnimationManager: Cast bolt sound stopped at 50% progress");
+              // // // console.log("EnemyAnimationManager: Cast bolt sound stopped at 50% progress");
             }
             this.spawnNightmareBoltSphere();
             this.nightmareBoltSpawned = true;
             this.onNightmareBoltAnimationState.notifyObservers({ isRunning: true, progress: 0.5 });
           }
         } else {
-          // // console.log("EnemyAnimationManager: NightmareBolt animation stopped or no animatables, removing observer");
+          // // // console.log("EnemyAnimationManager: NightmareBolt animation stopped or no animatables, removing observer");
           this.onNightmareBoltAnimationState.notifyObservers({ isRunning: false });
           if (this.castBoltSound) {
             this.castBoltSound.stop();
-            // // console.log("EnemyAnimationManager: Cast bolt sound stopped on animation stop");
+            // // // console.log("EnemyAnimationManager: Cast bolt sound stopped on animation stop");
           }
           this.scene.onBeforeRenderObservable.remove(observer);
         }
@@ -597,7 +597,7 @@ export class EnemyAnimationManager {
         nightmareBoltAnim.metadata.nightmareBoltObserver = null;
         if (this.castBoltSound) {
           this.castBoltSound.stop();
-          // console.log("EnemyAnimationManager: Cast bolt sound stopped when switching to non-NightmareBolt animation");
+          // // console.log("EnemyAnimationManager: Cast bolt sound stopped when switching to non-NightmareBolt animation");
         }
       }
     }
@@ -632,28 +632,28 @@ export class EnemyAnimationManager {
     if (this.footstepObserver) {
       this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
       this.footstepObserver = null;
-      // console.log("EnemyAnimationManager: Cleared footstep observer in dispose");
+      // // console.log("EnemyAnimationManager: Cleared footstep observer in dispose");
     }
     if (this.castBoltSound) {
       this.castBoltSound.stop();
       this.castBoltSound.dispose();
       this.castBoltSound = null;
-      // console.log("EnemyAnimationManager: Cast bolt sound stopped and disposed in dispose");
+      // // console.log("EnemyAnimationManager: Cast bolt sound stopped and disposed in dispose");
     }
     if (this.boltLaunchSound) {
       this.boltLaunchSound.stop();
       this.boltLaunchSound.dispose();
       this.boltLaunchSound = null;
-      // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped and disposed in dispose");
+      // // console.log("EnemyAnimationManager: Bolt launch (whoosh) sound stopped and disposed in dispose");
     }
     if (this.nightmareBoltSound) {
       this.nightmareBoltSound.stop();
       this.nightmareBoltSound.dispose();
       this.nightmareBoltSound = null;
-      // console.log("EnemyAnimationManager: NightmareBolt ambient sound stopped and disposed in dispose");
+      // // console.log("EnemyAnimationManager: NightmareBolt ambient sound stopped and disposed in dispose");
     }
     this.onNightmareBoltAnimationState.clear();
-    // console.log("EnemyAnimationManager: Disposed");
+    // // console.log("EnemyAnimationManager: Disposed");
   }
 }
 

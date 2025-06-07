@@ -60,12 +60,12 @@ export class DreamCrystalManager {
       }
     });
 
-    console.log(`Initialized ${this.totalCrystals} DreamCrystals, ${this.collectedCrystals} already collected.`);
+    // console.log(`Initialized ${this.totalCrystals} DreamCrystals, ${this.collectedCrystals} already collected.`);
   }
 
   private onCrystalCollected(): void {
     this.collectedCrystals++;
-    console.log(`DreamCrystalManager: Collected ${this.collectedCrystals}/${this.totalCrystals} DreamCrystals`);
+    // console.log(`DreamCrystalManager: Collected ${this.collectedCrystals}/${this.totalCrystals} DreamCrystals`);
     this.onCrystalCollectedObservable.notifyObservers();
     if (this.collectedCrystals >= this.totalCrystals) {
       this.onAllCrystalsCollected.notifyObservers();

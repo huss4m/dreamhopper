@@ -10,7 +10,7 @@ export class NPCAnimationManager {
 
   public initialize(animationGroups: AnimationGroup[]): void {
     this.animationGroups = animationGroups;
- // // // // // // console.log(`Initializing NPCAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+ // // // // // // // console.log(`Initializing NPCAnimationManager with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
     // Start with the Idle animation if available
     const idleAnim = this.getAnimationByName("Idle");

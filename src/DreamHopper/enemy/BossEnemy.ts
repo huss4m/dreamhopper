@@ -1,4 +1,4 @@
-import { Scene, Vector3, HighlightLayer, CascadedShadowGenerator, Mesh, AbstractMesh } from "@babylonjs/core";
+import { Scene, Vector3, CascadedShadowGenerator, Mesh, AbstractMesh } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 import { AssetManager } from "../AssetManager";
 import { TargetingSystem } from "../TargetingSystem";
@@ -17,11 +17,10 @@ export class BossEnemy extends Enemy {
     assetManager: AssetManager,
     shadowGenerator: CascadedShadowGenerator,
     position: Vector3,
-    highlightLayer: HighlightLayer,
     targetingSystem: TargetingSystem,
     game: Game
   ) {
-    super(scene, name, assetManager, shadowGenerator, position, highlightLayer, targetingSystem, game);
+    super(scene, name, assetManager, shadowGenerator, position, targetingSystem, game);
    
     this.attackRange = 15;
     this.aggroRadius = 25;
@@ -44,14 +43,14 @@ export class BossEnemy extends Enemy {
       this.enemyMesh = clones.rootNodes[0] as Mesh;
       this.enemySkeleton = clones.skeletons[0];
       const animationGroups = clones.animationGroups || [];
-      console.log(`BossEnemy: Loaded ${animationGroups.length} animation groups: ${animationGroups.map(ag => ag.name).join(", ")}`);
+      // console.log(`BossEnemy: Loaded ${animationGroups.length} animation groups: ${animationGroups.map(ag => ag.name).join(", ")}`);
 
       this.enemyMesh.position = this.position;
       this.enemyMesh.checkCollisions = true;
-      this.enemyMesh.isPickable = true;
+      this.enemyMesh.isPickable = false;
       this.enemyMesh.getChildMeshes().forEach((mesh) => {
         mesh.checkCollisions = true;
-        mesh.isPickable = true;
+        mesh.isPickable = false;
       });
 
       if (this.shadowGenerator) {
@@ -83,8 +82,8 @@ export class BossEnemy extends Enemy {
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
 
       this.setupPhysics();
-      console.log(`BossEnemy ${this.getId()}: Initializing animation manager`);
-      //console.log('AnimationManager instance of Boss ?', this.animationManager instanceof BossEnemyAnimationManager);
+      // console.log(`BossEnemy ${this.getId()}: Initializing animation manager`);
+      //// console.log('AnimationManager instance of Boss ?', this.animationManager instanceof BossEnemyAnimationManager);
        this.animationManager = new BossEnemyAnimationManager(this.scene, this.game, this);
       this.animationManager.initialize(animationGroups);
       this.setupHealthBar(this.isNPC);
@@ -95,7 +94,7 @@ export class BossEnemy extends Enemy {
         getHighlightMesh: () => this.enemyMesh,
       };
       this.hoverHandler.setupHover(hoverable);
-      console.log(`BossEnemy ${this.getId()}: Loaded with 2x hitbox at position`, this.position);
+      // console.log(`BossEnemy ${this.getId()}: Loaded with 2x hitbox at position`, this.position);
     } catch (error) {
       console.error(`BossEnemy ${this.getId()}: Failed to load character`, error);
     }
@@ -125,13 +124,13 @@ export class BossEnemy extends Enemy {
     this.physicsController = new EnemyPhysicsController(this.scene, this.enemyMesh, physicsConfig, this.game, this);
     this.physicsController.setInertia(new Vector3(0, 1, 0));
     this.physicsController.orientToForwardDirection(Vector3.Left());
-    console.log(`BossEnemy ${this.getId()}: Physics setup with 2x capsule collider`);
+    // console.log(`BossEnemy ${this.getId()}: Physics setup with 2x capsule collider`);
   }
 
 
   protected setupHealthBar(isNPC = false): void {
     if (isNPC) {
-      // console.log(`BossEnemy ${this.getId()}: Skipping health bar setup for NPC`);
+      // // console.log(`BossEnemy ${this.getId()}: Skipping health bar setup for NPC`);
       return;
     }
     if (!this.getEnemyMesh() || !this.hitboxMesh) {
@@ -158,7 +157,7 @@ export class BossEnemy extends Enemy {
       this.healthBarPlane.renderingGroupId = 0;
       this.healthBarPlane.alwaysSelectAsActiveMesh = false;
       this.healthBarTexture = AdvancedDynamicTexture.CreateForMesh(this.healthBarPlane, 768, 96, true);
-      // console.log(`BossEnemy ${this.getId()}: Health bar texture created, resolution: 768x96`);
+      // // console.log(`BossEnemy ${this.getId()}: Health bar texture created, resolution: 768x96`);
       this.healthBarBackground = new Rectangle(`healthBarBg_${this.getId()}`);
       this.healthBarBackground.width = "100%";
       this.healthBarBackground.height = "100%";
@@ -190,7 +189,7 @@ export class BossEnemy extends Enemy {
         }
       });
       this.updateHealthBar();
-      // console.log(`BossEnemy ${this.getId()}: Purple health bar setup complete`);
+      // // console.log(`BossEnemy ${this.getId()}: Purple health bar setup complete`);
     } catch (error) {
       console.error(`BossEnemy ${this.getId()}: Failed to setup purple health bar`, error);
     }
@@ -198,25 +197,25 @@ export class BossEnemy extends Enemy {
 
   public async swapToNPCModel(): Promise<void> {
     if (this.isTransformed) {
-      // console.log(`BossEnemy ${this.getId()}: Already transformed to NPC, skipping swap`);
+      // // console.log(`BossEnemy ${this.getId()}: Already transformed to NPC, skipping swap`);
       return;
     }
     try {
-      // console.log(`BossEnemy ${this.getId()}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
+      // // console.log(`BossEnemy ${this.getId()}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
       const currentPosition = this.getEnemyMesh() ? this.getEnemyMesh()!.position.clone() : this.getPosition();
-      // console.log(`BossEnemy ${this.getId()}: Current position for respawn`, currentPosition);
+      // // console.log(`BossEnemy ${this.getId()}: Current position for respawn`, currentPosition);
       this.onDeath.notifyObservers({ id: this.getId(), position: currentPosition });
       const wasWandering = this.isAggroed ? false : true;
       if (this.behaviorObserver) {
         this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
         this.behaviorObserver = null;
-        // console.log(`BossEnemy ${this.getId()}: Removed behavior observer`);
+        // // console.log(`BossEnemy ${this.getId()}: Removed behavior observer`);
       }
       if (this.getPhysics()) {
         this.getPhysics()!.stopAllMovement();
         this.getPhysics()!.dispose();
         this.physicsController = null;
-        // console.log(`BossEnemy ${this.getId()}: PhysicsController stopped and disposed`);
+        // // console.log(`BossEnemy ${this.getId()}: PhysicsController stopped and disposed`);
       }
       if (this.targetCircle) {
         if (this.targetCircle.metadata?.observer) {
@@ -224,34 +223,26 @@ export class BossEnemy extends Enemy {
         }
         this.targetCircle.dispose();
         this.targetCircle = null;
-        // console.log(`BossEnemy ${this.getId()}: Disposed target circle`);
+        // // console.log(`BossEnemy ${this.getId()}: Disposed target circle`);
       }
       if (this.hitboxMesh) {
-        // console.log(`BossEnemy ${this.getId()}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
+        // // console.log(`BossEnemy ${this.getId()}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
         this.hitboxMesh.dispose();
         this.hitboxMesh = null;
       }
       this.disposeHealthBar();
-      // console.log(`BossEnemy ${this.getId()}: Disposed health bar`);
+      // // console.log(`BossEnemy ${this.getId()}: Disposed health bar`);
       const enemyMesh = this.getEnemyMesh();
-      if (enemyMesh && this.highlightLayer && !enemyMesh.isDisposed()) {
-        this.highlightLayer.removeMesh(enemyMesh);
-        enemyMesh.getChildMeshes().forEach((mesh) => {
-          if (!mesh.isDisposed() && mesh instanceof Mesh) {
-            this.highlightLayer.removeMesh(mesh);
-          }
-        });
-        // console.log(`BossEnemy ${this.getId()}: Removed highlight layer from mesh`);
-      }
+    
       if (enemyMesh) {
         enemyMesh.dispose();
         this.enemyMesh = null;
-        // console.log(`BossEnemy ${this.getId()}: Disposed enemy mesh`);
+        // // console.log(`BossEnemy ${this.getId()}: Disposed enemy mesh`);
       }
       this.getAnimationManager().dispose();
       this.onDeath.clear();
       this.enemySkeleton = null;
-      // console.log(`BossEnemy ${this.getId()}: Disposed animation manager and skeleton`);
+      // // console.log(`BossEnemy ${this.getId()}: Disposed animation manager and skeleton`);
       const npcAssetContainer = this.assetManager.getAssetContainer("plushUnicorn");
       if (!npcAssetContainer) {
         console.error(`BossEnemy ${this.getId()}: Failed to load npc asset container`);
@@ -262,7 +253,7 @@ export class BossEnemy extends Enemy {
       this.enemyMesh = clones.rootNodes[0] as Mesh;
       this.enemySkeleton = clones.skeletons[0];
       const animationGroups = clones.animationGroups || [];
-      // console.log(`BossEnemy ${this.getId()}: Loaded plushUnicorn model`);
+      // // console.log(`BossEnemy ${this.getId()}: Loaded plushUnicorn model`);
       this.enemyMesh.position = currentPosition;
       this.enemyMesh.checkCollisions = true;
       this.enemyMesh.isPickable = false;
@@ -280,7 +271,7 @@ export class BossEnemy extends Enemy {
         Tags.EnableFor(mesh);
         Tags.AddTagsTo(mesh, `enemyID:${this.getId()}`);
       });
-      // console.log(`BossEnemy ${this.getId()}: Set up tags for unicorn mesh`);
+      // // console.log(`BossEnemy ${this.getId()}: Set up tags for unicorn mesh`);
       this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.getId()}`, {
         height: 0.4,
         width: 0.3,
@@ -295,49 +286,46 @@ export class BossEnemy extends Enemy {
       this.hitboxMesh.material = hitboxMaterial;
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.getId()} hitbox`);
-      // console.log(`BossEnemy ${this.getId()}: Unicorn hitbox created, height: 0.4, width: 0.3`);
+      // // console.log(`BossEnemy ${this.getId()}: Unicorn hitbox created, height: 0.4, width: 0.3`);
       this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
       this.setupPhysics();
       this.getAnimationManager().initialize(animationGroups);
-      // console.log(`BossEnemy ${this.getId()}: Initialized physics and animations`);
+      // // console.log(`BossEnemy ${this.getId()}: Initialized physics and animations`);
       this.setupHealthBar(true);
-      // console.log(`BossEnemy ${this.getId()}: Set up hidden health bar`);
+      // // console.log(`BossEnemy ${this.getId()}: Set up hidden health bar`);
       const hoverable = {
         getMesh: () => this.hitboxMesh,
         getScene: () => this.scene,
         getHighlightMesh: () => this.enemyMesh,
       };
       this.hoverHandler.setupHover(hoverable);
-      // console.log(`BossEnemy ${this.getId()}: Set up hover handler`);
+      // // console.log(`BossEnemy ${this.getId()}: Set up hover handler`);
       if (this.isTargetted) {
-        if (!this.highlightLayer) {
-          console.error(`BossEnemy ${this.getId()}: HighlightLayer is undefined for targeting`);
-          this.isTargetted = false;
-        } else {
+
           this.setTargetted(true);
-          // console.log(`BossEnemy ${this.getId()}: Reapplied targeting`);
+          // // console.log(`BossEnemy ${this.getId()}: Reapplied targeting`);
         }
-      }
+      
       this.isNPC = true;
       this.isAggroed = false;
       this.isAttacking = false;
       this.isTransformed = true;
-      // console.log(`BossEnemy ${this.getId()}: Set NPC state`);
+      // // console.log(`BossEnemy ${this.getId()}: Set NPC state`);
       this.getPhysics()!.stopAllMovement();
       this.getAnimationManager().playAnimation("Idle", 1.0, undefined, undefined, true);
-      // console.log(`BossEnemy ${this.getId()}: Set to Idle as NPC`);
+      // // console.log(`BossEnemy ${this.getId()}: Set to Idle as NPC`);
       if (wasWandering) {
         this.getPhysics()!.startWandering();
         this.getAnimationManager().playAnimation("Run", 0.5, undefined, undefined, true);
-        // console.log(`BossEnemy ${this.getId()}: Resumed wandering as NPC`);
+        // // console.log(`BossEnemy ${this.getId()}: Resumed wandering as NPC`);
       }
       if (this.game?.gameManager) {
         this.game.gameManager.scheduleBossRespawn(this.getId(), currentPosition);
-        // console.log(`BossEnemy ${this.getId()}: Scheduled boss respawn in 60 seconds at position`, currentPosition);
+        // // console.log(`BossEnemy ${this.getId()}: Scheduled boss respawn in 60 seconds at position`, currentPosition);
       } else {
         console.error(`BossEnemy ${this.getId()}: Cannot schedule respawn, game or gameManager is undefined`);
       }
-      // console.log(`BossEnemy ${this.getId()}: Completed transformation to plushUnicorn at position`, currentPosition);
+      // // console.log(`BossEnemy ${this.getId()}: Completed transformation to plushUnicorn at position`, currentPosition);
     } catch (error) {
       console.error(`BossEnemy ${this.getId()}: Failed to swap model to NPC`, error);
     }
@@ -346,12 +334,12 @@ export class BossEnemy extends Enemy {
 
   protected setupBehavior(): void {
     if (this.isNPC) {
-      console.log(`BossEnemy ${this.getId()}: Skipping behavior setup, is NPC`);
+      // console.log(`BossEnemy ${this.getId()}: Skipping behavior setup, is NPC`);
       return;
     }
 
 
-    console.log(`BossEnemy ${this.getId()}: Setting up behavior observer`);
+    // console.log(`BossEnemy ${this.getId()}: Setting up behavior observer`);
     this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
       if (!this.enemyMesh || !this.physicsController) {
         console.warn(`BossEnemy ${this.getId()}: Behavior skipped - enemyMesh or physicsController null`);
@@ -365,7 +353,7 @@ export class BossEnemy extends Enemy {
       }
 
       const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-      console.log(`BossEnemy ${this.getId()}: Distance to player: ${distanceToPlayer.toFixed(2)}, aggroRadius: ${this.aggroRadius}, attackRange: ${this.attackRange}`);
+      // console.log(`BossEnemy ${this.getId()}: Distance to player: ${distanceToPlayer.toFixed(2)}, aggroRadius: ${this.aggroRadius}, attackRange: ${this.attackRange}`);
 
       if (distanceToPlayer > this.aggroRadius * 2) {
         if (this.isAggroed || this.isAttacking) {
@@ -373,7 +361,7 @@ export class BossEnemy extends Enemy {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
           this.startWandering();
-          console.log(`BossEnemy ${this.getId()}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${this.aggroRadius * 2}), lost aggro`);
+          // console.log(`BossEnemy ${this.getId()}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${this.aggroRadius * 2}), lost aggro`);
         }
         return;
       }
@@ -384,7 +372,7 @@ export class BossEnemy extends Enemy {
           this.isAttacking = false;
           this.physicsController.stopAllMovement();
           this.animationManager.playAnimation("Idle", 1.0, undefined, undefined, true);
-          console.log(`BossEnemy ${this.getId()}: Player or boss dead, stopping attack`);
+          // console.log(`BossEnemy ${this.getId()}: Player or boss dead, stopping attack`);
         }
         return;
       }
@@ -393,18 +381,18 @@ export class BossEnemy extends Enemy {
         this.isAggroed = true;
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
-        console.log(`BossEnemy ${this.getId()}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
+        // console.log(`BossEnemy ${this.getId()}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
       } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
         this.isAggroed = false;
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.startWandering();
-        console.log(`BossEnemy ${this.getId()}: Lost aggro at distance ${distanceToPlayer.toFixed(2)}`);
+        // console.log(`BossEnemy ${this.getId()}: Lost aggro at distance ${distanceToPlayer.toFixed(2)}`);
       }
 
       if (this.isAggroed) {
         const hasLOS = this.hasLineOfSightToPlayer(playerMesh);
-        console.log(`BossEnemy ${this.getId()}: Has LOS: ${hasLOS}, Distance: ${distanceToPlayer.toFixed(2)}, Attack range check: ${distanceToPlayer <= this.attackRange}, isAttacking: ${this.isAttacking}`);
+        // console.log(`BossEnemy ${this.getId()}: Has LOS: ${hasLOS}, Distance: ${distanceToPlayer.toFixed(2)}, Attack range check: ${distanceToPlayer <= this.attackRange}, isAttacking: ${this.isAttacking}`);
 
         if (distanceToPlayer <= this.attackRange && hasLOS) {
           this.physicsController.stopAllMovement();
@@ -412,7 +400,7 @@ export class BossEnemy extends Enemy {
           this.physicsController.orientToForwardDirection(directionToPlayer);
           const hasNightmareBolt = !!this.animationManager.getAnimationByName("NightmareBolt");
           const animationName = hasNightmareBolt ? "NightmareBolt" : "Idle";
-          console.log(`BossEnemy ${this.getId()}: In attack range with LOS, hasNightmareBolt: ${hasNightmareBolt}, playing: ${animationName}, isAttacking: ${this.isAttacking}`);
+          // console.log(`BossEnemy ${this.getId()}: In attack range with LOS, hasNightmareBolt: ${hasNightmareBolt}, playing: ${animationName}, isAttacking: ${this.isAttacking}`);
           if (!this.isAttacking || animationName === "NightmareBolt") {
             this.isAttacking = true;
             this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
@@ -421,14 +409,14 @@ export class BossEnemy extends Enemy {
           if (this.isAttacking) {
             this.isAttacking = false;
             this.physicsController.stopAllMovement();
-            console.log(`BossEnemy ${this.getId()}: Stopped attacking, out of range or no LOS`);
+            // console.log(`BossEnemy ${this.getId()}: Stopped attacking, out of range or no LOS`);
           }
           this.moveTo(playerMesh.position);
           this.animationManager.playAnimation("Run", 0.5);
-          console.log(`BossEnemy ${this.getId()}: Moving to player at distance ${distanceToPlayer.toFixed(2)}`);
+          // console.log(`BossEnemy ${this.getId()}: Moving to player at distance ${distanceToPlayer.toFixed(2)}`);
         }
       } else {
-        console.log(`BossEnemy ${this.getId()}: Not aggroed, checking velocity for animation`);
+        // console.log(`BossEnemy ${this.getId()}: Not aggroed, checking velocity for animation`);
         const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
         if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
           this.animationManager.playAnimation("Run", 0.5);

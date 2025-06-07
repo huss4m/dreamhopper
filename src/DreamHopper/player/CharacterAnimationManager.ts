@@ -31,15 +31,15 @@ export class CharacterAnimationManager {
 
   public async initialize(animationGroups: AnimationGroup[]): Promise<void> {
     this.animationGroups = animationGroups;
-    console.log(`CharacterAnimationManager: Initializing with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+    // console.log(`CharacterAnimationManager: Initializing with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
-    console.log("CharacterAnimationManager: About to load footstep sounds");
+    // console.log("CharacterAnimationManager: About to load footstep sounds");
     this.loadFootstepSounds();
-    console.log(`CharacterAnimationManager: Footstep sounds loaded, count: ${this.footstepSounds.length}`);
+    // console.log(`CharacterAnimationManager: Footstep sounds loaded, count: ${this.footstepSounds.length}`);
 
-    console.log("CharacterAnimationManager: About to preload Dreambolt sounds");
+    // console.log("CharacterAnimationManager: About to preload Dreambolt sounds");
     this.preloadDreamboltSounds();
-    console.log("CharacterAnimationManager: Dreambolt sounds preloaded");
+    // console.log("CharacterAnimationManager: Dreambolt sounds preloaded");
 
     if (this.getAnimationByName("Idle")) {
       this.getAnimationByName("Idle")!.play(true);
@@ -53,7 +53,7 @@ export class CharacterAnimationManager {
   }
 
   private loadFootstepSounds(): void {
-    console.log("CharacterAnimationManager: Starting loadFootstepSounds");
+    // console.log("CharacterAnimationManager: Starting loadFootstepSounds");
     const soundFiles = [
       "./sfx/footstep1.wav",
       "./sfx/footstep2.wav",
@@ -65,24 +65,24 @@ export class CharacterAnimationManager {
     if (!characterMesh) {
       console.warn("Character mesh not available for spatial sound attachment");
     } else {
-      console.log(`Attaching footstep sounds to mesh at position ${characterMesh.getAbsolutePosition().toString()}`);
+      // console.log(`Attaching footstep sounds to mesh at position ${characterMesh.getAbsolutePosition().toString()}`);
     }
 
     for (const file of soundFiles) {
-      console.log(`Attempting to load sound ${file}`);
+      // console.log(`Attempting to load sound ${file}`);
       const sound = new Sound(
         `footstep_${file.split('/').pop()}`,
         file,
         this.scene,
         () => {
-          console.log(`Loaded footstep sound ${file} (spatial: true, attached: ${!!characterMesh})`);
+          // console.log(`Loaded footstep sound ${file} (spatial: true, attached: ${!!characterMesh})`);
           this.footstepSounds.push(sound);
           if (characterMesh) {
             sound.attachToMesh(characterMesh);
-            console.log(`Attached footstep sound ${file} to character mesh`);
+            // console.log(`Attached footstep sound ${file} to character mesh`);
           }
           if (this.footstepSounds.length === soundFiles.length) {
-            console.log(`Successfully loaded ${this.footstepSounds.length} footstep sounds`);
+            // console.log(`Successfully loaded ${this.footstepSounds.length} footstep sounds`);
           }
         },
         {
@@ -103,13 +103,13 @@ export class CharacterAnimationManager {
       return;
     }
 
-    console.log("Preloading castBolt2.wav");
+    // console.log("Preloading castBolt2.wav");
     this.castBolt2Sound = new Sound(
       "castBoltSound",
       "./sfx/castBolt2.wav",
       this.scene,
       () => {
-        console.log("Cast bolt sound preloaded");
+        // console.log("Cast bolt sound preloaded");
         this.castBolt2Sound!.attachToMesh(characterMesh);
       },
       {
@@ -121,13 +121,13 @@ export class CharacterAnimationManager {
       }
     );
 
-    console.log("Preloading boltLaunch.wav");
+    // console.log("Preloading boltLaunch.wav");
     this.boltLaunchSound = new Sound(
       "boltLaunchSound",
       "./sfx/boltLaunch.wav",
       this.scene,
       () => {
-        console.log("Bolt launch sound preloaded");
+        // console.log("Bolt launch sound preloaded");
         this.boltLaunchSound!.attachToMesh(characterMesh);
       },
       {
@@ -139,13 +139,13 @@ export class CharacterAnimationManager {
       }
     );
 
-    console.log("Preloading bolt2.mp3");
+    // console.log("Preloading bolt2.mp3");
     this.dreamboltSound = new Sound(
       "dreamboltSound",
       "./sfx/bolt2.mp3",
       this.scene,
       () => {
-        console.log("Dreambolt sound preloaded");
+        // console.log("Dreambolt sound preloaded");
       },
       {
         autoplay: false,
@@ -156,13 +156,13 @@ export class CharacterAnimationManager {
       }
     );
 
-    console.log("Preloading impactchime.wav");
+    // console.log("Preloading impactchime.wav");
     this.impactChimeSound = new Sound(
       "impactChimeSound",
       "./sfx/impactchime.wav",
       this.scene,
       () => {
-        console.log("Impact chime sound preloaded");
+        // console.log("Impact chime sound preloaded");
       },
       {
         autoplay: false,
@@ -188,13 +188,13 @@ export class CharacterAnimationManager {
   private setupDreamboltDetection(): void {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
     if (dreamboltAnim) {
-      console.log("Dreambolt animation found, monitoring for 50% progress");
+      // console.log("Dreambolt animation found, monitoring for 50% progress");
       dreamboltAnim.onAnimationGroupEndObservable.add(() => {
         this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
-        console.log("Dreambolt animation ended");
+        // console.log("Dreambolt animation ended");
         if (this.castBolt2Sound) {
           this.castBolt2Sound.stop();
-          console.log("Cast bolt sound stopped on animation end");
+          // console.log("Cast bolt sound stopped on animation end");
         }
       });
     } else {
@@ -237,7 +237,7 @@ export class CharacterAnimationManager {
       fireworks.stop();
       setTimeout(() => {
         fireworks.dispose();
-        console.log("Fireworks effect disposed");
+        // console.log("Fireworks effect disposed");
       }, 5000);
     }, 1000);
   }
@@ -256,7 +256,7 @@ export class CharacterAnimationManager {
       console.error("PhysicsController not found");
       return;
     }
-    console.log("Spawning Dreambolt sphere");
+    // console.log("Spawning Dreambolt sphere");
     const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
     const material = new StandardMaterial("dreamboltMat", this.scene);
     material.diffuseColor = new Color3(1.0, 0.85, 0.9);
@@ -289,21 +289,21 @@ export class CharacterAnimationManager {
     const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
     sphere.position = startPos;
     sphere.checkCollisions = true;
-    console.log(`Sphere spawned at position: ${sphere.position.toString()}`);
+    // console.log(`Sphere spawned at position: ${sphere.position.toString()}`);
     if (this.boltLaunchSound && this.boltLaunchSound.isReady()) {
-      console.log("Playing boltLaunch.wav");
+      // console.log("Playing boltLaunch.wav");
       this.boltLaunchSound.play();
     } else {
       console.warn("boltLaunchSound not preloaded or not ready");
     }
     let sphereDreamboltSound: Sound | null = null;
     if (this.dreamboltSound) {
-      console.log(`Cloning preloaded dreambolt sound for sphere ${sphere.uniqueId}`);
+      // console.log(`Cloning preloaded dreambolt sound for sphere ${sphere.uniqueId}`);
       sphereDreamboltSound = this.dreamboltSound.clone();
       if (sphere && !sphere.isDisposed()) {
         sphereDreamboltSound!.attachToMesh(sphere);
         sphereDreamboltSound!.play();
-        console.log(`Cloned dreambolt sound playing, attached to sphere ${sphere.uniqueId}`);
+        // console.log(`Cloned dreambolt sound playing, attached to sphere ${sphere.uniqueId}`);
       } else {
         console.warn(`Sphere ${sphere.uniqueId} disposed before dreambolt sound could be attached`);
         sphereDreamboltSound!.dispose();
@@ -320,18 +320,18 @@ export class CharacterAnimationManager {
       targetMesh.refreshBoundingInfo();
       const boundingBox = targetMesh.getBoundingInfo().boundingBox;
       const targetMidpoint = boundingBox.minimumWorld.add(boundingBox.maximumWorld).scale(0.5);
-      console.log(`Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, midpoint=${targetMidpoint.toString()}`);
+      // console.log(`Target ${target!.getId()} bounding box: min=${boundingBox.minimumWorld.toString()}, max=${boundingBox.maximumWorld.toString()}, midpoint=${targetMidpoint.toString()}`);
       moveDirection = targetMidpoint.subtract(sphere.position);
       if (moveDirection.lengthSquared() > 0.0001) {
         moveDirection = moveDirection.normalize();
-        console.log(`Moving sphere toward target ${target!.getId()} at midpoint: ${targetMidpoint.toString()}`);
+        // console.log(`Moving sphere toward target ${target!.getId()} at midpoint: ${targetMidpoint.toString()}`);
       } else {
         moveDirection = forward;
-        console.log(`Target ${target!.getId()} midpoint is at same position as sphere, using forward direction`);
+        // console.log(`Target ${target!.getId()} midpoint is at same position as sphere, using forward direction`);
       }
     } else {
       moveDirection = forward;
-      console.log("No target or target mesh not found, moving sphere in character's forward direction");
+      // console.log("No target or target mesh not found, moving sphere in character's forward direction");
     }
     const speed = 10;
     const BASE_DREAMBOLT_MIN_DAMAGE = 20;
@@ -339,7 +339,7 @@ export class CharacterAnimationManager {
     const playerLevel = this.characterController?.getPlayer().getLevel() || 1;
     const DREAMBOLT_MIN_DAMAGE = BASE_DREAMBOLT_MIN_DAMAGE + (playerLevel - 1) * 5; // New: Scale with level
     const DREAMBOLT_MAX_DAMAGE = BASE_DREAMBOLT_MAX_DAMAGE + (playerLevel - 1) * 5; // New: Scale with level
-    console.log(`Dreambolt damage range at level ${playerLevel}: ${DREAMBOLT_MIN_DAMAGE}–${DREAMBOLT_MAX_DAMAGE}`);
+    // console.log(`Dreambolt damage range at level ${playerLevel}: ${DREAMBOLT_MIN_DAMAGE}–${DREAMBOLT_MAX_DAMAGE}`);
     const renderCallback = (eventData: Scene, eventState: EventState) => {
       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
       const moveDistance = speed * deltaTime;
@@ -350,7 +350,7 @@ export class CharacterAnimationManager {
           const tags = Tags.GetTags(hitbox);
           const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
           if (enemyId) {
-            console.log(`Dreambolt hit hitbox with enemyID: ${enemyId}`);
+            // console.log(`Dreambolt hit hitbox with enemyID: ${enemyId}`);
             let target: Enemy | BossEnemy | undefined;
             target = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
             if (!target) {
@@ -358,16 +358,16 @@ export class CharacterAnimationManager {
             }
             if (target) {
               this.triggerFireworks(sphere.position.clone());
-              console.log(`Triggered fireworks for Dreambolt hit on ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
+              // console.log(`Triggered fireworks for Dreambolt hit on ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
               let impactSound: Sound | null = null;
               if (this.impactChimeSound && this.impactChimeSound.isReady()) {
-                console.log(`Cloning preloaded impact chime sound for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
+                // console.log(`Cloning preloaded impact chime sound for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
                 impactSound = this.impactChimeSound.clone();
                 const targetMesh = target.getMesh();
                 if (targetMesh && !targetMesh.isDisposed()) {
                   impactSound!.attachToMesh(targetMesh);
                   impactSound!.play();
-                  console.log(`Impact chime sound playing, attached to ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
+                  // console.log(`Impact chime sound playing, attached to ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);
                 } else {
                   console.warn(`Target mesh for ${enemyId} disposed before impact chime sound could be attached`);
                   impactSound!.dispose();
@@ -378,9 +378,9 @@ export class CharacterAnimationManager {
               }
               const damage = Math.floor(Math.random() * (DREAMBOLT_MAX_DAMAGE - DREAMBOLT_MIN_DAMAGE + 1)) + DREAMBOLT_MIN_DAMAGE;
               target.takeDamage(damage);
-              console.log(`Dealt ${damage} damage to ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}, HP: ${target.getCurrentHP()}/${target.getMaxHP()}`);
+              // console.log(`Dealt ${damage} damage to ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}, HP: ${target.getCurrentHP()}/${target.getMaxHP()}`);
               if (target.isDead()) {
-                console.log(`${target instanceof BossEnemy ? 'Boss' : 'Enemy'} ${enemyId} defeated`);
+                // console.log(`${target instanceof BossEnemy ? 'Boss' : 'Enemy'} ${enemyId} defeated`);
               }
               particles.stop();
               particles.dispose();
@@ -388,21 +388,21 @@ export class CharacterAnimationManager {
               if (sphereDreamboltSound) {
                 sphereDreamboltSound.stop();
                 sphereDreamboltSound.dispose();
-                console.log(`Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed`);
+                // console.log(`Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed`);
               }
               if (this.boltLaunchSound) {
                 this.boltLaunchSound.stop();
-                console.log("Bolt launch sound stopped");
+                // console.log("Bolt launch sound stopped");
               }
               if (impactSound) {
                 const soundDuration = impactSound.getAudioBuffer()?.duration || 1;
                 const cleanupDelay = soundDuration * 1000;
-                console.log(`Scheduling impact chime cleanup for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId} after ${cleanupDelay}ms`);
+                // console.log(`Scheduling impact chime cleanup for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId} after ${cleanupDelay}ms`);
                 setTimeout(() => {
                   if (impactSound) {
                     impactSound.stop();
                     impactSound.dispose();
-                    console.log(`Impact chime sound for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId} stopped and disposed after ${cleanupDelay}ms`);
+                    // console.log(`Impact chime sound for ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId} stopped and disposed after ${cleanupDelay}ms`);
                   }
                 }, cleanupDelay);
               }
@@ -418,18 +418,18 @@ export class CharacterAnimationManager {
     this.scene.onBeforeRenderObservable.add(renderCallback);
     setTimeout(() => {
       if (sphere && !sphere.isDisposed()) {
-        console.log(`Dreambolt sphere ${sphere.uniqueId} timed out, disposing`);
+        // console.log(`Dreambolt sphere ${sphere.uniqueId} timed out, disposing`);
         particles.stop();
         particles.dispose();
         sphere.dispose();
         if (sphereDreamboltSound) {
           sphereDreamboltSound.stop();
           sphereDreamboltSound.dispose();
-          console.log(`Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed due to timeout`);
+          // console.log(`Cloned dreambolt sound for sphere ${sphere.uniqueId} stopped and disposed due to timeout`);
         }
         if (this.boltLaunchSound) {
           this.boltLaunchSound.stop();
-          console.log("Bolt launch sound stopped due to timeout");
+          // console.log("Bolt launch sound stopped due to timeout");
         }
         this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
       }
@@ -439,7 +439,7 @@ export class CharacterAnimationManager {
   public cancelDreambolt(): void {
     const dreamboltAnim = this.getAnimationByName("Dreambolt");
     if (dreamboltAnim && dreamboltAnim.isPlaying) {
-      console.log("Cancelling Dreambolt animation");
+      // console.log("Cancelling Dreambolt animation");
       dreamboltAnim.stop();
       this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
       this.dreamboltSpawned = false;
@@ -451,7 +451,7 @@ export class CharacterAnimationManager {
       }
       if (this.castBolt2Sound) {
         this.castBolt2Sound.stop();
-        console.log("Cast bolt sound stopped on cancel");
+        // console.log("Cast bolt sound stopped on cancel");
       }
       if (this.getAnimationByName("Idle")) {
         this.getAnimationByName("Idle")!.play(true);
@@ -467,7 +467,7 @@ export class CharacterAnimationManager {
     toFrame?: number,
     loop?: boolean
   ): void {
-    //console.log(`Attempting to play animation '${name}'`);
+    //// console.log(`Attempting to play animation '${name}'`);
     const newAnim = this.getAnimationByName(name);
     if (!newAnim) {
       console.warn(`Animation group '${name}' not found`);
@@ -475,7 +475,7 @@ export class CharacterAnimationManager {
     }
 
     if (this.characterController?.getPlayer().isPlayerDead() && name !== "Death" && name !== "Idle") {
-      //console.log(`Skipping animation '${name}' because player is dead`);
+      //// console.log(`Skipping animation '${name}' because player is dead`);
       return;
     }
 
@@ -483,7 +483,7 @@ export class CharacterAnimationManager {
       this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
       this.footstepObserver = null;
       this.footstepFrames = [];
-      //console.log("Cleared previous footstep observer");
+      //// console.log("Cleared previous footstep observer");
     }
 
     const walkingAnimations = ["Run", "RunBackwards", "RightStrafe", "StrafeLeft"];
@@ -493,7 +493,7 @@ export class CharacterAnimationManager {
         (fromFrame ?? newAnim.from) + 0.25 * frameRange,
         (fromFrame ?? newAnim.from) + 0.75 * frameRange
       ];
-      //console.log(`Set footstep sounds to play at frames ${this.footstepFrames} for animation '${name}'`);
+      //// console.log(`Set footstep sounds to play at frames ${this.footstepFrames} for animation '${name}'`);
 
       this.footstepObserver = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
@@ -505,10 +505,10 @@ export class CharacterAnimationManager {
             if (currentFrame >= frame && currentFrame < frame + 1) {
               const soundIndex = Math.floor(Math.random() * this.footstepSounds.length);
               this.footstepSounds[soundIndex].play();
-              //console.log(`Played footstep sound ${soundIndex + 1} at frame ${currentFrame} for animation '${name}'`);
+              //// console.log(`Played footstep sound ${soundIndex + 1} at frame ${currentFrame} for animation '${name}'`);
               if (newAnim.isStarted && (loop ?? true)) {
                 this.footstepFrames[i] += frameRange;
-                //console.log(`Shifted keyframe ${i} to ${this.footstepFrames[i]} for next loop`);
+                //// console.log(`Shifted keyframe ${i} to ${this.footstepFrames[i]} for next loop`);
               }
             }
           }
@@ -516,7 +516,7 @@ export class CharacterAnimationManager {
           this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
           this.footstepObserver = null;
           this.footstepFrames = [];
-          //console.log(`Animation '${name}' stopped, removed footstep observer`);
+          //// console.log(`Animation '${name}' stopped, removed footstep observer`);
         }
       });
     } 
@@ -543,7 +543,7 @@ export class CharacterAnimationManager {
       const dot = Vector3.Dot(forward, toTarget);
       const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
 
-      //console.log(`Dreambolt taget ${target.getId()} angle: ${angle * (180 / Math.PI)} deg`);
+      //// console.log(`Dreambolt taget ${target.getId()} angle: ${angle * (180 / Math.PI)} deg`);
 
       if (angle > Math.PI / 2) {
         console.warn(`Cannot cast Dreambolt; target ${target.getId()} is outside front 180° arc`);
@@ -551,7 +551,7 @@ export class CharacterAnimationManager {
       }
 
       if (this.castBolt2Sound && this.castBolt2Sound.isReady()) {
-       // console.log("Playing castBolt2.wav");
+       // // console.log("Playing castBolt2.wav");
         this.castBolt2Sound.play();
       } else {
         console.warn("castBolt2Sound not preloaded or not ready");
@@ -567,7 +567,7 @@ export class CharacterAnimationManager {
         prevAnim.setWeightForAllAnimatables(0);
       }
     } else if (name === this.currentAnimationName && newAnim.isPlaying) {
-      //console.log(`Animation '${name}' already playing, skipping`);
+      //// console.log(`Animation '${name}' already playing, skipping`);
       return;
     }
 
@@ -589,13 +589,13 @@ export class CharacterAnimationManager {
     newAnim.setWeightForAllAnimatables(skipBlending ? 1 : 0);
 
     this.currentAnimationName = name;
-    //console.log(`Started animation '${name}'`);
+    //// console.log(`Started animation '${name}'`);
 
     if (skipBlending) {
       if (prevAnim) prevAnim.stop();
       newAnim.setWeightForAllAnimatables(1);
       this.isBlending = false;
-      //console.log(`Played '${name}' without blending (previous was Death)`);
+      //// console.log(`Played '${name}' without blending (previous was Death)`);
     } else {
       this.isBlending = true;
       const blendDuration = 300;
@@ -613,7 +613,7 @@ export class CharacterAnimationManager {
           newAnim.setWeightForAllAnimatables(1);
           this.isBlending = false;
           this.blendFrameId = null;
-         // console.log(`Blending complete for '${name}'`);
+         // // console.log(`Blending complete for '${name}'`);
         }
       };
 
@@ -622,13 +622,13 @@ export class CharacterAnimationManager {
 
     if (newAnim === this.getAnimationByName("Jump")) {
       this.isJumping = true;
-     // console.log("Jump animation detected, isJumping set to true");
+     // // console.log("Jump animation detected, isJumping set to true");
     }
 
     if (name === "Dreambolt") {
       this.dreamboltSpawned = false;
       this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0 });
-      //console.log("Dreambolt animation started");
+      //// console.log("Dreambolt animation started");
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -638,10 +638,10 @@ export class CharacterAnimationManager {
           const progress = (currentFrame - from) / (to - from);
           this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress });
           if (progress >= 0.5 && !this.dreamboltSpawned) {
-           // console.log("Dreambolt animation reached 50%, spawning sphere");
+           // // console.log("Dreambolt animation reached 50%, spawning sphere");
             if (this.castBolt2Sound) {
               this.castBolt2Sound.stop();
-              //console.log("Cast bolt sound stopped at 50% progress");
+              //// console.log("Cast bolt sound stopped at 50% progress");
             }
             this.spawnDreamboltSphere();
             this.dreamboltSpawned = true;
@@ -649,11 +649,11 @@ export class CharacterAnimationManager {
             this.scene.onBeforeRenderObservable.remove(observer);
           }
         } else {
-          //console.log("Dreambolt animation stopped or no animatables, removing observer");
+          //// console.log("Dreambolt animation stopped or no animatables, removing observer");
           this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
           if (this.castBolt2Sound) {
             this.castBolt2Sound.stop();
-           // console.log("Cast bolt sound stopped on animation stop");
+           // // console.log("Cast bolt sound stopped on animation stop");
           }
           this.scene.onBeforeRenderObservable.remove(observer);
         }
@@ -749,27 +749,27 @@ export class CharacterAnimationManager {
       this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
       this.footstepObserver = null;
       this.footstepFrames = [];
-      console.log("Cleared footstep observer in stopAllAnimations");
+      // console.log("Cleared footstep observer in stopAllAnimations");
     }
     if (this.castBolt2Sound) {
       this.castBolt2Sound.stop();
-      console.log("Cast bolt sound stopped in stopAllAnimations");
+      // console.log("Cast bolt sound stopped in stopAllAnimations");
     }
     if (this.dreamboltSound) {
       this.dreamboltSound.stop();
-      console.log("Dreambolt sound stopped in stopAllAnimations");
+      // console.log("Dreambolt sound stopped in stopAllAnimations");
     }
     if (this.boltLaunchSound) {
       this.boltLaunchSound.stop();
-      console.log("Bolt launch sound stopped in stopAllAnimations");
+      // console.log("Bolt launch sound stopped in stopAllAnimations");
     }
     if (this.impactChimeSound) {
       this.impactChimeSound.stop();
-      console.log("Impact chime sound stopped in stopAllAnimations");
+      // console.log("Impact chime sound stopped in stopAllAnimations");
     }
     this.currentAnimationName = null;
     this.dreamboltSpawned = false;
-    console.log("Stopped all animations, cleared blending state, and reset animatables");
+    // console.log("Stopped all animations, cleared blending state, and reset animatables");
   }
 
   public dispose(): void {
@@ -780,33 +780,33 @@ export class CharacterAnimationManager {
     if (this.footstepObserver) {
       this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
       this.footstepObserver = null;
-      console.log("Cleared footstep observer in dispose");
+      // console.log("Cleared footstep observer in dispose");
     }
     if (this.castBolt2Sound) {
       this.castBolt2Sound.stop();
       this.castBolt2Sound.dispose();
       this.castBolt2Sound = null;
-      console.log("Cast bolt sound stopped and disposed in dispose");
+      // console.log("Cast bolt sound stopped and disposed in dispose");
     }
     if (this.dreamboltSound) {
       this.dreamboltSound.stop();
       this.dreamboltSound.dispose();
       this.dreamboltSound = null;
-      console.log("Dreambolt sound stopped and disposed in dispose");
+      // console.log("Dreambolt sound stopped and disposed in dispose");
     }
     if (this.boltLaunchSound) {
       this.boltLaunchSound.stop();
       this.boltLaunchSound.dispose();
       this.boltLaunchSound = null;
-      console.log("Bolt launch sound stopped and disposed in dispose");
+      // console.log("Bolt launch sound stopped and disposed in dispose");
     }
     if (this.impactChimeSound) {
       this.impactChimeSound.stop();
       this.impactChimeSound.dispose();
       this.impactChimeSound = null;
-      console.log("Impact chime sound stopped and disposed in dispose");
+      // console.log("Impact chime sound stopped and disposed in dispose");
     }
     this.onDreamboltAnimationState.clear();
-    console.log("Disposed");
+    // console.log("Disposed");
   }
 }

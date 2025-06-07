@@ -87,82 +87,85 @@ export class Game {
 
 
 /*
-    Inspector.Show(this.scene, {
-  embedMode: true, 
-});
+      Inspector.Show(this.scene, {
+    embedMode: true, 
+  });
 
 */ 
 
   }
-
-  private async initialize(): Promise<void> {
+private async initialize(): Promise<void> {
   try {
     this.engine.displayLoadingUI();
-    const totalSteps = 7;
+    const totalSteps = 6;
     let currentStep = 0;
 
-    // Initialize AssetManager first to ensure assets are available
+    // Step 1: Load assets with live progress updates
     this.assetManager = new AssetManager(this.scene);
-    await this.assetManager.initializeFromJson("./models/assets.json");
-    console.log("Game: All assets loaded.");
+
+    await this.assetManager.initializeFromJson("./models/assets.json", (percent) => {
+
+      const stepProgress = (percent / 100) * (1 / totalSteps) * 100;
+      this.loadingScreen.updateProgress(stepProgress);
+      
+    });
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Initialize physics
+    // Step 2: Initialize physics
     await this.initializePhysics();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Create forest environment (includes forest creation with preloaded assets)
+    // Step 3: Create forest environment
     await this.createForestEnvironment();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Initialize navigation
+    // Step 4: Initialize navigation
     await this.initializeNavigation();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    
+    // Step 5: Sound (optional, doesn't need a progress tick)
     await this.soundManager.initialize();
 
-    //this.scene.setRenderingAutoClearDepthStencil(0, true, true, true);
-    //this.scene.setRenderingOrder(0, (a: any, b: any) => b - a); // Sort transparent objects back-to-front
-    // Initialize other scene components
+    // Steps 6–7: Scene components
     await this.initializeSceneComponents(() => {
       currentStep++;
       this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
     });
 
-    currentStep++;
-    this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
-
+    // Scene ready callback
     this.gameManager.getDreamCrystalManager().getOnAllCrystalsCollected().add(() => {
-      console.log("Game: All DreamCrystals collected! You win!");
+      // Game win logic
     });
 
+    this.isInitialized = true;
+
+
+  
+    this.engine.hideLoadingUI();
     this.engine.runRenderLoop(() => {
       if (this.inputHandler.getIsInitialized()) {
         this.inputHandler.update();
-       
         this.scene.render();
       }
     });
 
-    window.addEventListener("resize", () => {
-      this.engine.resize();
-    });
+    window.addEventListener("resize", () => this.engine.resize());
 
-    this.isInitialized = true;
-    console.log("Game initialized");
-    this.engine.hideLoadingUI();
+    
+
+    
   } catch (error) {
     console.error("Game: Initialization failed:", error);
-    this.engine.hideLoadingUI();
+   // this.engine.hideLoadingUI();
     throw error;
   }
-
 }
+
+
 
   private async initializePhysics(): Promise<void> {
     try {
@@ -170,7 +173,7 @@ export class Game {
       const physicsPlugin = new HavokPlugin(true, havokInstance);
       this.scene.enablePhysics(new Vector3(0, -9.81, 0), physicsPlugin);
       this.scene.collisionsEnabled = false;
-      console.log("Havok physics initialized successfully");
+      // console.log("Havok physics initialized successfully");
     } catch (error) {
       console.error("Failed to initialize Havok physics:", error);
     }
@@ -186,11 +189,9 @@ export class Game {
   this.shadowGenerator = new CascadedShadowGenerator(1024, this.light);
   this.shadowGenerator.numCascades = 1;
   this.shadowGenerator.lambda = 0.9;
-  this.shadowGenerator.autoCalcDepthBounds = true;
-  this.shadowGenerator.shadowMaxZ = 100;
+  this.shadowGenerator.shadowMaxZ = 30;
   this.shadowGenerator.bias = 0.001;
   this.shadowGenerator.cascadeBlendPercentage = 0.05;
-  this.shadowGenerator.penumbraDarkness = 1.0;
   this.shadowGenerator.stabilizeCascades = true;
 
   // Setup fog
@@ -198,6 +199,7 @@ export class Game {
   this.scene.fogDensity = 0.008;
   this.scene.fogColor = new Color3(0.9, 0.92, 0.95);
   this.scene.fogEnabled = true;
+  //this.scene.renderTargetsEnabled = false
 
   // Setup skybox
   this.envTexture = CubeTexture.CreateFromPrefilteredData("./environment/bluesky.env", this.scene);
@@ -237,114 +239,64 @@ export class Game {
 
   
 private async loadGroundMesh(): Promise<void> {
-  try {
-    // Create ground from heightmap
-    const ground = MeshBuilder.CreateGroundFromHeightMap(
-      "Plane",
-      "./HeightMap2.png",
-      {
-        width: 300, 
-        height: 300, 
-        subdivisions: 150, 
-        minHeight: 0, 
-        maxHeight: 1.5, 
-     
-        
-        onReady: (mesh) => {
-          console.log(`Ground mesh ${mesh.name} is ready`);
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const ground = MeshBuilder.CreateGroundFromHeightMap(
+        "Plane",
+        "./HeightMap2.png",
+        {
+          width: 300,
+          height: 300,
+          subdivisions: 75,
+          minHeight: 0,
+          maxHeight: 1.5,
+          onReady: (mesh) => {
+            mesh.receiveShadows = true;
+            mesh.isPickable = false;
+            resolve();
+          },
         },
-      },
-      this.scene
-    );
-    this.ground = ground;
-    this.ground = ground;
+        this.scene
+      );
+      this.ground = ground;
 
-    ground.onMeshReadyObservable.add(() => {
-    // Position ground
-    //ground.position = new Vector3(0, 0, 0);
+      const pbr = new PBRMaterial("pbr", this.scene);
+      pbr.albedoTexture = new Texture("./textures/grass4/diffuse.jpg", this.scene);
+      pbr.bumpTexture = new Texture("./textures/grass4/normal.jpg", this.scene);
+      pbr.invertNormalMapX = true;
+      pbr.invertNormalMapY = true;
+      pbr.metallic = 0.2;
+      pbr.roughness = 0.6;
+      if (pbr.albedoTexture instanceof Texture) {
+        pbr.albedoTexture.uScale = 75;
+        pbr.albedoTexture.vScale = 75;
+      }
+      pbr.environmentIntensity = 0.15;
+      ground.material = pbr;
 
-    ground.receiveShadows = true;
-    ground.isPickable = true;
-    //ground.checkCollisions = true;
-
-    })
-
-    /*
-    // Create and assign a simple standard material so it's visible
-    const groundMat = new StandardMaterial("groundMaterial", this.scene);
-    groundMat.diffuseColor = new Color3(0.5, 0.7, 0.3);  // greenish
-    groundMat.specularColor = new Color3(0, 0, 0);
-    ground.material = groundMat;
-
-    */
-
-
-        // Create PBR material
-    const pbr = new PBRMaterial("pbr", this.scene);
-    pbr.albedoTexture = new Texture(
-      "./textures/grass4/diffuse.jpg",
-      this.scene
-    );
-
-    pbr.bumpTexture = new Texture(
-      "./textures/grass4/normal.jpg",
-      this.scene
-    );
-
-    pbr.invertNormalMapX = true;
-    pbr.invertNormalMapY = true;
-
-  pbr.metallic = 0.2;
-  pbr.roughness = 0.6;
- 
-
-if (pbr.albedoTexture instanceof Texture) {
-              pbr.albedoTexture.uScale = 75;
-              pbr.albedoTexture.vScale = 75;
-            }
-
-
-          pbr.environmentIntensity = 0.15;
-
-    //groundMat.useAmbientOcclusionFromMetallicTextureRed = false;
-
-    //pbr.environmentIntensity = 0.3;
-    
-    ground.material = pbr;
- 
-    this.groundMeshes.push(ground);
-
-    // Physics
+      this.groundMeshes.push(ground);
+    } catch (error) {
+      console.error("Error creating ground from heightmap:", error);
+      reject(error);
+    }
+  }).then(() => {
     if (this.scene.isPhysicsEnabled()) {
       try {
-        ground.onMeshReadyObservable.addOnce(() => {
-          
-  try {
-    //ground.optimize(100);
-    new PhysicsAggregate(
-      ground,
-      PhysicsShapeType.MESH,
-      { mass: 0, restitution: 0.1, friction: 0.8 },
-      this.scene
-    );
-    
-  } catch (physicsError) {
-    console.error(`Failed to apply physics to ${ground.name}:`, physicsError);
-  }
-});
+        new PhysicsAggregate(
+          this.ground,
+          PhysicsShapeType.MESH,
+          { mass: 0, restitution: 0.1, friction: 0.8 },
+          this.scene
+        );
       } catch (physicsError) {
-        console.error(`Failed to apply physics to ${ground.name}:`, physicsError);
+        console.error(`Failed to apply physics to ground:`, physicsError);
       }
     }
 
-    // Add to shadow generator if exists
     if (this.shadowGenerator) {
-      this.shadowGenerator.addShadowCaster(ground);
+      this.shadowGenerator.addShadowCaster(this.ground);
     }
-
-  } catch (error) {
-    console.error("Error creating ground from heightmap:", error);
-  }
+  });
 }
 
   private createMistParticles(): void {
@@ -865,7 +817,7 @@ lodLow.leaves!.isVisible = false;
     }
   }
 
-  console.log(`Created forest with ${points.length} instances and adaptive LOD0 shadows.`);
+  // console.log(`Created forest with ${points.length} instances and adaptive LOD0 shadows.`);
 }
 
 
@@ -938,7 +890,7 @@ private async createBoundaryWalls(): Promise<void> {
         this.boundaryWalls.push(wall);
       }
 
-      console.log("Created invisible boundary walls around the forest");
+      // console.log("Created invisible boundary walls around the forest");
     } catch (error) {
       console.error("Error creating boundary walls:", error);
     }
@@ -951,29 +903,22 @@ private async createGrass(grassCount: number): Promise<void> {
   }
 
   const groundMesh = this.groundMeshes[0];
-  groundMesh.isPickable = true;
+  groundMesh.isPickable = false;
 
-  // Retrieve the preloaded Grass asset
   const grassContainer = this.assetManager.getAssetContainer("grassPlant");
   if (!grassContainer) {
-    console.error("Game: Grass asset not found in AssetManager", this.assetManager);
+    console.error("Game: Grass asset not found in AssetManager");
     return;
   }
 
-  // Access meshes from the asset container
   const grassMeshes = grassContainer.meshes.filter(mesh => mesh.name.includes("Grass")) as Mesh[];
   if (grassMeshes.length === 0) {
     console.warn("No Grass meshes found in asset container");
-    console.log("Available meshes:", grassContainer.meshes.map(m => m.name));
     return;
   }
 
-  // Clone meshes to avoid modifying originals
   const clonedGrassMeshes = grassMeshes.map(mesh => mesh.clone(`cloned_grass_${mesh.name}`, null, true));
-
-  // Apply material properties
   clonedGrassMeshes.forEach(mesh => {
- 
     mesh.isPickable = false;
     if (mesh.material instanceof PBRMaterial) {
       const mat = mesh.material as PBRMaterial;
@@ -988,7 +933,6 @@ private async createGrass(grassCount: number): Promise<void> {
     }
   });
 
-  // Merge meshes for thin instancing
   const mergedGrassMesh = Mesh.MergeMeshes(clonedGrassMeshes, true, true, undefined, false, true);
   if (!mergedGrassMesh) {
     console.warn("Failed to merge grass meshes");
@@ -996,19 +940,10 @@ private async createGrass(grassCount: number): Promise<void> {
     return;
   }
 
-  // Dispose cloned meshes after merging
   clonedGrassMeshes.forEach(m => m.dispose());
-
   mergedGrassMesh.refreshBoundingInfo();
   mergedGrassMesh.receiveShadows = true;
-  /*
-  if (this.shadowGenerator) {
-    this.shadowGenerator.addShadowCaster(mergedGrassMesh, true);
-    this.shadowGenerator.transparencyShadow = true;
-  }
-    */
 
-  // Random distribution for grass placement
   const seed = 98765432;
   const rand = this.mulberry32(seed);
   const bounds = { minX: -200, maxX: 200, minZ: -200, maxZ: 200 };
@@ -1016,64 +951,52 @@ private async createGrass(grassCount: number): Promise<void> {
   const height = bounds.maxZ - bounds.minZ;
   const grassMatrices: Float32Array = new Float32Array(grassCount * 16);
 
-  let processedCount = 0;
-
   for (let i = 0; i < grassCount; i++) {
     const x = bounds.minX + rand() * width;
     const z = bounds.minZ + rand() * height;
 
-    this.ground.onMeshReadyObservable.add(() => {
-      let position: Vector3;
-      let rotation = Quaternion.Identity();
+    let position: Vector3;
+    let rotation = Quaternion.Identity();
 
-      // Get height from this.ground
-      const y = this.ground.getHeightAtCoordinates(x, z);
-      if (y === undefined || isNaN(y)) {
-        console.warn(`No valid height for grass ${i} at (${x}, ${z})`);
-        position = new Vector3(x, 0, z); // Fallback position
-      } else {
-        position = new Vector3(x, y, z);
-      }
+    const y = this.ground.getHeightAtCoordinates(x, z);
+    if (y === undefined || isNaN(y)) {
+      console.warn(`No valid height for grass ${i} at (${x}, ${z})`);
+      position = new Vector3(x, 0, z);
+    } else {
+      position = new Vector3(x, y, z);
+    }
 
-      // Calculate normal-based rotation
-      const ray = new Ray(new Vector3(x, position.y + 100, z), Vector3.Down(), 200);
-      const hit = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
+    const ray = new Ray(new Vector3(x, position.y + 100, z), Vector3.Down(), 200);
+    const hit = this.scene.pickWithRay(ray, (mesh) => mesh === groundMesh);
 
-      if (hit && hit.getNormal) {
-        const normal = hit.getNormal(true) || Vector3.Up();
-        const up = Vector3.Up();
-        if (normal.lengthSquared() > 0 && !normal.equalsWithEpsilon(up, 0.0001)) {
-          const axis = Vector3.Cross(up, normal).normalize();
-          const angle = Math.acos(Vector3.Dot(up, normal) / normal.length());
-          if (axis.lengthSquared() > 0.0001) {
-            rotation = Quaternion.RotationAxis(axis, angle);
-          } else if (Vector3.Dot(up, normal) < -0.999) {
-            rotation = Quaternion.RotationAxis(Vector3.Right(), Math.PI);
-          }
+    if (hit && hit.getNormal) {
+      const normal = hit.getNormal(true) || Vector3.Up();
+      const up = Vector3.Up();
+      if (normal.lengthSquared() > 0 && !normal.equalsWithEpsilon(up, 0.0001)) {
+        const axis = Vector3.Cross(up, normal).normalize();
+        const angle = Math.acos(Vector3.Dot(up, normal) / normal.length());
+        if (axis.lengthSquared() > 0.0001) {
+          rotation = Quaternion.RotationAxis(axis, angle);
+        } else if (Vector3.Dot(up, normal) < -0.999) {
+          rotation = Quaternion.RotationAxis(Vector3.Right(), Math.PI);
         }
       }
+    }
 
-      const randomYaw = rand() * Math.PI * 2;
-      const yawRotation = Quaternion.RotationAxis(Vector3.Up(), randomYaw);
-      rotation = yawRotation.multiply(rotation);
+    const randomYaw = rand() * Math.PI * 2;
+    const yawRotation = Quaternion.RotationAxis(Vector3.Up(), randomYaw);
+    rotation = yawRotation.multiply(rotation);
 
-      const scaleValue = 10 + rand() * (0.6 - 0.3);
-      const scale = new Vector3(scaleValue, scaleValue, scaleValue);
+    const scaleValue = 10 + rand() * (0.6 - 0.3);
+    const scale = new Vector3(scaleValue, scaleValue, scaleValue);
 
-      const grassMatrix = Matrix.Compose(scale, rotation, position);
-      grassMatrix.copyToArray(grassMatrices, i * 16);
-
-      processedCount++;
-
-      // Apply instances only when all grass positions are processed
-      if (processedCount === grassCount) {
-        mergedGrassMesh.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
-        mergedGrassMesh.thinInstanceCount = grassCount;
-        mergedGrassMesh.freezeWorldMatrix();
-        console.log(`Created ${grassCount} grass instances using thin instancing.`);
-      }
-    }, -1, false, false, true); // Run once per instance
+    const grassMatrix = Matrix.Compose(scale, rotation, position);
+    grassMatrix.copyToArray(grassMatrices, i * 16);
   }
+
+  mergedGrassMesh.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
+  mergedGrassMesh.thinInstanceCount = grassCount;
+  mergedGrassMesh.freezeWorldMatrix();
 }
 
   private mulberry32(seed: number) {
@@ -1086,112 +1009,98 @@ private async createGrass(grassCount: number): Promise<void> {
   }
 
   private async initializeSceneComponents(onStepComplete: () => void): Promise<void> {
-    try {
-      this.assetManager = new AssetManager(this.scene);
-      await this.assetManager.initializeFromJson("./models/assets.json");
-      console.log("Game: All assets loaded.");
-      onStepComplete();
+  try {
+    this.targetingSystem = new TargetingSystem(this.scene);
 
-      this.targetingSystem = new TargetingSystem(this.scene);
-
-      if (!this.shadowGenerator) {
-        throw new Error("Game: Shadow generator not initialized");
-      }
-
-      if (!this.shadowGenerator.getLight()) {
-        throw new Error("Game: Shadow generator has no associated light");
-      }
-      console.log("Game: Shadow generator initialized with light:", this.shadowGenerator.getLight().name);
-
-      this.gameManager = new GameManager(
-        this.scene,
-        this.assetManager,
-        this.shadowGenerator,
-        this.highlightLayer,
-        this.targetingSystem,
-        this
-      );
-
-      const savedState: SceneState = { npcPositions: [], enemyPositions: [], bossPositions: [], questStates: [] };
-      await this.gameManager.initializeNPCs(savedState.npcPositions, savedState.questStates);
-      console.log("Game: NPCs initialized");
-      onStepComplete();
-      await this.gameManager.initializeEnemies(savedState.enemyPositions);
-      await this.gameManager.initializeBosses(savedState.bossPositions);
-      console.log("Game: Enemies initialized");
-      onStepComplete();
-
-        this.gameManager.getEnemies().forEach(enemy => {
-        this.observeEnemyDeath(enemy);
-      });
-      
-
-      this.characterController = new CharacterController(
-        this.scene,
-        this.canvas,
-        this.camera,
-        this.shadowGenerator,
-        this.assetManager,
-        this.targetingSystem,
-        this.gameManager
-      );
-
-      const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
-      if (characterMesh) {
-        console.log("Game: Player mesh name:", characterMesh.name);
-        this.shadowGenerator.addShadowCaster(characterMesh, true);
-        characterMesh.receiveShadows = true;
-        characterMesh.checkCollisions = true;
-        characterMesh.getChildMeshes().forEach(child => {
-          this.shadowGenerator!.addShadowCaster(child, true);
-          child.receiveShadows = true;
-          child.checkCollisions = true;
-        });
-        console.log("Game: Character mesh added to shadow generator:", characterMesh.name);
-        this.gameManager.setCharacterMesh(characterMesh);
-      } else {
-        console.warn("Game: Character mesh not found for shadow generator");
-      }
-
-      await this.gameManager.initializeDreamCrystals();
-      console.log("Game: DreamCrystals initialized");
-      onStepComplete();
-
-      const player = this.characterController.getPlayer();
-      const crystalState = this.gameManager.getDreamCrystalManager().getState();
-      const totalCrystals = this.gameManager.getDreamCrystalManager().totalCrystals;
-      console.log(`Game: Crystal state:`, crystalState.collected, `positions:`, crystalState.positions.length, `totalCrystals:`, totalCrystals);
-      player.setTotalCrystals(totalCrystals);
-      player.resetCrystalCount();
-      crystalState.collected.forEach((collected, i) => {
-        if (collected) {
-          player.incrementCrystalCount();
-          console.log(`Game: Crystal ${i} collected during initialization`);
-        }
-      });
-      this.gameManager.getDreamCrystalManager().getOnCrystalCollectedObservable().add((index) => {
-        player.incrementCrystalCount();
-        console.log(`Game: Crystal ${index} collected, player crystals: ${player.getCollectedCrystals()}/${player.getTotalCrystals()}`);
-      });
-
-      if (savedState.questStates) {
-        player.setQuestState(savedState.questStates);
-      }
-
-      this.inputHandler = new InputHandler(this.scene, this.characterController, this.canvas, this);
-      const initSuccess = await this.inputHandler.init();
-      if (!initSuccess) {
-        console.warn("Game: InputHandler failed to initialize, using fallback keybindings");
-      }
-    } catch (error) {
-      console.error("Game: Scene components initialization failed:", error);
-      throw error;
+    if (!this.shadowGenerator) {
+      throw new Error("Game: Shadow generator not initialized");
     }
+
+    if (!this.shadowGenerator.getLight()) {
+      throw new Error("Game: Shadow generator has no associated light");
+    }
+
+    this.gameManager = new GameManager(
+      this.scene,
+      this.assetManager,
+      this.shadowGenerator,
+      this.highlightLayer,
+      this.targetingSystem,
+      this
+    );
+
+    const savedState: SceneState = { npcPositions: [], enemyPositions: [], bossPositions: [], questStates: [] };
+    await this.gameManager.initializeNPCs(savedState.npcPositions, savedState.questStates);
+    onStepComplete(); // Step 5: NPCs initialized
+
+    await this.gameManager.initializeEnemies(savedState.enemyPositions);
+    await this.gameManager.initializeBosses(savedState.bossPositions);
+    onStepComplete(); // Step 6: Enemies and bosses initialized
+
+    this.gameManager.getEnemies().forEach(enemy => {
+      this.observeEnemyDeath(enemy);
+    });
+
+    this.characterController = new CharacterController(
+      this.scene,
+      this.canvas,
+      this.camera,
+      this.shadowGenerator,
+      this.assetManager,
+      this.targetingSystem,
+      this.gameManager
+    );
+
+    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+    if (characterMesh) {
+      this.shadowGenerator.addShadowCaster(characterMesh, true);
+      characterMesh.receiveShadows = true;
+      characterMesh.checkCollisions = true;
+      characterMesh.getChildMeshes().forEach(child => {
+        this.shadowGenerator!.addShadowCaster(child, true);
+        child.receiveShadows = true;
+        child.checkCollisions = true;
+      });
+      this.gameManager.setCharacterMesh(characterMesh);
+    } else {
+      console.warn("Game: Character mesh not found for shadow generator");
+    }
+
+    await this.gameManager.initializeDreamCrystals();
+    onStepComplete(); // Step 7: DreamCrystals initialized
+
+    const player = this.characterController.getPlayer();
+    const crystalState = this.gameManager.getDreamCrystalManager().getState();
+    const totalCrystals = this.gameManager.getDreamCrystalManager().totalCrystals;
+    player.setTotalCrystals(totalCrystals);
+    player.resetCrystalCount();
+    crystalState.collected.forEach((collected, i) => {
+      if (collected) {
+        player.incrementCrystalCount();
+      }
+    });
+    this.gameManager.getDreamCrystalManager().getOnCrystalCollectedObservable().add((index) => {
+      player.incrementCrystalCount();
+    });
+
+    if (savedState.questStates) {
+      player.setQuestState(savedState.questStates);
+    }
+
+    this.inputHandler = new InputHandler(this.scene, this.characterController, this.canvas, this);
+    const initSuccess = await this.inputHandler.init();
+    if (!initSuccess) {
+      console.warn("Game: InputHandler failed to initialize, using fallback keybindings");
+    }
+  } catch (error) {
+    console.error("Game: Scene components initialization failed:", error);
+    throw error;
   }
+}
 public observeEnemyDeath(enemy: Enemy): void {
     const enemyId = enemy.getId();
     if (this.observedEnemies.has(enemyId)) {
-      console.log(`Game: Already observing enemy ${enemyId}, skipping duplicate observer`);
+      // console.log(`Game: Already observing enemy ${enemyId}, skipping duplicate observer`);
       return;
     }
     this.observedEnemies.add(enemyId);
@@ -1206,7 +1115,7 @@ public observeEnemyDeath(enemy: Enemy): void {
         const player = this.characterController.getPlayer();
         const enemyType = enemy instanceof BossEnemy ? "BossEnemy" : "Enemy";
         player.incrementEnemyKills(enemyType);
-        console.log(`Game: ${enemyType} ${id} killed at position`, position, `notified player`);
+        // console.log(`Game: ${enemyType} ${id} killed at position`, position, `notified player`);
         this.observedEnemies.delete(id); // Clean up after death
         if (enemyType === "BossEnemy") {
           this.gameManager.scheduleBossRespawn(id, position);
@@ -1215,7 +1124,7 @@ public observeEnemyDeath(enemy: Enemy): void {
         }
       }
     });
-    console.log(`Game: Observing onDeath for ${enemy instanceof BossEnemy ? "BossEnemy" : "Enemy"} ${enemyId}`);
+    // console.log(`Game: Observing onDeath for ${enemy instanceof BossEnemy ? "BossEnemy" : "Enemy"} ${enemyId}`);
   }
   
 
@@ -1259,21 +1168,21 @@ public observeEnemyDeath(enemy: Enemy): void {
         const player = this.characterController.getPlayer();
         const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests()].find(q => q.getId() === npcQuest.getId());
         this.currentQuest = playerQuest || npcQuest;
-        console.log(`Game: Set currentQuest to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}, playerQuest: ${playerQuest ? playerQuest.getState().status : 'none'}, npcQuest: ${npcQuest.getState().status}`);
+        // console.log(`Game: Set currentQuest to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}, playerQuest: ${playerQuest ? playerQuest.getState().status : 'none'}, npcQuest: ${npcQuest.getState().status}`);
         this.showQuestDialog = !this.showQuestDialog;
-        console.log(`Game: Quest dialog toggled to ${this.showQuestDialog} for quest ${this.currentQuest.getId()}`);
+        // console.log(`Game: Quest dialog toggled to ${this.showQuestDialog} for quest ${this.currentQuest.getId()}`);
         this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
         if (this.showQuestDialog) {
           target.rotateToFacePlayer();
         }
       } else {
-        console.log("Game: Cannot toggle quest dialog; NPC has no quest");
+        // console.log("Game: Cannot toggle quest dialog; NPC has no quest");
         this.showQuestDialog = false;
         this.currentQuest = null;
         this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
       }
     } else {
-      console.log("Game: Cannot toggle quest dialog; target is not an NPC");
+      // console.log("Game: Cannot toggle quest dialog; target is not an NPC");
       this.showQuestDialog = false;
       this.currentQuest = null;
       this.onQuestDialogToggled.notifyObservers(this.showQuestDialog);
@@ -1290,10 +1199,10 @@ public observeEnemyDeath(enemy: Enemy): void {
       const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests()].find(q => q.getId() === this.currentQuest!.getId());
       if (playerQuest) {
         this.currentQuest = playerQuest;
-        console.log(`Game: getCurrentQuest updated to playerQuest ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
+        // console.log(`Game: getCurrentQuest updated to playerQuest ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
       }
     }
-    console.log(`Game: getCurrentQuest returning ${this.currentQuest?.getId() ?? "null"}, status: ${this.currentQuest?.getState().status ?? "none"}`);
+    // console.log(`Game: getCurrentQuest returning ${this.currentQuest?.getId() ?? "null"}, status: ${this.currentQuest?.getState().status ?? "none"}`);
     return this.currentQuest;
   }
 
@@ -1323,13 +1232,13 @@ public observeEnemyDeath(enemy: Enemy): void {
           const playerQuest = player.getActiveQuests().find(q => q.getId() === this.currentQuest!.getId());
           if (playerQuest) {
             npc.setQuest(playerQuest);
-            console.log(`Game: Updated NPC quest ${this.currentQuest!.getId()} to status: ${playerQuest.getState().status}`);
+            // console.log(`Game: Updated NPC quest ${this.currentQuest!.getId()} to status: ${playerQuest.getState().status}`);
           }
           npc.updateQuestMarker();
         }
       });
       this.currentQuest = player.getActiveQuests().find(q => q.getId() === this.currentQuest!.getId()) || this.currentQuest;
-      console.log(`Game: updated currentQuest after accept to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
+      // console.log(`Game: updated currentQuest after accept to ${this.currentQuest.getId()}, status: ${this.currentQuest.getState().status}`);
       this.showQuestDialog = false;
       this.onQuestDialogToggled.notifyObservers(false);
     }
@@ -1366,14 +1275,14 @@ public observeEnemyDeath(enemy: Enemy): void {
           const playerQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === currentQuestId);
           if (playerQuest) {
             npc.setQuest(playerQuest);
-            console.log(`Game: Updated NPC quest ${currentQuestId} to status: ${playerQuest.getState().status}`);
+            // console.log(`Game: Updated NPC quest ${currentQuestId} to status: ${playerQuest.getState().status}`);
             npc.updateQuestMarker();
           }
           // New: Assign next quest to NPC if available
           if (nextQuest && !player.getTurnedInQuests().some(q => q.getId() === nextQuestId)) {
             npc.setQuest(nextQuest);
             npc.updateQuestMarker();
-            console.log(`Game: Assigned next quest ${nextQuestId} to NPC ${npc.getId()}`);
+            // console.log(`Game: Assigned next quest ${nextQuestId} to NPC ${npc.getId()}`);
           }
         }
       });
@@ -1381,9 +1290,9 @@ public observeEnemyDeath(enemy: Enemy): void {
       this.currentQuest = [...player.getActiveQuests(), ...player.getCompletedQuests(), ...player.getTurnedInQuests()].find(q => q.getId() === currentQuestId) || this.currentQuest;
       if (nextQuest && !player.getTurnedInQuests().some(q => q.getId() === nextQuestId)) {
         this.currentQuest = nextQuest;
-        console.log(`Game: Updated currentQuest to next quest ${nextQuestId}, status: ${nextQuest.getState().status}`);
+        // console.log(`Game: Updated currentQuest to next quest ${nextQuestId}, status: ${nextQuest.getState().status}`);
       } else {
-        console.log(`Game: Updated currentQuest after turn-in to ${this.currentQuest!.getId()}, status: ${this.currentQuest!.getState().status}`);
+        // console.log(`Game: Updated currentQuest after turn-in to ${this.currentQuest!.getId()}, status: ${this.currentQuest!.getState().status}`);
       }
 
       this.showQuestDialog = false;
@@ -1424,7 +1333,7 @@ public observeEnemyDeath(enemy: Enemy): void {
       ].filter((mesh): mesh is Mesh => !!mesh);
 
       this.navigationPlugin.createNavMesh(navmeshMeshes, navmeshParameters);
-      console.log("Game: Navmesh created successfully");
+      // console.log("Game: Navmesh created successfully");
       /*
       const navmeshdebug = this.navigationPlugin.createDebugNavMesh(this.scene);
       const matdebug = new StandardMaterial("matdebug", this.scene);
@@ -1435,7 +1344,7 @@ public observeEnemyDeath(enemy: Enemy): void {
 
       // Create crowd for enemies
       this.crowd = this.navigationPlugin.createCrowd(20, 2.0, this.scene); // Max 20 enemies, max speed 2.0
-      console.log("Game: Crowd initialized for enemies");
+      // console.log("Game: Crowd initialized for enemies");
     } catch (error) {
       console.error("Game: Failed to initialize navigation:", error);
     }
@@ -1476,7 +1385,7 @@ public observeEnemyDeath(enemy: Enemy): void {
 
 
    
-      console.log("Game: Cleared enemy death subscriptions");
+      // console.log("Game: Cleared enemy death subscriptions");
 
       
       this.characterController?.dispose();
@@ -1555,7 +1464,7 @@ public observeEnemyDeath(enemy: Enemy): void {
       this.scene.dispose();
       this.onQuestDialogToggled.clear();
       this.engine.dispose();
-      console.log("Game: Disposed");
+      // console.log("Game: Disposed");
     } catch (error) {
       console.error("Game: Dispose failed:", error);
     }

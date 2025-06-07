@@ -54,7 +54,7 @@ export class Player {
     this.hpRegenInterval = setInterval(() => {
     if (!this.isDead && this.currentHP < this.maxHP) {
       this.currentHP = Math.min(this.currentHP + this.hpRegenRate, this.maxHP);
-      console.log(`Player: Regenerated ${this.hpRegenRate} HP at level ${this.level}, now ${this.currentHP}/${this.maxHP}`);
+      // console.log(`Player: Regenerated ${this.hpRegenRate} HP at level ${this.level}, now ${this.currentHP}/${this.maxHP}`);
       this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     }
   }, 5000);
@@ -71,7 +71,7 @@ export class Player {
   enemies.forEach(enemy => this.subscribeToEnemyDeath(enemy));
   bosses.forEach(boss => this.subscribeToEnemyDeath(boss));
 
-  console.log(`Player: Subscribed to ${enemies.length} enemies and ${bosses.length} bosses for XP awards`);
+  // console.log(`Player: Subscribed to ${enemies.length} enemies and ${bosses.length} bosses for XP awards`);
 }
 
   public getLevel(): number { // New: Getter for level
@@ -92,10 +92,10 @@ export class Player {
 
   public setHP(hp: number): void {
     this.currentHP = Math.max(0, Math.min(hp, this.maxHP));
-    console.log(`Player: HP updated to ${this.currentHP}/${this.maxHP}`);
+    // console.log(`Player: HP updated to ${this.currentHP}/${this.maxHP}`);
     if (this.currentHP === 0 && !this.isDead) {
       this.isDead = true;
-      console.log("Player is Dead!");
+      // console.log("Player is Dead!");
       this.onDeathObservable.notifyObservers();
       const characterController = this.game?.getCharacterController();
       if (characterController) {
@@ -110,7 +110,7 @@ export class Player {
     this.currentHP = this.maxHP;
     this.isDead = false;
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
-    console.log("Player: Reset HP to max and cleared isDead state");
+    // console.log("Player: Reset HP to max and cleared isDead state");
   }
 
   public getInventory(): Item[] {
@@ -120,9 +120,9 @@ export class Player {
   public addItem(item: Item): void {
     if (!this.inventory.some(i => i.getName() === item.getName())) {
       this.inventory.push(item);
-      console.log(`Player: Added ${item.getName()} to inventory`);
+      // console.log(`Player: Added ${item.getName()} to inventory`);
     } else {
-      console.log(`Player: ${item.getName()} already in inventory`);
+      // console.log(`Player: ${item.getName()} already in inventory`);
       item.dispose();
     }
   }
@@ -133,9 +133,9 @@ export class Player {
       const item = this.inventory[index];
       this.inventory.splice(index, 1);
       item.dispose();
-      console.log(`Player: Removed ${itemName} from inventory`);
+      // console.log(`Player: Removed ${itemName} from inventory`);
     } else {
-      console.log(`Player: ${itemName} not found in inventory`);
+      // console.log(`Player: ${itemName} not found in inventory`);
     }
   }
 
@@ -153,11 +153,11 @@ export class Player {
 
   public incrementCrystalCount(): void {
     this.collectedCrystals++;
-    console.log(`Player: Incrementing crystal count, now ${this.collectedCrystals}/${this.totalCrystals}, activeQuests=${this.activeQuests.map(q => `${q.getId()}:${q.getState().status}`).join(", ")}`);
+    // console.log(`Player: Incrementing crystal count, now ${this.collectedCrystals}/${this.totalCrystals}, activeQuests=${this.activeQuests.map(q => `${q.getId()}:${q.getState().status}`).join(", ")}`);
     this.activeQuests.forEach(quest => {
       if (quest.type === "COLLECT" && quest.getState().status === "inProgress") {
         quest.updateProgress(1);
-        console.log(`Player: Updated COLLECT quest ${quest.getId()} - progress ${quest.getState().collectedCrystals}/${quest.requiredCrystals}, completed=${quest.isCompletedStatus()}`);
+        // console.log(`Player: Updated COLLECT quest ${quest.getId()} - progress ${quest.getState().collectedCrystals}/${quest.requiredCrystals}, completed=${quest.isCompletedStatus()}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -166,11 +166,11 @@ export class Player {
   }
 
   public incrementEnemyKills(enemyType: "Enemy" | "BossEnemy"): void {
-    console.log(`Player: Incrementing enemy kills for type ${enemyType}`);
+    // console.log(`Player: Incrementing enemy kills for type ${enemyType}`);
     this.activeQuests.forEach(quest => {
       if (quest.type === "KILL") {
         quest.updateProgress(1, enemyType);
-        console.log(`Player: Updated KILL quest ${quest.getId()} progress for ${enemyType}, enemiesKilled: ${quest.getState().enemiesKilled}`);
+        // console.log(`Player: Updated KILL quest ${quest.getId()} progress for ${enemyType}, enemiesKilled: ${quest.getState().enemiesKilled}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -180,7 +180,7 @@ export class Player {
 
   public setTotalCrystals(total: number): void {
     this.totalCrystals = total;
-    console.log(`Player: Set total crystals to ${this.totalCrystals}`);
+    // console.log(`Player: Set total crystals to ${this.totalCrystals}`);
   }
 
   public getCollectedCrystals(): number {
@@ -194,7 +194,7 @@ export class Player {
   public resetCrystalCount(): void {
     this.collectedCrystals = 0;
     this.totalCrystals = 0;
-    console.log("Player: Reset crystal count");
+    // console.log("Player: Reset crystal count");
   }
 
   public acceptQuest(quest: Quest): void {
@@ -203,7 +203,7 @@ export class Player {
         !this.turnedInQuests.some(q => q.getId() === quest.getId())) {
       quest.accept();
       this.activeQuests.push(quest);
-      console.log(`Player: Accepted quest ${quest.getId()}`);
+      // console.log(`Player: Accepted quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
       this.onQuestStateChanged.notifyObservers(quest);
     }
@@ -221,10 +221,10 @@ export class Player {
       });
       this.activeQuests = this.activeQuests.filter(q => q.getId() !== questId);
       this.completedQuests.push(quest);
-      console.log(`Player: Forced completion of quest ${questId}`);
+      // console.log(`Player: Forced completion of quest ${questId}`);
       this.updateNPCQuest(quest);
     } else {
-      console.log(`Player: Quest ${questId} not found in active quests`);
+      // console.log(`Player: Quest ${questId} not found in active quests`);
     }
   }
 
@@ -235,7 +235,7 @@ export class Player {
       this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
       this.turnedInQuests.push(quest);
       this.addXP(quest.getXPReward());
-      console.log(`Player: Turned in quest ${quest.getId()}`);
+      // console.log(`Player: Turned in quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
       this.onQuestStateChanged.notifyObservers(quest);
     }
@@ -263,7 +263,7 @@ export class Player {
         });
         this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
         this.completedQuests.push(quest);
-        console.log(`Player: Completed quest ${quest.getId()}`);
+        // console.log(`Player: Completed quest ${quest.getId()}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -276,15 +276,15 @@ export class Player {
       return;
     }
     const npcs = this.game.getGameManager().getNPCs();
-    console.log(`Player: Found ${npcs.length} NPCs to check for quest ${quest.getId()}`);
+    // console.log(`Player: Found ${npcs.length} NPCs to check for quest ${quest.getId()}`);
     let updated = false;
     npcs.forEach(npc => {
       const npcQuest = npc.getQuest();
-      console.log(`Player: Checking NPC ${npc.getId()}, quest=${npcQuest?.getId() || 'none'}, status=${npcQuest?.getState().status || 'none'}`);
+      // console.log(`Player: Checking NPC ${npc.getId()}, quest=${npcQuest?.getId() || 'none'}, status=${npcQuest?.getState().status || 'none'}`);
       if (npcQuest?.getId() === quest.getId()) {
         npc.setQuest(quest);
         npc.updateQuestMarker();
-        console.log(`Player: Updated NPC ${npc.getId()} quest ${quest.getId()} to status: ${quest.getState().status}`);
+        // console.log(`Player: Updated NPC ${npc.getId()} quest ${quest.getId()} to status: ${quest.getState().status}`);
         updated = true;
       }
     });
@@ -321,11 +321,11 @@ export class Player {
 
   public takeDamage(damage: number): void {
     this.currentHP = Math.max(0, Math.min(this.currentHP - damage, this.maxHP));
-    console.log(`Player: Took ${damage} damage, HP updated to ${this.currentHP}/${this.maxHP}`);
+    // console.log(`Player: Took ${damage} damage, HP updated to ${this.currentHP}/${this.maxHP}`);
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     if (this.currentHP === 0 && !this.isDead) {
       this.isDead = true;
-      console.log("Player is Dead!");
+      // console.log("Player is Dead!");
       this.onDeathObservable.notifyObservers();
       const characterController = this.game?.getCharacterController();
       if (characterController) {
@@ -346,7 +346,7 @@ export class Player {
 
   public addXP(amount: number): void {
     this.currentXP += amount;
-    console.log(`Player: Added ${amount} XP, current XP: ${this.currentXP}/${this.maxXP} at level ${this.level}`);
+    // console.log(`Player: Added ${amount} XP, current XP: ${this.currentXP}/${this.maxXP} at level ${this.level}`);
     this.onXPChanged.notifyObservers({ currentXP: this.currentXP, maxXP: this.maxXP });
 
     while (this.currentXP >= this.maxXP) {
@@ -356,7 +356,7 @@ export class Player {
         this.maxHP = 100 + (this.level - 1) * 20; 
         const hpPercentage = this.currentHP / oldMaxHP;
         this.currentHP = Math.round(this.maxHP * hpPercentage); 
-        console.log(`Player: Leveled up to level ${this.level}! New max HP: ${this.maxHP}, current HP: ${this.currentHP}`);
+        // console.log(`Player: Leveled up to level ${this.level}! New max HP: ${this.maxHP}, current HP: ${this.currentHP}`);
         this.currentXP -= this.maxXP;
         this.maxXP = Math.round(1000 * Math.pow(1.5, this.level - 1));
         this.onLevelChanged.notifyObservers({ level: this.level });
@@ -370,9 +370,9 @@ export class Player {
   public subscribeToEnemyDeath(entity: Enemy | BossEnemy): void {
   entity.onDeath.add(() => {
     this.addXP(entity.xpReward);
-    console.log(`Player: Awarded 100 XP for ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} transformation`);
+    // console.log(`Player: Awarded 100 XP for ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} transformation`);
   });
-  console.log(`Player: Subscribed to ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} for XP awards`);
+  // console.log(`Player: Subscribed to ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} for XP awards`);
 }
 
 
@@ -419,12 +419,12 @@ private triggerLevelUpEffect(): void {
     },
     { volume: 0.7 }
   );
-    console.log(`Player: Triggered level-up particle effect at level ${this.level}`);
+    // console.log(`Player: Triggered level-up particle effect at level ${this.level}`);
     setTimeout(() => {
       particleSystem.stop();
       setTimeout(() => {
         particleSystem.dispose();
-        console.log(`Player: Disposed level-up particle effect for level ${this.level}`);
+        // console.log(`Player: Disposed level-up particle effect for level ${this.level}`);
       }, 3000);
     }, 2000);
   }
@@ -445,8 +445,8 @@ private triggerLevelUpEffect(): void {
       {
         clearInterval(this.hpRegenInterval);
         this.hpRegenInterval = null;
-        console.log("Player: Cleared HP regeneration interval");
+        // console.log("Player: Cleared HP regeneration interval");
       }
-    console.log("Player: Disposed");
+    // console.log("Player: Disposed");
   }
 }

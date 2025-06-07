@@ -6,7 +6,7 @@ export class DreamCrystal extends Item {
   private onCollected: Observable<DreamCrystal> = new Observable();
   private showBoundingBoxes = false;
   private rotationSpeed = 0.02; // Radians per frame
-  private glowLayer: GlowLayer | null;
+
 
   constructor(
     itemName: string,
@@ -21,7 +21,7 @@ export class DreamCrystal extends Item {
   ) {
     super(itemName, scene, assetContainer, shadowGenerator, positionOffset, rotationOffset, scaling);
 
-    this.glowLayer = glowLayer;
+
     const crystalMesh = this.getCrystalMesh();
 
     // Setup material with emissive color for glow
@@ -40,7 +40,7 @@ export class DreamCrystal extends Item {
       
   //  }
 
-    console.log(`Material for ${itemName}: emissiveColor=${material.emissiveColor.toString()}, diffuseColor=${material.diffuseColor.toString()}`);
+    // console.log(`Material for ${itemName}: emissiveColor=${material.emissiveColor.toString()}, diffuseColor=${material.diffuseColor.toString()}`);
 
     this.setupCollision(playerMesh);
     this.setupAnimation();
@@ -50,7 +50,7 @@ export class DreamCrystal extends Item {
   public getCrystalMesh(): Mesh {
     const parentMesh = this.getParentMesh();
     const childMeshes = parentMesh.getChildMeshes();
-    console.log(`Crystal ${this.getName()} child meshes:`, childMeshes.map(m => m.name));
+    // console.log(`Crystal ${this.getName()} child meshes:`, childMeshes.map(m => m.name));
     const childMesh = childMeshes[0] as Mesh;
     if (!childMesh) {
       console.warn(`No child mesh found for ${this.getName()}, using parentMesh`);
@@ -86,8 +86,8 @@ export class DreamCrystal extends Item {
         );
 
         if (intersects) {
-          console.log(`Intersection detected for ${this.getName()} at position ${crystalMesh.position.toString()}`);
-          console.log("Distance to player:", Vector3.Distance(crystalMesh.position, playerMesh.position));
+          // console.log(`Intersection detected for ${this.getName()} at position ${crystalMesh.position.toString()}`);
+          // console.log("Distance to player:", Vector3.Distance(crystalMesh.position, playerMesh.position));
           this.collect();
         }
       }
@@ -109,7 +109,7 @@ export class DreamCrystal extends Item {
     this.scene.onKeyboardObservable.add((kbInfo) => {
       if (kbInfo.type === 1 && kbInfo.event.key === "b") {
         this.showBoundingBoxes = !this.showBoundingBoxes;
-        console.log(`Bounding boxes ${this.showBoundingBoxes ? "enabled" : "disabled"} for ${this.getName()}`);
+        // console.log(`Bounding boxes ${this.showBoundingBoxes ? "enabled" : "disabled"} for ${this.getName()}`);
       }
     });
   }
@@ -125,9 +125,6 @@ export class DreamCrystal extends Item {
     parent.setEnabled(false);
     mesh.isVisible = false;
 
-    if (this.glowLayer) {
-      this.glowLayer.removeIncludedOnlyMesh(mesh);
-    }
 
     this.onCollected.notifyObservers(this);
   }
@@ -143,9 +140,7 @@ export class DreamCrystal extends Item {
   public dispose(): void {
     const mesh = this.getCrystalMesh();
     mesh.isVisible = false;
-    if (this.glowLayer) {
-      this.glowLayer.removeIncludedOnlyMesh(mesh);
-    }
+
     super.dispose();
   }
 }

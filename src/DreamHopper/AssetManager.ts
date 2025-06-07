@@ -1,37 +1,55 @@
-import { Scene, SceneLoader, AssetContainer } from "@babylonjs/core";
+import { Scene, SceneLoader, AssetContainer, AssetsManager } from "@babylonjs/core";
 
 export class AssetManager {
   private scene: Scene | null;
   public assetList: { [key: string]: AssetContainer } = {};
+  public assetsManager!: AssetsManager;
 
   constructor(scene: Scene | null) {
     this.scene = scene;
+    this.assetsManager = new AssetsManager(scene!);
+    this.assetsManager.useDefaultLoadingScreen = false;
+    this.assetsManager.autoHideLoadingUI = false;
   }
 
-  // Initialize and load assets from Json file (models/assets.json)
-  async initializeFromJson(jsonUrl: string): Promise<void> {
-    if (!this.scene) {
-      console.error("Scene not set in AssetManager during initialization");
-      return;
-    }
-  
-    console.log("Initializing assets from JSON...");
-  
-    try {
-      const response = await fetch(jsonUrl);
-      const assets = await response.json();
-  
-      for (const asset of assets) {
-        await this.loadAsset(asset.name, asset.rootUrl, asset.filename);
-      }
-  
-      console.log("Assets loaded successfully from JSON.");
-    } catch (error) {
-      console.error("Error loading assets from JSON:", error);
-    }
+  async initializeFromJson(jsonUrl: string, onProgress?: (percent: number) => void): Promise<void> {
+  if (!this.scene) {
+    console.error("Scene not set in AssetManager during initialization");
+    return;
   }
 
-  // Load a JSON file and return its parsed content
+  try {
+    const response = await fetch(jsonUrl);
+    const assets = await response.json();
+
+    let loadedAssets = 0;
+    const totalAssets = assets.length;
+
+    assets.forEach((asset: { name: string; rootUrl: string; filename: string | File }) => {
+      const task = this.assetsManager.addContainerTask(asset.name, "", asset.rootUrl, asset.filename);
+      task.onSuccess = (task) => {
+        this.assetList[asset.name] = task.loadedContainer;
+        task.loadedContainer.meshes.forEach(mesh => mesh.setEnabled(false));
+        task.loadedContainer.addAllToScene();
+        loadedAssets++;
+        if (onProgress) {
+          onProgress((loadedAssets / totalAssets) * 100); // Report progress per asset
+        }
+      };
+      task.onError = (task, message, exception) => {
+        console.error(`Error loading asset '${asset.name}':`, message, exception);
+      };
+    });
+
+    await this.assetsManager.loadAsync();
+    if (onProgress) {
+      onProgress(100); // Ensure 100% is reported when done
+    }
+  } catch (error) {
+    console.error("Error loading assets from JSON:", error);
+  }
+}
+
   async loadJson(jsonUrl: string): Promise<any> {
     try {
       const response = await fetch(jsonUrl);
@@ -46,7 +64,6 @@ export class AssetManager {
     }
   }
 
-  // Load a specific asset into the asset container
   private async loadAsset(name: string, rootUrl: string, filename: string): Promise<void> {
     if (!this.scene) {
       throw new Error(`Cannot load asset '${name}' without a scene`);
@@ -54,8 +71,7 @@ export class AssetManager {
 
     try {
       const assetContainer = await SceneLoader.LoadAssetContainerAsync(rootUrl, filename, this.scene);
-      this.assetList[name] = assetContainer; // Store in the asset list
-
+      this.assetList[name] = assetContainer;
       assetContainer.meshes.forEach(mesh => mesh.setEnabled(false));
       assetContainer.addAllToScene();
     } catch (error) {
@@ -63,15 +79,12 @@ export class AssetManager {
     }
   }
 
-  // Get a loaded asset container by name
   getAssetContainer(name: string): AssetContainer | undefined {
     return this.assetList[name];
   }
 
-  // Update the scene for the AssetManager
   setScene(scene: Scene | null): void {
     this.scene = scene;
-    // Update existing assets to use the new scene
     Object.values(this.assetList).forEach(container => {
       container.removeAllFromScene();
       if (scene) {
@@ -80,7 +93,6 @@ export class AssetManager {
     });
   }
 
-  // Dispose of all assets
   dispose(): void {
     Object.values(this.assetList).forEach(container => {
       container.dispose();

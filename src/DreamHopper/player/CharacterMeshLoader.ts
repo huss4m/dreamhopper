@@ -45,7 +45,7 @@ export class CharacterMeshLoader {
       this.skeleton = clones.skeletons[0];
       this.animationGroups = clones.animationGroups || [];
 
-      // // console.log(`Loaded ${this.animationGroups.length} animation groups:`, this.animationGroups.map(ag => ag.name));
+      // // // console.log(`Loaded ${this.animationGroups.length} animation groups:`, this.animationGroups.map(ag => ag.name));
 
       this.characterMesh.position = position;
       this.characterMesh.checkCollisions = true;
@@ -77,7 +77,7 @@ export class CharacterMeshLoader {
 
       Tags.EnableFor(this.hitboxMesh);
       Tags.AddTagsTo(this.hitboxMesh, "player hitbox");
-      // // console.log(`Player hitbox created: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
+      // // // console.log(`Player hitbox created: ${this.hitboxMesh.name}, isVisible: ${this.hitboxMesh.isVisible}, isPickable: ${this.hitboxMesh.isPickable}, tags: ${Tags.GetTags(this.hitboxMesh)}`);
 
       if (this.shadowGenerator) {
         this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
@@ -112,12 +112,12 @@ export class CharacterMeshLoader {
 
   public printBones(): void {
     if (this.skeleton && this.skeleton.bones.length > 0) {
-      // // console.log("Bones in the skeleton:");
+      // // // console.log("Bones in the skeleton:");
       this.skeleton.bones.forEach((bone, index) => {
-        // console.log(`Bone ${index}: ${bone.name}`);
+        // // console.log(`Bone ${index}: ${bone.name}`);
       });
     } else {
-      // console.log("No skeleton found.");
+      // // console.log("No skeleton found.");
     }
   }
 

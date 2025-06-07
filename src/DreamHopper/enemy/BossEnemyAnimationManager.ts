@@ -6,18 +6,18 @@ import { BossEnemy } from "./BossEnemy";
 export class BossEnemyAnimationManager extends EnemyAnimationManager {
   constructor(scene: Scene, game: Game, enemy: BossEnemy) {
     super(scene, game, enemy);
-    console.log(`BossEnemyAnimationManager: Constructor called for BossEnemy ${enemy.getId()}`);
+    // console.log(`BossEnemyAnimationManager: Constructor called for BossEnemy ${enemy.getId()}`);
   }
 
   public initialize(animationGroups: AnimationGroup[]): void {
    
     super.initialize(animationGroups);
     this.animationGroups = animationGroups;
-   console.log(`BossEnemyAnimationManager: Initializing with ${animationGroups.length} animation groups: ${animationGroups.map(ag => ag.name).join(", ")}`);
+   // console.log(`BossEnemyAnimationManager: Initializing with ${animationGroups.length} animation groups: ${animationGroups.map(ag => ag.name).join(", ")}`);
   }
 
   protected setupNightmareBoltDetection(): void {
-    console.log(`BossEnemyAnimationManager: Setting up NightmareBolt detection`);
+    // console.log(`BossEnemyAnimationManager: Setting up NightmareBolt detection`);
     super.setupNightmareBoltDetection();
   }
 
@@ -28,15 +28,15 @@ export class BossEnemyAnimationManager extends EnemyAnimationManager {
     toFrame?: number,
     loop = true
   ): void {
-    console.log(`BossEnemyAnimationManager: Playing animation ${name} with speed ${speed}`);
+    // console.log(`BossEnemyAnimationManager: Playing animation ${name} with speed ${speed}`);
     if(name === "Run") { speed = 0.5 }
     super.playAnimation(name, speed, fromFrame, toFrame, loop);
   }
 
   protected spawnNightmareBoltSphere(): void {
-    console.log(`BossEnemyAnimationManager: Spawning NightmareBolt`);
+    // console.log(`BossEnemyAnimationManager: Spawning NightmareBolt`);
     if (Date.now() - this.lastBoltTime < 2000) {
-      console.log("BossEnemyAnimationManager: NightmareBolt on cooldown");
+      // console.log("BossEnemyAnimationManager: NightmareBolt on cooldown");
       return;
     }
     this.lastBoltTime = Date.now();
@@ -99,7 +99,7 @@ export class BossEnemyAnimationManager extends EnemyAnimationManager {
 
     // Play whoosh sound
     if (this.boltLaunchSound && this.boltLaunchSound.isReady()) {
-      console.log("BossEnemyAnimationManager: Playing boltLaunch.wav (whoosh sound)");
+      // console.log("BossEnemyAnimationManager: Playing boltLaunch.wav (whoosh sound)");
       this.boltLaunchSound.play();
     } else {
       console.warn("BossEnemyAnimationManager: boltLaunchSound not preloaded or not ready");
@@ -152,7 +152,7 @@ export class BossEnemyAnimationManager extends EnemyAnimationManager {
             //const currentHP = player.getCurrentHP();
             const damage = Math.floor(Math.random() * (10 - 5 + 1)) + 5; // Same as base
             player.takeDamage(damage);
-            console.log(`BossEnemyAnimationManager: Applied ${damage} damage to player, new HP: ${player.getCurrentHP()}`);
+            // console.log(`BossEnemyAnimationManager: Applied ${damage} damage to player, new HP: ${player.getCurrentHP()}`);
           }
         }
 
@@ -184,7 +184,7 @@ export class BossEnemyAnimationManager extends EnemyAnimationManager {
             this.boltLaunchSound.stop();
           }
           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-          console.log("BossEnemyAnimationManager: NightmareBolt timed out");
+          // console.log("BossEnemyAnimationManager: NightmareBolt timed out");
         }
       }, 5000);
     };
@@ -194,7 +194,7 @@ export class BossEnemyAnimationManager extends EnemyAnimationManager {
 
   public getAnimationByName(name: string): AnimationGroup | undefined {
     const anim = super.getAnimationByName(name);
-    console.log(`BossEnemyAnimationManager: getAnimationByName("${name}"), available animations: ${this.animationGroups.map(ag => ag.name).join(", ")}, found: ${!!anim}`);
+    // console.log(`BossEnemyAnimationManager: getAnimationByName("${name}"), available animations: ${this.animationGroups.map(ag => ag.name).join(", ")}, found: ${!!anim}`);
     return anim;
   }
 }

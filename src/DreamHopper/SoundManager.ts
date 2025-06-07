@@ -43,7 +43,7 @@ export class SoundManager {
         resumeOnInteraction: true
       });
       await this.audioEngine.unlockAsync();
-      //console.log("SoundManager: Audio engine initialized and unlocked");
+      //// console.log("SoundManager: Audio engine initialized and unlocked");
       await this.playRandomSong();
       await this.playAmbiance();
     } catch (error) {
@@ -68,7 +68,7 @@ private async playAmbiance(): Promise<void> {
     this.ambianceSound.volume = 0.32; // ajustable indépendamment
   
     this.ambianceSound.play();
-    //console.log("SoundManager: Ambiance sound started");
+    //// console.log("SoundManager: Ambiance sound started");
   } catch (error) {
     console.error("SoundManager: Failed to play ambiance sound", error);
   }
@@ -87,7 +87,7 @@ private async playRandomSong(): Promise<void> {
 
   // Delay before next song
   const delayMs = 10000 + Math.random() * 5000; // 10-15 seconds
-  //console.log(`SoundManager: Waiting ${delayMs / 1000}s before next song`);
+  //// console.log(`SoundManager: Waiting ${delayMs / 1000}s before next song`);
 
   this.nextSongTimeoutId = setTimeout(async () => {
     this.nextSongTimeoutId = null;
@@ -104,13 +104,13 @@ private async playRandomSong(): Promise<void> {
       this.currentSound.volume = 0; // Start at 0 for fade-in
       this.currentSound.play();
       this.isPlaying = true;
-      //console.log(`SoundManager: Playing song ${songUrl}`);
+      //// console.log(`SoundManager: Playing song ${songUrl}`);
 
       // Fade in
       await this.fadeIn(this.currentSound);
 
       this.currentSound.onEndedObservable.addOnce(() => {
-        //console.log(`SoundManager: Song ${songUrl} ended`);
+        //// console.log(`SoundManager: Song ${songUrl} ended`);
         this.playRandomSong();
       });
     } catch (error) {
@@ -142,16 +142,16 @@ private async fadeIn(sound: any): Promise<void> {
         }
         if (sound) {
           sound.volume = this.volume;
-         // console.log(`SoundManager: Fade-in set volume to ${this.volume}`);
+         // // console.log(`SoundManager: Fade-in set volume to ${this.volume}`);
         }
         this.isFading = false;
-       // console.log("SoundManager: Fade-in completed");
+       // // console.log("SoundManager: Fade-in completed");
         resolve();
         return;
       }
       currentVolume += volumeStep;
       sound.volume = Math.min(currentVolume, this.volume);
-     // console.log(`SoundManager: Fade-in volume: ${currentVolume}`);
+     // // console.log(`SoundManager: Fade-in volume: ${currentVolume}`);
     }, stepMs);
   });
 }
@@ -179,16 +179,16 @@ private async fadeOut(sound: any): Promise<void> {
         if (sound) {
           sound.volume = 0;
           sound.stop();
-         // console.log("SoundManager: Fade-out set volume to 0 and stopped");
+         // // console.log("SoundManager: Fade-out set volume to 0 and stopped");
         }
         this.isFading = false;
-      //  console.log("SoundManager: Fade-out completed");
+      //  // console.log("SoundManager: Fade-out completed");
         resolve();
         return;
       }
       currentVolume -= volumeStep;
       sound.volume = Math.max(currentVolume, 0);
-     // console.log(`SoundManager: Fade-out volume: ${currentVolume}`);
+     // // console.log(`SoundManager: Fade-out volume: ${currentVolume}`);
     }, stepMs);
   });
 }
@@ -197,16 +197,16 @@ public setVolume(volume: number): void {
   this.volume = Math.max(0, Math.min(1, volume));
   if (this.currentSound && !this.isFading) {
     this.currentSound.volume = this.volume;
-   // console.log(`SoundManager: Set volume to ${this.volume}`);
+   // // console.log(`SoundManager: Set volume to ${this.volume}`);
   }
- // console.log(`SoundManager: Volume set to ${this.volume}`);
+ // // console.log(`SoundManager: Volume set to ${this.volume}`);
 }
 
   public stop(): void {
     if (this.currentSound) {
       this.currentSound.stop();
       this.isPlaying = false;
-      //console.log("SoundManager: Music stopped");
+      //// console.log("SoundManager: Music stopped");
     }
   }
 
@@ -222,7 +222,7 @@ public setVolume(volume: number): void {
       this.audioEngine = null;
     }
     SoundManager.instance = null;
-    //console.log("SoundManager: Disposed");
+    //// console.log("SoundManager: Disposed");
   }
 
   public isMusicPlaying(): boolean {
