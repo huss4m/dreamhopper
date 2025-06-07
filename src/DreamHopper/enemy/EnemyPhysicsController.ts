@@ -185,7 +185,7 @@ export class EnemyPhysicsController {
     }
 
     this.crowd.agentGoto(this.agentIndex, finalTarget);
-    this.enemy.getAnimationManager().playAnimation("Run");
+    //this.enemy.getAnimationManager().playAnimation("Run");
 
     waitingForNextTarget = false;
   };
@@ -200,7 +200,7 @@ export class EnemyPhysicsController {
       if (!waitingForNextTarget) {
         waitingForNextTarget = true;
 
-        this.enemy.getAnimationManager().playAnimation("Idle", 1.0, undefined, undefined, true);
+      
         setTimeout(() => {
           moveToNextTarget();
         }, 3000); // Delay before wandering again
