@@ -1,0 +1,54 @@
+[
+   
+    {
+      "name": "caster",
+      "rootUrl": "./models/",
+      "filename": "caster.glb"
+    },
+    {
+      "name": "npc",
+      "rootUrl": "./models/",
+      "filename": "npc.glb"
+    },
+    {
+      "name": "enemy",
+      "rootUrl": "./models/",
+      "filename": "enemy.glb"
+    },
+    {
+      "name": "boss",
+      "rootUrl": "./models/",
+      "filename": "boss.glb"
+    },
+    {
+      "name": "dreamCrystal",
+      "rootUrl": "./models/",
+      "filename": "dream_crystal.glb"
+    },
+    {
+      "name": "plushUnicorn",
+      "rootUrl": "./models/",
+      "filename": "plush_unicorn.glb"
+    },
+    {
+      "name": "mapleTree",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3.glb"
+    },
+    {
+      "name": "mapleTreeHighPoly",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3_highpoly.glb"
+    },
+    {
+      "name": "mapleTreeLowPoly",
+      "rootUrl": "./models/",
+      "filename": "maple_tree3_lowpoly.glb"
+    },
+    {
+      "name": "grassPlant",
+      "rootUrl": "./models/",
+      "filename": "grass_plant.glb"
+    }
+  ]
+  

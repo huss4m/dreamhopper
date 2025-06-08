@@ -1,0 +1,181 @@
+async attachItemToHand(scene: Scene, itemName: string, boneName: string, positionOffset: Vector3 = Vector3.Zero(), rotationOffset: Vector3 = Vector3.Zero(), scaling: Vector3 = new Vector3(1, 1, 1)): Promise<void> {
+  try {
+    // Retrieve the item mesh from the asset container
+    const itemAssetContainer = this.assetManager.getAssetContainer(itemName);
+
+    // Check if the item container is loaded and has meshes
+    if (!itemAssetContainer || !itemAssetContainer.meshes || itemAssetContainer.meshes.length === 0) {
+      console.error(`❌ No meshes found for the item '${itemName}' in the asset container.`);
+      return;
+    }
+
+    // Log all meshes for debugging
+    console.log(`✅ Loaded meshes for ${itemName}:`, itemAssetContainer.meshes.map((m, i) => `Index ${i}: ${m.name}`));
+
+    // Create a parent mesh to group all item meshes
+    const itemParent = new Mesh(`${itemName}Parent`, scene);
+    itemAssetContainer.meshes.forEach((mesh, index) => {
+      if (index === 0) return; // Skip root node
+      mesh.parent = itemParent;
+      mesh.isVisible = true;
+
+      const mat = mesh.material;
+      if (mat instanceof PBRMaterial) {
+        mat.alpha = 1;
+        
+        // More natural metallic shine (no wet/plastic look)
+        mat.metallic = 0.95; // slightly under 1 for realism
+        mat.roughness = 0.99; // enough to keep highlights sharp but not glassy
+    
+        mat.environmentIntensity = 1; // enough to reflect, but not burn
+        mat.usePhysicalLightFalloff = true;
+        mat.reflectivityColor = new Color3(1, 1, 1); // helps with sharp specular highlights
+        mat.microSurface = 1; // optional: refines specular gloss sharpness
+    
+        // Optional: tint the base slightly if it's too dull
+        mat.albedoColor = mat.albedoColor || new Color3(1, 1, 1);
+      }
+    });
+
+    // Check if itemParent has children
+    if (itemParent.getChildMeshes().length === 0) {
+      console.error(`❌ No child meshes attached to ${itemName}Parent`);
+      return;
+    }
+
+    this.shadowGenerator.addShadowCaster(itemParent);
+
+    const skeleton = this.skeleton;
+    const characterMesh = this.characterMesh;
+    if (!skeleton || !characterMesh) {
+      console.error("❌ Missing skeleton or character mesh");
+      return;
+    }
+
+    // Confirm skeleton is bound to this mesh
+    const boundMesh = characterMesh.getChildMeshes().find(m => m.skeleton === skeleton) || characterMesh;
+    if (!boundMesh) {
+      console.error("❌ No mesh found with the bound skeleton");
+      return;
+    }
+
+    const bone = skeleton.bones.find((b: { name: string }) => b.name === boneName);
+    if (!bone) {
+      console.error(`❌ Bone '${boneName}' not found.`);
+      return;
+    }
+
+    // Set itemParent to origin BEFORE attaching
+    itemParent.position = Vector3.Zero();
+    itemParent.rotation = Vector3.Zero();
+    itemParent.scaling = scaling;
+
+    // Attach itemParent to the specified bone
+    itemParent.attachToBone(bone, boundMesh);
+
+    // Adjust position/rotation to align properly in hand (tweak as needed)
+    itemParent.position.addInPlace(positionOffset);
+    itemParent.rotation.addInPlace(rotationOffset);
+
+  } catch (err) {
+    console.error(`❌ Error in attachItemToHand for item '${itemName}':`, err);
+  }
+}
+
+
+
+async attachItemToHand(scene: Scene, itemName: string, boneName: string, positionOffset: Vector3 = Vector3.Zero(), rotationOffset: Vector3 = Vector3.Zero(), scaling: Vector3 = new Vector3(1, 1, 1)): Promise<void> {
+    try {
+      // Retrieve the item asset container
+      const itemAssetContainer = this.assetManager.getAssetContainer(itemName);
+  
+      // Check if the item container exists
+      if (!itemAssetContainer) {
+        console.error(`❌ Asset container for item '${itemName}' not found.`);
+        return;
+      }
+  
+      // Clone the item by instantiating models from the asset container
+      const entries = itemAssetContainer.instantiateModelsToScene(undefined, false, { doNotInstantiate: true });
+      if (!entries.rootNodes || entries.rootNodes.length === 0) {
+        console.error(`❌ No meshes instantiated for the item '${itemName}'.`);
+        return;
+      }
+  
+      // Log all instantiated root nodes for debugging
+      console.log(`✅ Instantiated meshes for ${itemName}:`, entries.rootNodes.map((m, i) => `Index ${i}: ${m.name}`));
+  
+      // Create a parent mesh to group all instantiated item meshes
+      const itemParent = new Mesh(`${itemName}Parent`, scene);
+  
+      // Process all child meshes of the root nodes
+      entries.rootNodes.forEach((rootNode) => {
+        const childMeshes = rootNode.getChildMeshes().filter((node) => node instanceof Mesh) as Mesh[];
+        childMeshes.forEach((mesh) => {
+          mesh.parent = itemParent;
+          mesh.isVisible = true;
+          mesh.setEnabled(true);
+  /*
+          const mat = mesh.material;
+          if (mat instanceof PBRMaterial) {
+            mat.alpha = 1;
+            
+            // More natural metallic shine (no wet/plastic look)
+            mat.metallic = 0.95; // slightly under 1 for realism
+            mat.roughness = 0.99; // enough to keep highlights sharp but not glassy
+        
+            mat.environmentIntensity = 1; // enough to reflect, but not burn
+            mat.usePhysicalLightFalloff = true;
+            mat.reflectivityColor = new Color3(1, 1, 1); // helps with sharp specular highlights
+            mat.microSurface = 1; // optional: refines specular gloss sharpness
+        
+            // Optional: tint the base slightly if it's too dull
+            mat.albedoColor = mat.albedoColor || new Color3(1, 1, 1);
+          }*/
+        });
+      });
+  
+      // Check if itemParent has children
+      if (itemParent.getChildMeshes().length === 0) {
+        console.error(`❌ No child meshes attached to ${itemName}Parent`);
+        return;
+      }
+  
+      this.shadowGenerator.addShadowCaster(itemParent);
+  
+      const skeleton = this.skeleton;
+      const characterMesh = this.characterMesh;
+      if (!skeleton || !characterMesh) {
+        console.error("❌ Missing skeleton or character mesh");
+        return;
+      }
+  
+      // Confirm skeleton is bound to this mesh
+      const boundMesh = characterMesh.getChildMeshes().find(m => m.skeleton === skeleton) || characterMesh;
+      if (!boundMesh) {
+        console.error("❌ No mesh found with the bound skeleton");
+        return;
+      }
+  
+      const bone = skeleton.bones.find((b: { name: string }) => b.name === boneName);
+      if (!bone) {
+        console.error(`❌ Bone '${boneName}' not found.`);
+        return;
+      }
+  
+      // Set itemParent to origin BEFORE attaching
+      itemParent.position = Vector3.Zero();
+      itemParent.rotation = Vector3.Zero();
+      itemParent.scaling = scaling;
+  
+      // Attach itemParent to the specified bone
+      itemParent.attachToBone(bone, boundMesh);
+  
+      // Adjust position/rotation to align properly in hand (tweak as needed)
+      itemParent.position.addInPlace(positionOffset);
+      itemParent.rotation.addInPlace(rotationOffset);
+  
+    } catch (err) {
+      console.error(`❌ Error in attachItemToHand for item '${itemName}':`, err);
+    }
+  }

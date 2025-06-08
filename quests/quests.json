@@ -1,0 +1,55 @@
+[
+  {
+    "id": "quest1",
+    "title": "Fragments de Rêve",
+    "description": "Vous… vous êtes lucide ici. Seriez-vous un Dreamhopper ? Si tel est le cas, alors vous êtes peut-être notre dernier espoir. Les Fragments de Rêve ont été volés par les Perdus. Trouvez-les. Évitez leurs traits de cauchemard, et utilisez votre Trait de Rêve pour ramener la lumière.",
+    "inProgressText": "Allez, Dreamhopper. Que votre lumière perce les ténèbres de Dreamland. Vous avez déjà accompli une partie du chemin. Mais tous les Fragments de Rêve n’ont pas encore été retrouvés.",
+    "completedText": "Je ressens l’équilibre revenir… Vous avez retrouvé les Fragments de Rêve. Dreamland vous doit la vie.",
+    "turnedInText": "Merci, Dreamhopper. Grâce à vous, les Perdus reposent enfin, apaisés… sous forme de licornes en peluche. Dreamland se souviendra de vous.",
+    "requiredCrystals": 12,
+    "requiredEnemies": 0,
+    "type": "COLLECT",
+    "nextQuestId": "quest2",
+    "xpReward": 1000
+  },
+  {
+    "id": "quest2",
+    "title": "Chasse aux Perdus",
+    "description": "Les Perdus menacent encore Dreamland. Éliminez 12 Perdus pour sécuriser la région.",
+    "inProgressText": "Continuez la chasse !",
+    "completedText": "Le silence revient, fragile mais réel… Grâce à vous, l'écho des Perdus s'estompe, ils ne tourmenteront plus Dreamland.",
+    "turnedInText": "Merci, Dreamhopper. Dreamland n'oubliera pas votre lumière.",
+    "requiredCrystals": 0,
+    "requiredEnemies": 12,
+    "type": "KILL",
+    "nextQuestId": "quest3",
+    "xpReward": 1500
+  },
+  {
+  "id": "quest3",
+  "title": "Chasseur de Cauchemar",
+  "description": "Un puissant Cauchemar, le maître des Perdus, rôde dans Dreamland. Transformez-le pour restaurer la paix dans les rêves.",
+  "inProgressText": "Le Cauchemar est toujours là, défiant votre lumière. Continuez, Dreamhopper, et mettez fin à sa terreur !",
+  "completedText": "Le Cauchemar est vaincu ! Dreamland respire à nouveau, grâce à votre courage.",
+  "turnedInText": "Vous avez triomphé du Cauchemar, Dreamhopper. Votre légende grandit dans Dreamland.",
+  "requiredCrystals": 0,
+  "requiredEnemies": 1,
+  "type": "KILL",
+  "nextQuestId": "quest4",
+  "requiredEnemyType": "BossEnemy",
+  "xpReward": 3000
+},
+{
+    "id": "quest4",
+    "title": "Chasse aux Perdus (Encore !)",
+    "description": "Les Perdus menacent encore Dreamland. Éliminez 20 Perdus pour sécuriser la région.",
+    "inProgressText": "Continuez la chasse !",
+    "completedText": "Le silence revient, fragile mais réel… Grâce à vous, l'écho des Perdus s'estompe, ils ne tourmenteront plus Dreamland.",
+    "turnedInText": "Merci, Dreamhopper. Dreamland n'oubliera pas votre lumière.",
+    "requiredCrystals": 0,
+    "requiredEnemies": 20,
+    "type": "KILL",
+    "nextQuestId": null,
+    "xpReward": 5000
+  }
+]
