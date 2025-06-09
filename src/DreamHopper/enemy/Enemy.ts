@@ -101,7 +101,7 @@ export class Enemy implements Hoverable, Targettable {
 
     // Distance-based culling
     const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-    const cullingDistance = 40;
+    const cullingDistance = 110;
     if (distanceToPlayer > cullingDistance) {
       if (this.isAggroed || this.isAttacking) {
         this.isAggroed = false;

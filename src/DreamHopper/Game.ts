@@ -100,7 +100,7 @@ private async initialize(): Promise<void> {
     const totalSteps = 6;
     let currentStep = 0;
 
-    // Step 1: Load assets with live progress updates
+
     this.assetManager = new AssetManager(this.scene);
 
     await this.assetManager.initializeFromJson("./models/assets.json", (percent) => {
@@ -112,25 +112,25 @@ private async initialize(): Promise<void> {
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Step 2: Initialize physics
+
     await this.initializePhysics();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Step 3: Create forest environment
+
     await this.createForestEnvironment();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Step 4: Initialize navigation
+
     await this.initializeNavigation();
     currentStep++;
     this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
 
-    // Step 5: Sound (optional, doesn't need a progress tick)
+
     await this.soundManager.initialize();
 
-    // Steps 6–7: Scene components
+    
     await this.initializeSceneComponents(() => {
       currentStep++;
       this.loadingScreen.updateProgress((currentStep / totalSteps) * 100);
@@ -1310,7 +1310,7 @@ public observeEnemyDeath(enemy: Enemy): void {
       const recast = await Recast();
       this.navigationPlugin = new RecastJSPlugin(recast);
       const navmeshParameters = {
-        cs: 0.38, // Cell size (tune for precision vs. performance)
+        cs: 0.38, // Cell size 
         ch: 0.05, // Cell height
         walkableSlopeAngle: 60, // Max slope enemies can climb
         walkableHeight: 2.0, // Enemy height
@@ -1325,7 +1325,7 @@ public observeEnemyDeath(enemy: Enemy): void {
   detailSampleMaxError: 0.4,
       };
 
-      // Combine ground and obstacle meshes (trees, walls)
+      // Combine ground and obstacle meshes
       const navmeshMeshes = [
         this.ground,
         ...this.treeColliders,

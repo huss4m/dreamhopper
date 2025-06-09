@@ -15,12 +15,12 @@
   {
     "id": "quest2",
     "title": "Chasse aux Perdus",
-    "description": "Les Perdus menacent encore Dreamland. Éliminez 5 Perdus pour sécuriser la région.",
+    "description": "Les Perdus menacent encore Dreamland. Éliminez 12 Perdus pour sécuriser la région.",
     "inProgressText": "Continuez la chasse !",
     "completedText": "Le silence revient, fragile mais réel… Grâce à vous, l'écho des Perdus s'estompe, ils ne tourmenteront plus Dreamland.",
     "turnedInText": "Merci, Dreamhopper. Dreamland n'oubliera pas votre lumière.",
     "requiredCrystals": 0,
-    "requiredEnemies": 6,
+    "requiredEnemies": 12,
     "type": "KILL",
     "nextQuestId": "quest3",
     "xpReward": 1500
@@ -35,8 +35,21 @@
   "requiredCrystals": 0,
   "requiredEnemies": 1,
   "type": "KILL",
-  "nextQuestId": null,
+  "nextQuestId": "quest4",
   "requiredEnemyType": "BossEnemy",
   "xpReward": 3000
-}
+},
+{
+    "id": "quest4",
+    "title": "Chasse aux Perdus (Encore !)",
+    "description": "Les Perdus menacent encore Dreamland. Éliminez 20 Perdus pour sécuriser la région.",
+    "inProgressText": "Continuez la chasse !",
+    "completedText": "Le silence revient, fragile mais réel… Grâce à vous, l'écho des Perdus s'estompe, ils ne tourmenteront plus Dreamland.",
+    "turnedInText": "Merci, Dreamhopper. Dreamland n'oubliera pas votre lumière.",
+    "requiredCrystals": 0,
+    "requiredEnemies": 20,
+    "type": "KILL",
+    "nextQuestId": null,
+    "xpReward": 5000
+  }
 ]
