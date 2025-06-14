@@ -7,16 +7,19 @@ import { TargetingSystem } from "./TargetingSystem";
 import { DreamCrystalManager, DreamCrystalState } from "./items/DreamCrystalManager";
 import { Game } from "./Game";
 import { Quest, QuestState } from "./npc/Quest";
-import { BossEnemy } from "./enemy/BossEnemy";
+//import { BossEnemy } from "./enemy/BossEnemy";
+import { EnemyInstanceConfig, EnemyTypesConfig } from "./enemy/EnemyTypeConfig";
 
 export class GameManager {
   private npcs: NPC[] = [];
   private enemies: Enemy[] = [];
-  private bosses: BossEnemy[] = [];
+  //private bosses: BossEnemy[] = [];
   private dreamCrystalManager: DreamCrystalManager | null = null;
   private characterMesh: Mesh | null = null;
   private quests: Quest[] = [];
   private respawnTimers: Map<string, number> = new Map();
+  private enemyTypesConfig: EnemyTypesConfig | null = null;
+  private enemyTypeMap: Map<string, string> = new Map();
 
   constructor(
     private scene: Scene,
@@ -28,11 +31,25 @@ export class GameManager {
   ) {
 
     this.assetManager.loadEnemyTypes().then((data) => {
+      this.enemyTypesConfig = data
     console.log("GameManager: Loaded enemy types:", data);
   }).catch((error) => {
     console.error("GameManager: Error loading enemy types:", error);
   });
 
+  }
+
+
+  public getEnemyTypeConfig(type: string) {
+    if (!this.enemyTypesConfig) {
+      console.error(`GameManager: Enemy types config not loaded`);
+      return null;
+    }
+    const config = this.enemyTypesConfig.enemyTypes.find(t => t.type === type);
+    if (!config) {
+      console.error(`GameManager: Enemy type '${type}' not found in config`);
+    }
+    return config;
   }
 
    // New: Add getQuestById method
@@ -144,12 +161,14 @@ export class GameManager {
   return this.npcs;
 }
 
-  public scheduleEnemyRespawn(enemyId: string, position: Vector3): void {
+  public scheduleEnemyRespawn(enemyId: string, position: Vector3, isBoss = false): void {
     if (this.respawnTimers.has(enemyId)) {
       clearTimeout(this.respawnTimers.get(enemyId)!);
       this.respawnTimers.delete(enemyId);
       // console.log(`GameManager: Cleared existing respawn timer for enemy ${enemyId}`);
     }
+
+    const respawnDelay = isBoss ? 120000 : 60000;
 
     const timer = setTimeout(async () => {
       // console.log(`GameManager: Respawning enemy ${enemyId} at position`, position);
@@ -164,9 +183,22 @@ export class GameManager {
         console.warn(`GameManager: Enemy ${enemyId} not found in enemies array for respawn`);
       }
 
+
+      const enemyType = this.enemyTypeMap.get(enemyId);
+      if (!enemyType) {
+        console.error(`GameManager: No type found for enemy ${enemyId}, cannot respawn`);
+        return;
+      }
+
+      const enemyConfig = this.getEnemyTypeConfig(enemyType);
+      if (!enemyConfig) {
+        console.error(`GameManager: No config found for enemy type ${enemyType}, cannot respawn`);
+        return;
+      }
+
       const newEnemy = new Enemy(
         this.scene,
-        "enemy",
+        enemyConfig,
         this.assetManager,
         this.shadowGenerator,
         position,
@@ -174,6 +206,8 @@ export class GameManager {
         this.game
       );
       this.enemies.push(newEnemy);
+      this.enemyTypeMap.set(newEnemy.getId(), enemyType); // Store new ID mapping
+
 
       this.game.observeEnemyDeath(newEnemy);
 
@@ -187,117 +221,155 @@ export class GameManager {
 
       this.respawnTimers.delete(enemyId);
       // console.log(`GameManager: Enemy ${enemyId} respawned successfully at position`, position);
-    }, 60000);
+    }, respawnDelay);
 
     this.respawnTimers.set(enemyId, timer);
     // console.log(`GameManager: Scheduled respawn for enemy ${enemyId} in 60 seconds`);
   }
 
 
-  public scheduleBossRespawn(bossId: string, position: Vector3): void {
-    if (this.respawnTimers.has(bossId)) {
-      clearTimeout(this.respawnTimers.get(bossId)!);
-      this.respawnTimers.delete(bossId);
-      // console.log(`GameManager: Cleared existing respawn timer for boss ${bossId}`);
-    }
-    const timer = setTimeout(async () => {
-      // console.log(`GameManager: Respawning boss ${bossId} at position`, position);
-      const oldBossIndex = this.bosses.findIndex(boss => boss.getId() === bossId);
-      if (oldBossIndex !== -1) {
-        const oldBoss = this.bosses[oldBossIndex];
-        oldBoss.dispose();
-        this.bosses.splice(oldBossIndex, 1);
-        // console.log(`GameManager: Disposed old boss (NPC) ${bossId}`);
-      } else {
-        console.warn(`GameManager: Boss ${bossId} not found in bosses array for respawn`);
-      }
-      const newBoss = new BossEnemy(
-        this.scene,
-        "boss",
-        this.assetManager,
-        this.shadowGenerator,
-        position,
-        this.targetingSystem,
-        this.game
-      );
-      this.bosses.push(newBoss);
-      this.game.observeEnemyDeath(newBoss);
-      const bossMesh = newBoss.getMesh();
-      if (bossMesh) {
-        bossMesh.receiveShadows = true;
-        // console.log(`GameManager: Respawned boss ${bossId} mesh added to shadow generator:`, bossMesh.name);
-      } else {
-        console.warn(`GameManager: Respawned boss ${bossId} mesh not found for shadow generator`);
-      }
-      this.respawnTimers.delete(bossId);
-      // console.log(`GameManager: Boss ${bossId} respawned successfully at position`, position);
-    }, 60000);
-    this.respawnTimers.set(bossId, timer);
-    // console.log(`GameManager: Scheduled respawn for boss ${bossId} in 60 seconds`);
-  }
+  
+  // public scheduleBossRespawn(bossId: string, position: Vector3): void {
+  //   if (this.respawnTimers.has(bossId)) {
+  //     clearTimeout(this.respawnTimers.get(bossId)!);
+  //     this.respawnTimers.delete(bossId);
+  //     // console.log(`GameManager: Cleared existing respawn timer for boss ${bossId}`);
+  //   }
+  //   const timer = setTimeout(async () => {
+  //     // console.log(`GameManager: Respawning boss ${bossId} at position`, position);
+  //     const oldBossIndex = this.bosses.findIndex(boss => boss.getId() === bossId);
+  //     if (oldBossIndex !== -1) {
+  //       const oldBoss = this.bosses[oldBossIndex];
+  //       oldBoss.dispose();
+  //       this.bosses.splice(oldBossIndex, 1);
+  //       // console.log(`GameManager: Disposed old boss (NPC) ${bossId}`);
+  //     } else {
+  //       console.warn(`GameManager: Boss ${bossId} not found in bosses array for respawn`);
+  //     }
+  //     const newBoss = new BossEnemy(
+  //       this.scene,
+  //       "boss",
+  //       this.assetManager,
+  //       this.shadowGenerator,
+  //       position,
+  //       this.targetingSystem,
+  //       this.game
+  //     );
+  //     this.bosses.push(newBoss);
+  //     this.game.observeEnemyDeath(newBoss);
+  //     const bossMesh = newBoss.getMesh();
+  //     if (bossMesh) {
+  //       bossMesh.receiveShadows = true;
+  //       // console.log(`GameManager: Respawned boss ${bossId} mesh added to shadow generator:`, bossMesh.name);
+  //     } else {
+  //       console.warn(`GameManager: Respawned boss ${bossId} mesh not found for shadow generator`);
+  //     }
+  //     this.respawnTimers.delete(bossId);
+  //     // console.log(`GameManager: Boss ${bossId} respawned successfully at position`, position);
+  //   }, 60000);
+  //   this.respawnTimers.set(bossId, timer);
+  //   // console.log(`GameManager: Scheduled respawn for boss ${bossId} in 60 seconds`);
+  // }
 
-  async initializeEnemies(savedPositions?: Vector3[]): Promise<Enemy[]> {
+  async initializeEnemies(savedEnemyPositions?: Vector3[], savedBossPositions?: Vector3[]): Promise<Enemy[]> {
     const configData = await this.assetManager.loadJson("./game_config.json");
-    const enemyPositions = configData.enemies?.map((pos: { x: number, y: number, z: number }) => 
-      new Vector3(pos.x, pos.y, pos.z)) || [];
-    const positionsToUse = savedPositions?.length ? savedPositions : enemyPositions;
-    this.enemies = positionsToUse.map((position: Vector3, index: number) => {
-      // console.log(`GameManager: Spawning Enemy at position`, position);
-      return new Enemy(
+
+
+    const enemyInstances : EnemyInstanceConfig[] = configData.enemies || [];
+
+    const bossInstances: EnemyInstanceConfig[] = (configData.bosses || []).map((pos: { x: number, y: number, z: number }) => ({
+        type: "boss",
+        x: pos.x,
+        y: pos.y,
+        z: pos.z
+    }));
+
+    // Combine enemy and boss instances
+    const allInstances = [...enemyInstances, ...bossInstances];
+
+    // Combine saved positions
+    const savedPositions = [
+        ...(savedEnemyPositions || []),
+        ...(savedBossPositions || [])
+    ];
+
+   // const enemyPositions = configData.enemies?.map((pos: { x: number, y: number, z: number }) => 
+   //   new Vector3(pos.x, pos.y, pos.z)) || [];
+
+    const positionsToUse = savedPositions?.length ? savedPositions : allInstances.map((pos: EnemyInstanceConfig) => new Vector3(pos.x, pos.y, pos.z));
+
+    this.enemies = allInstances.map((instance: EnemyInstanceConfig, index: number) => {
+      const position = positionsToUse[index] || new Vector3(instance.x, instance.y, instance.z);
+
+      const enemyConfig = this.getEnemyTypeConfig(instance.type);
+      if (!enemyConfig) {
+        console.warn(`GameManager: Skipping enemy at index ${index} due to missing config for type '${instance.type}'`);
+        return null;
+      }
+      console.log(`GameManager: Spawning Enemy of type '${instance.type}' at position`, position);
+      const enemy = new Enemy(
         this.scene,
-        "enemy",
+        enemyConfig,
         this.assetManager,
         this.shadowGenerator,
         position,
         this.targetingSystem,
         this.game
       );
-    });
-    this.enemies.forEach((enemy, index) => {
+      this.enemyTypeMap.set(enemy.getId(), instance.type); // Store type mapping
+      return enemy;
+    }).filter((enemy): enemy is Enemy => enemy !== null);
+
+    
+
+
+     this.enemies.forEach((enemy, index) => {
       const enemyMesh = enemy.getMesh();
       if (enemyMesh) {
         enemyMesh.receiveShadows = true;
-        // console.log(`GameManager: Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
-        // console.log(`GameManager: Enemy ${index} ID:`, enemy.getId());
+        console.log(`GameManager: Enemy ${index} mesh added to shadow generator:`, enemyMesh.name);
+        console.log(`GameManager: Enemy ${index} ID:`, enemy.getId());
       } else {
         console.warn(`GameManager: Enemy ${index} mesh not found for shadow generator`);
       }
       this.game.observeEnemyDeath(enemy);
     });
+
     return this.enemies;
   }
 
 
-  async initializeBosses(savedPositions?: Vector3[]): Promise<BossEnemy[]> {
-    const configData = await this.assetManager.loadJson("./game_config.json");
-    const bossPositions = configData.bosses?.map((pos: { x: number, y: number, z: number }) => 
-      new Vector3(pos.x, pos.y, pos.z)) || [];
-    const positionsToUse = savedPositions?.length ? savedPositions : bossPositions;
-    this.bosses = positionsToUse.map((position: Vector3, index: number) => {
-      // console.log(`GameManager: Spawning BossEnemy at position`, position);
-      return new BossEnemy(
-        this.scene,
-        "boss",
-        this.assetManager,
-        this.shadowGenerator,
-        position,
-        this.targetingSystem,
-        this.game
-      );
-    });
-    this.bosses.forEach((boss, index) => {
-      const bossMesh = boss.getMesh();
-      if (bossMesh) {
-        bossMesh.receiveShadows = true;
-        // console.log(`GameManager: Boss ${index} mesh added to shadow generator:`, bossMesh.name);
-        // console.log(`GameManager: Boss ${index} ID:`, boss.getId());
-      } else {
-        console.warn(`GameManager: Boss ${index} mesh not found for shadow generator`);
-      }
-      this.game.observeEnemyDeath(boss);
-    });
-    return this.bosses;
-  }
+
+  // async initializeBosses(savedPositions?: Vector3[]): Promise<BossEnemy[]> {
+  //   const configData = await this.assetManager.loadJson("./game_config.json");
+  //   const bossPositions = configData.bosses?.map((pos: { x: number, y: number, z: number }) => 
+  //     new Vector3(pos.x, pos.y, pos.z)) || [];
+  //   const positionsToUse = savedPositions?.length ? savedPositions : bossPositions;
+  //   this.bosses = positionsToUse.map((position: Vector3, index: number) => {
+  //     // console.log(`GameManager: Spawning BossEnemy at position`, position);
+  //     return new BossEnemy(
+  //       this.scene,
+  //       "boss",
+  //       this.assetManager,
+  //       this.shadowGenerator,
+  //       position,
+  //       this.targetingSystem,
+  //       this.game
+  //     );
+  //   });
+  //   this.bosses.forEach((boss, index) => {
+  //     const bossMesh = boss.getMesh();
+  //     if (bossMesh) {
+  //       bossMesh.receiveShadows = true;
+  //       // console.log(`GameManager: Boss ${index} mesh added to shadow generator:`, bossMesh.name);
+  //       // console.log(`GameManager: Boss ${index} ID:`, boss.getId());
+  //     } else {
+  //       console.warn(`GameManager: Boss ${index} mesh not found for shadow generator`);
+  //     }
+  //     this.game.observeEnemyDeath(boss);
+  //   });
+  //   return this.bosses;
+  // }
 
   async initializeDreamCrystals(savedState?: DreamCrystalState): Promise<DreamCrystalManager> {
     const configData = await this.assetManager.loadJson("./game_config.json");
@@ -349,9 +421,9 @@ export class GameManager {
   }
 
   
-  getBosses(): BossEnemy[] {
-    return this.bosses;
-  }
+  // getBosses(): BossEnemy[] {
+  //   return this.bosses;
+  // }
   getDreamCrystalManager(): DreamCrystalManager {
     if (!this.dreamCrystalManager) {
       throw new Error("GameManager: DreamCrystalManager not initialized");
@@ -383,7 +455,7 @@ export class GameManager {
   dispose(): void {
     this.npcs.forEach(npc => npc.dispose());
     this.enemies.forEach(enemy => enemy.dispose());
-     this.bosses.forEach(boss => boss.dispose());
+     //this.bosses.forEach(boss => boss.dispose());
     this.dreamCrystalManager?.dispose();
     this.npcs = [];
     this.enemies = [];

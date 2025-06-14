@@ -4,7 +4,7 @@ import { TargetingSystem } from "../TargetingSystem";
 import { AssetManager } from "../AssetManager";
 import { GameManager } from "../GameManager";
 import { Enemy } from "../enemy/Enemy";
-import { BossEnemy } from "../enemy/BossEnemy";
+//import { BossEnemy } from "../enemy/BossEnemy";
 
 export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];
@@ -351,11 +351,9 @@ export class CharacterAnimationManager {
           const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
           if (enemyId) {
             // console.log(`Dreambolt hit hitbox with enemyID: ${enemyId}`);
-            let target: Enemy | BossEnemy | undefined;
-            target = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
-            if (!target) {
-              target = this.gameManager?.getBosses().find(b => b.getId() === enemyId);
-            }
+            const target: Enemy | undefined = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+            //target = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+           
             if (target) {
               this.triggerFireworks(sphere.position.clone());
               // console.log(`Triggered fireworks for Dreambolt hit on ${target instanceof BossEnemy ? 'boss' : 'enemy'} ${enemyId}`);

@@ -37,10 +37,10 @@ export class EnemyAnimationManager {
     this.preloadNightmareBoltSounds();
     // // console.log("EnemyAnimationManager: NightmareBolt sounds preloaded");
 
-    const idleAnim = this.getAnimationByName("Idle");
+    const idleAnim = this.getAnimationByName(this.enemy!.config.animations.idle);
     if (idleAnim) {
       idleAnim.play(true);
-      this.currentAnimationName = "Idle";
+      this.currentAnimationName = this.enemy!.config.animations.idle;
     } else {
       console.warn("Idle animation not found for Enemy");
     }
@@ -157,7 +157,7 @@ export class EnemyAnimationManager {
   }
 
   protected setupNightmareBoltDetection(): void {
-    const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
+    const nightmareBoltAnim = this.getAnimationByName(this.enemy!.config.animations.attack);
     if (nightmareBoltAnim) {
       // // console.log("EnemyAnimationManager: NightmareBolt animation found, monitoring for 50% progress");
       nightmareBoltAnim.onAnimationGroupEndObservable.add(() => {
@@ -205,8 +205,8 @@ export class EnemyAnimationManager {
     // // console.log(`EnemyAnimationManager: Found player hitbox: ${hitboxMesh.name}, position: ${hitboxMesh.getAbsolutePosition().toString()}`);
 
     // // console.log(`EnemyAnimationManager: Spawning NightmareBolt sphere, loopCount=${this.loopCount}`);
-
-    const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: 0.5 }, this.scene);
+    const boltConfig = this.enemy.config.attackBolt;
+    const sphere = MeshBuilder.CreateSphere("nightmareBolt", { diameter: boltConfig.diameter }, this.scene);
     const material = new StandardMaterial("nightmareBoltMat", this.scene);
     material.diffuseColor = new Color3(0.15, 0.0, 0.3);
     material.emissiveColor = new Color3(0.1, 0.0, 0.4);
@@ -224,8 +224,8 @@ export class EnemyAnimationManager {
     particles.color1 = new Color4(0.15, 0.0, 0.4, 1.0);
     particles.color2 = new Color4(0.05, 0.0, 0.4, 0.7);
     particles.colorDead = new Color4(0.0, 0.0, 0.1, 0.0);
-    particles.minSize = 0.7;
-    particles.maxSize = 1.5;
+    particles.minSize = boltConfig.particleMinSize;
+    particles.maxSize = boltConfig.particleMaxSize;
     particles.minLifeTime = 0.15;
     particles.maxLifeTime = 0.4;
     particles.emitRate = 600;
@@ -236,7 +236,7 @@ export class EnemyAnimationManager {
     particles.start();
 
     const forward = enemyMesh.getDirection(Vector3.Forward()).normalize();
-    const spawnOffset = forward.scale(1).add(new Vector3(0, 1.2, 0));
+    const spawnOffset = forward.scale(boltConfig.spawnOffsetScale).add(new Vector3(0, boltConfig.spawnOffsetScale, 0));
     const startPos = enemyMesh.getAbsolutePosition().add(spawnOffset);
     sphere.position = startPos;
     sphere.checkCollisions = true;
@@ -320,7 +320,7 @@ export class EnemyAnimationManager {
           }
         }
 
-        const explosion = confrontationParticleSystem(sphere, this.scene);
+        const explosion = this.confrontationParticleSystem(sphere, this.scene);
         particles.stop();
         particles.dispose();
         sphere.dispose();
@@ -361,7 +361,7 @@ export class EnemyAnimationManager {
   }
 
   public cancelNightmareBolt(): void {
-    const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
+    const nightmareBoltAnim = this.getAnimationByName(this.enemy!.config.animations.attack);
     if (nightmareBoltAnim && nightmareBoltAnim.isPlaying) {
       // // console.log("EnemyAnimationManager: Cancelling NightmareBolt animation");
       nightmareBoltAnim.stop();
@@ -377,9 +377,9 @@ export class EnemyAnimationManager {
         this.castBoltSound.stop();
         // // console.log("EnemyAnimationManager: Cast bolt sound stopped on cancel");
       }
-      if (this.getAnimationByName("Idle")) {
-        this.getAnimationByName("Idle")!.play(true);
-        this.currentAnimationName = "Idle";
+      if (this.getAnimationByName(this.enemy!.config.animations.idle)) {
+        this.getAnimationByName(this.enemy!.config.animations.idle)!.play(true);
+        this.currentAnimationName = this.enemy!.config.animations.idle;
       }
     }
   }
@@ -448,7 +448,7 @@ export class EnemyAnimationManager {
       // // console.log(`EnemyAnimationManager: No footstep sounds for animation '${name}' (walkingAnimations: ${walkingAnimations.includes(name)}, sounds loaded: ${this.footstepSounds.length})`);
     }
 
-    if (name === "NightmareBolt") {
+    if (name === this.enemy!.config.animations.attack) {
       if (!this.enemy || !this.enemy.getPhysics() || !this.enemy.getEnemyMesh()) {
         console.warn("EnemyAnimationManager: Cannot cast NightmareBolt; missing enemy, physics, or enemy mesh");
         return;
@@ -532,7 +532,7 @@ export class EnemyAnimationManager {
 
     this.blendFrameId = requestAnimationFrame(blendStep);
 
-    if (name === "NightmareBolt") {
+    if (name === this.enemy!.config.animations.attack) {
       this.lastProgress = 0;
       this.loopCount = 0;
       this.nightmareBoltSpawned = false;
@@ -591,7 +591,7 @@ export class EnemyAnimationManager {
       newAnim.metadata = newAnim.metadata || {};
       newAnim.metadata.nightmareBoltObserver = observer;
     } else {
-      const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
+      const nightmareBoltAnim = this.getAnimationByName(this.enemy!.config.animations.attack);
       if (nightmareBoltAnim?.metadata?.nightmareBoltObserver) {
         this.scene.onBeforeRenderObservable.remove(nightmareBoltAnim.metadata.nightmareBoltObserver);
         nightmareBoltAnim.metadata.nightmareBoltObserver = null;
@@ -621,7 +621,7 @@ export class EnemyAnimationManager {
       cancelAnimationFrame(this.blendFrameId);
       this.blendFrameId = null;
     }
-    const nightmareBoltAnim = this.getAnimationByName("NightmareBolt");
+    const nightmareBoltAnim = this.getAnimationByName(this.enemy!.config.animations.attack);
     if (nightmareBoltAnim?.metadata?.nightmareBoltObserver) {
       this.scene.onBeforeRenderObservable.remove(nightmareBoltAnim.metadata.nightmareBoltObserver);
     }
@@ -655,20 +655,25 @@ export class EnemyAnimationManager {
     this.onNightmareBoltAnimationState.clear();
     // // console.log("EnemyAnimationManager: Disposed");
   }
-}
 
-// Helper function to create the confrontation particle system
-function confrontationParticleSystem(sphere: Mesh, scene: Scene): ParticleSystem {
+
+  confrontationParticleSystem(sphere: Mesh, scene: Scene): ParticleSystem {
+
+  const boltConfig = this.enemy?.config.attackBolt || {
+      explosionMinSize: 0.4,
+      explosionMaxSize: 1.2,
+      explosionEmitBoxScale: 0.2
+    };
   const explosion = new ParticleSystem("nightmareExplosion", 100, scene);
   explosion.particleTexture = new Texture("./Flare.png", scene);
   explosion.emitter = sphere.position.clone();
-  explosion.minEmitBox = new Vector3(-0.2, -0.2, -0.2);
-  explosion.maxEmitBox = new Vector3(0.2, 0.2, 0.2);
+   explosion.minEmitBox = new Vector3(-boltConfig.explosionEmitBoxScale, -boltConfig.explosionEmitBoxScale, -boltConfig.explosionEmitBoxScale);
+    explosion.maxEmitBox = new Vector3(boltConfig.explosionEmitBoxScale, boltConfig.explosionEmitBoxScale, boltConfig.explosionEmitBoxScale);
   explosion.color1 = new Color4(0.4, 0.0, 0.6, 1.0);
   explosion.color2 = new Color4(0.6, 0.1, 0.8, 0.8);
   explosion.colorDead = new Color4(0.2, 0.0, 0.3, 0.0);
-  explosion.minSize = 0.4;
-  explosion.maxSize = 1.2;
+  explosion.minSize = boltConfig.explosionMinSize;
+    explosion.maxSize = boltConfig.explosionMaxSize;
   explosion.minLifeTime = 0.2;
   explosion.maxLifeTime = 0.5;
   explosion.emitRate = 1000;
@@ -684,3 +689,5 @@ function confrontationParticleSystem(sphere: Mesh, scene: Scene): ParticleSystem
   explosion.start();
   return explosion;
 }
+}
+

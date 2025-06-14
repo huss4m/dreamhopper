@@ -9,6 +9,7 @@ export interface EnemyTypeConfig {
   attackRange: number;
   xpReward: number;
   speed: number;
+  isBoss: boolean;
   animations: {
     idle: string;
     run: string;
@@ -19,6 +20,20 @@ export interface EnemyTypeConfig {
     model: string;
     scaling: { x: number; y: number; z: number };
     hitbox: { height: number; width: number };
+  };
+  attackBolt: {
+    diameter: number;
+    particleMinSize: number;
+    particleMaxSize: number;
+    spawnOffsetScale: number;
+    explosionMinSize: number;
+    explosionMaxSize: number;
+    explosionEmitBoxScale: number;
+  };
+  hitbox: { // New
+    height: number;
+    width: number;
+    yPosition: number;
   };
 }
 

@@ -16,6 +16,7 @@ export class EnemyPhysicsController {
   private game: Game;
   private navDummy: Mesh;
   enemy: Enemy;
+  speed: number;
 
   constructor(scene: Scene, mesh: Mesh, physicsConfig: PhysicsConfig, game: Game, enemy: Enemy) {
     this.scene = scene;
@@ -25,6 +26,7 @@ export class EnemyPhysicsController {
     this.physicsController = new PhysicsController(scene, mesh, physicsConfig);
     this.navigationPlugin = game.getNavigationPlugin();
     this.crowd = game.getCrowd();
+    this.speed = enemy.config.speed;
 
     // Create invisible navDummy for crowd navigation
     this.navDummy = Mesh.CreateBox("navDummy", 1, scene);
@@ -38,7 +40,7 @@ export class EnemyPhysicsController {
         radius: physicsConfig.colliderParams.radius! || 0.2,
         height: physicsConfig.colliderParams.pointB!.y - physicsConfig.colliderParams.pointA!.y || 1.75,
         maxAcceleration: 8.0,
-        maxSpeed: 3,
+        maxSpeed: this.speed,
         collisionQueryRange: 3,
         pathOptimizationRange: 0,
         separationWeight: 3,

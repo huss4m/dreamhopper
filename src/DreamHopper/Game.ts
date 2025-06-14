@@ -16,7 +16,7 @@ import { CharacterCameraController } from "./player/CharacterCameraController";
 import { RecastJSPlugin } from "@babylonjs/core";
 import Recast from "recast-detour";
 import { Enemy } from "./enemy/Enemy";
-import { BossEnemy } from "./enemy/BossEnemy";
+//import { BossEnemy } from "./enemy/BossEnemy";
 //import { Inspector } from "@babylonjs/inspector"
 
 
@@ -1033,8 +1033,8 @@ private async createGrass(grassCount: number): Promise<void> {
     await this.gameManager.initializeNPCs(savedState.npcPositions, savedState.questStates);
     onStepComplete(); // Step 5: NPCs initialized
 
-    await this.gameManager.initializeEnemies(savedState.enemyPositions);
-    await this.gameManager.initializeBosses(savedState.bossPositions);
+    await this.gameManager.initializeEnemies(savedState.enemyPositions, savedState.bossPositions);
+    //await this.gameManager.initializeBosses(savedState.bossPositions);
     onStepComplete(); // Step 6: Enemies and bosses initialized
 
     this.gameManager.getEnemies().forEach(enemy => {
@@ -1113,15 +1113,12 @@ public observeEnemyDeath(enemy: Enemy): void {
     enemy.onDeath.addOnce(({ id, position }) => {
       if (this.characterController) {
         const player = this.characterController.getPlayer();
-        const enemyType = enemy instanceof BossEnemy ? "BossEnemy" : "Enemy";
-        player.incrementEnemyKills(enemyType);
-        // console.log(`Game: ${enemyType} ${id} killed at position`, position, `notified player`);
-        this.observedEnemies.delete(id); // Clean up after death
-        if (enemyType === "BossEnemy") {
-          this.gameManager.scheduleBossRespawn(id, position);
-        } else {
-          this.gameManager.scheduleEnemyRespawn(id, position);
-        }
+            const enemyType = this.gameManager.getEnemyTypeConfig(enemy.getType())?.type || "Enemy";
+            const isBoss = enemyType === "boss"; // Assume "boss" type indicates a boss
+            player.incrementEnemyKills(isBoss ? "BossEnemy" : "Enemy");
+            // console.log(`Game: ${isBoss ? "BossEnemy" : "Enemy"} ${id} killed at position`, position, `notified player`);
+            this.observedEnemies.delete(id); // Clean up after death
+            this.gameManager.scheduleEnemyRespawn(id, position, isBoss); // Pass isBoss flag
       }
     });
     // console.log(`Game: Observing onDeath for ${enemy instanceof BossEnemy ? "BossEnemy" : "Enemy"} ${enemyId}`);

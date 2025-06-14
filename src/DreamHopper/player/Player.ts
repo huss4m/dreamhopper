@@ -4,7 +4,7 @@ import { Item } from "../items/Item";
 import { Quest, QuestState } from "../npc/Quest";
 import { Game } from "../Game";
 import { Enemy } from "../enemy/Enemy";
-import { BossEnemy } from "../enemy/BossEnemy";
+//import { BossEnemy } from "../enemy/BossEnemy";
 
 export class Player {
   private inventory: Item[] = [];
@@ -66,10 +66,10 @@ export class Player {
     return;
   }
   const enemies = this.game.getGameManager()?.getEnemies() || [];
-  const bosses = this.game.getGameManager()?.getBosses() || [];
+  //const bosses = this.game.getGameManager()?.getBosses() || [];
   
   enemies.forEach(enemy => this.subscribeToEnemyDeath(enemy));
-  bosses.forEach(boss => this.subscribeToEnemyDeath(boss));
+ // bosses.forEach(boss => this.subscribeToEnemyDeath(boss));
 
   // console.log(`Player: Subscribed to ${enemies.length} enemies and ${bosses.length} bosses for XP awards`);
 }
@@ -367,7 +367,7 @@ export class Player {
 }
 
 
-  public subscribeToEnemyDeath(entity: Enemy | BossEnemy): void {
+  public subscribeToEnemyDeath(entity: Enemy ): void {
   entity.onDeath.add(() => {
     this.addXP(entity.xpReward);
     // console.log(`Player: Awarded 100 XP for ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} transformation`);
