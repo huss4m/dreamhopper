@@ -1,4 +1,5 @@
 import { Scene, SceneLoader, AssetContainer, AssetsManager } from "@babylonjs/core";
+import { EnemyTypesConfig } from "./enemy/EnemyTypeConfig";
 
 export class AssetManager {
   private scene: Scene | null;
@@ -49,6 +50,22 @@ export class AssetManager {
     console.error("Error loading assets from JSON:", error);
   }
 }
+
+
+  public async loadEnemyTypes(): Promise<EnemyTypesConfig> {
+  try {
+    const data = await this.loadJson("./enemy_types.json") as EnemyTypesConfig;
+    if (!data.enemyTypes || !Array.isArray(data.enemyTypes)) {
+      throw new Error("Invalid enemy_types.json: missing or invalid enemyTypes array");
+    }
+    console.log("AssetManager: Loaded enemy types:", data.enemyTypes.map(t => t.type));
+    return data;
+  } catch (error) {
+    console.error("AssetManager: Failed to load enemy_types.json", error);
+    return { enemyTypes: [] };
+  }
+}
+
 
   async loadJson(jsonUrl: string): Promise<any> {
     try {

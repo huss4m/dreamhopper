@@ -25,7 +25,15 @@ export class GameManager {
     private highlightLayer: HighlightLayer,
     private targetingSystem: TargetingSystem,
     public game: Game
-  ) {}
+  ) {
+
+    this.assetManager.loadEnemyTypes().then((data) => {
+    console.log("GameManager: Loaded enemy types:", data);
+  }).catch((error) => {
+    console.error("GameManager: Error loading enemy types:", error);
+  });
+
+  }
 
    // New: Add getQuestById method
   public getQuestById(questId: string): Quest | null {
