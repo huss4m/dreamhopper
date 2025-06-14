@@ -83,14 +83,14 @@ export class Game {
       this.soundManager.dispose();
     });
 
-
+ 
 
 
 /*
-      Inspector.Show(this.scene, {
+     
+Inspector.Show(this.scene, {
     embedMode: true, 
   });
-
 */ 
 
   }
