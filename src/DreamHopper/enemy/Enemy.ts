@@ -167,7 +167,9 @@ export class Enemy implements Hoverable, Targettable {
         this.isAggroed = false;
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
-        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        if(!this.animationManager.getAnimationByName(this.config.animations.idle)!.isPlaying) {
+          this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        }
         console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
       }
       return;
@@ -211,7 +213,10 @@ export class Enemy implements Hoverable, Targettable {
           } else {
             // [NEW] Fallback to Idle if no valid attack
             this.isAttacking = false;
-            this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+            if(!this.animationManager.getAnimationByName(this.config.animations.idle)!.isPlaying) {
+              this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+            }
+            
             console.log(`Enemy ${this.id}: No valid attack available at distance ${distanceToPlayer.toFixed(2)}, playing Idle`);
           }
         }
@@ -222,15 +227,21 @@ export class Enemy implements Hoverable, Targettable {
           console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
         }
         this.moveTo(playerMesh.position);
-        this.animationManager.playAnimation(this.config.animations.run);
+         if(!this.animationManager.getAnimationByName(this.config.animations.run)!.isPlaying) {
+            this.animationManager.playAnimation(this.config.animations.run);
+         }
         console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
       }
     } else {
       const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
       if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
-        this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
+        if(!this.animationManager.getAnimationByName(this.config.animations.run)!.isPlaying) {
+          this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
+        }
       } else {
-        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        if(!this.animationManager.getAnimationByName(this.config.animations.idle)!.isPlaying) {
+          this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        }
       }
     }
   });
@@ -725,7 +736,7 @@ export class Enemy implements Hoverable, Targettable {
       return;
     }
     this.physicsController.startWandering(maxDistance);
-    this.animationManager.playAnimation("Run");
+    this.animationManager.playAnimation(this.config.animations.run);
   }
 
   public stopWandering(): void {
