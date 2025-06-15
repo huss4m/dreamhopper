@@ -117,6 +117,13 @@ export class CharacterAttackSystem {
       return;
     }
 
+    // New: Check and deduct mana
+    const player = this.characterController.getPlayer();
+    if (ability.manaCost && !player.deductMana(ability.manaCost)) {
+      console.warn(`Cannot trigger ${abilityId}; insufficient mana (required: ${ability.manaCost}, available: ${player.getMana()})`);
+      return;
+    }
+
     if (ability.type === AbilityType.Healing) {
       // Healing abilities are self-targeted, execute without target checks
       strategy.execute(

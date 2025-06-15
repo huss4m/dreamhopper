@@ -33,9 +33,13 @@ export class Player {
   private baseRegenRate = 2; 
   private hpRegenRate: number; 
   private hpRegenInterval: number | null = null;
-
+  private baseManaRegenRate = 2; // New: Base mana regen rate
+  private manaRegenRate: number; // New: Mana regen rate
+  private manaRegenInterval: number | null = null; // New: Mana regen interval
   private mana = 100;
   private maxMana = 100;
+
+  public onManaChanged = new Observable<{ currentMana: number; maxMana: number }>(); // New: Mana change observable
 
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator, game?: Game) {
     this.game = game!;
@@ -44,11 +48,13 @@ export class Player {
     this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
 
     this.hpRegenRate = this.baseRegenRate;
+    this.manaRegenRate = this.baseManaRegenRate; // New: Initialize mana regen rate
 
     this.startHPRegeneration();
-
+    this.startManaRegeneration(); // New: Start mana regeneration
     // Subscribe to enemy and boss death events to award XP
     this.setupEnemyDeathSubscriptions();
+    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Initial mana notification
 
   }
 
@@ -61,6 +67,16 @@ export class Player {
       this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     }
   }, 5000);
+  }
+
+
+   private startManaRegeneration(): void { // New: Mana regeneration
+    this.manaRegenInterval = setInterval(() => {
+      if (!this.isDead && this.mana < this.maxMana) {
+        this.mana = Math.min(this.mana + this.manaRegenRate, this.maxMana);
+        this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana });
+      }
+    }, 5000);
   }
 
   private setupEnemyDeathSubscriptions(): void {
@@ -113,6 +129,7 @@ export class Player {
     this.currentHP = this.maxHP;
     this.isDead = false;
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
+    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana reset
     // console.log("Player: Reset HP to max and cleared isDead state");
   }
 
@@ -454,6 +471,10 @@ private triggerLevelUpEffect(): void {
     }, 2000);
   }
 
+  public getMaxMana() {
+    return this.maxMana;
+  }
+
   public dispose(): void {
     this.onDeathObservable.clear();
     this.onQuestStateChanged.clear();
@@ -472,6 +493,11 @@ private triggerLevelUpEffect(): void {
         this.hpRegenInterval = null;
         // console.log("Player: Cleared HP regeneration interval");
       }
+
+       if (this.manaRegenInterval !== null) { // New: Clear mana regen interval
+      clearInterval(this.manaRegenInterval);
+      this.manaRegenInterval = null;
+    }
     // console.log("Player: Disposed");
   }
 }

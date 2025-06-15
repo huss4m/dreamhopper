@@ -67,6 +67,8 @@ export class RangedProjectileStrategy implements AbilityStrategy {
       launchSound.play();
     }
 
+    
+
     const moveDirection = target.mesh.getAbsolutePosition().subtract(sphere.position).normalize();
 
     const playerLevel = characterController.getPlayer().getLevel() || 1;

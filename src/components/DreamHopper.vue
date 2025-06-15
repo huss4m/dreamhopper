@@ -13,17 +13,19 @@
       :key="dialogState.questKey"
     />
     <HPBar
-  v-if="playerHP && xpData"
-  :current-h-p="playerHP.currentHP"
-  :max-h-p="playerHP.maxHP"
-  :level="xpData.level"
-/>
+      v-if="playerHP && playerMana && xpData"
+      :current-h-p="playerHP.currentHP"
+      :max-h-p="playerHP.maxHP"
+      :current-mana="playerMana.currentMana"
+      :max-mana="playerMana.maxMana"
+      :level="xpData.level"
+    />
     <XPBar
-    v-if="xpData"
-    :current-x-p="xpData.currentXP"
-    :max-x-p="xpData.maxXP"
-    :level="xpData.level"
-  />
+      v-if="xpData"
+      :current-x-p="xpData.currentXP"
+      :max-x-p="xpData.maxXP"
+      :level="xpData.level"
+    />
     <QuestLog
       v-if="activeQuests"
       :quests="activeQuests"
@@ -69,16 +71,16 @@ export default defineComponent({
     const animationManager = ref<any>(null);
     const dreamCrystalManager = ref<any>(null);
     const playerHP = ref<{ currentHP: number; maxHP: number } | null>(null);
+    const playerMana = ref<{ currentMana: number; maxMana: number } | null>(null);
     const activeQuests = ref<Quest[]>([]);
     const isDeathScreenVisible = ref(false);
     let gameInstance: Game | null = null;
     let questObserver: Observer<Quest> | null = null;
     let hpObserver: Observer<{ currentHP: number; maxHP: number }> | null = null;
-
-
-    const xpData = ref<{ currentXP: number; maxXP: number; level: number } | null>(null); // New: Ref for XP data
-    let xpObserver: Observer<{ currentXP: number; maxXP: number }> | null = null; // New: Observer for XP changes
-    let levelObserver: Observer<{ level: number }> | null = null; // New: Observer for level changes
+    let manaObserver: Observer<{ currentMana: number; maxMana: number }> | null = null;
+    const xpData = ref<{ currentXP: number; maxXP: number; level: number } | null>(null);
+    let xpObserver: Observer<{ currentXP: number; maxXP: number }> | null = null;
+    let levelObserver: Observer<{ level: number }> | null = null;
 
     const dialogState = reactive({
       visible: false,
@@ -131,7 +133,6 @@ export default defineComponent({
           gameInstance.getCharacterController()?.animationManager.stopAllAnimations();
           isDeathScreenVisible.value = false;
           console.log("DreamHopper: Player respawned, death screen hidden");
-          // Sync active quests after reset instead of clearing them
           updateActiveQuests();
         }
       }
@@ -153,7 +154,7 @@ export default defineComponent({
     const helpDialogSteps = [
       "Appuyez sur Z pour avancer, S pour reculer, A et E pour vous déplacer latéralement, Q et D pour pivoter. Appuyez sur L pour activer/désactiver le clavier QWERTY.",
       "Maintenez le clic gauche pour faire pivoter la caméra autour du personnage, et le clic droit pour contrôler la rotation avec la souris.",
-      "Sélectionnez un PNJ et appuyez sur T pour interagir."
+      "Sélectionnez un PNJ et appuyez sur T pour interagir.",
     ];
 
     const closeHelpDialog = (permanently = false) => {
@@ -198,7 +199,17 @@ export default defineComponent({
             console.log(`DreamHopper: Player HP updated to ${hp.currentHP}/${hp.maxHP}`);
           });
 
-
+          playerMana.value = {
+            currentMana: player.getMana(),
+            maxMana: player.getMaxMana(),
+          };
+          manaObserver = player.onManaChanged.add((mana) => {
+            playerMana.value = {
+              currentMana: mana.currentMana,
+              maxMana: mana.maxMana,
+            };
+            console.log(`DreamHopper: Mana updated to ${mana.currentMana}/${mana.maxMana}`);
+          });
 
           xpData.value = {
             currentXP: player.getCurrentXP(),
@@ -249,15 +260,18 @@ export default defineComponent({
           player.onHPChanged.remove(hpObserver);
           console.log("DreamHopper: Unsubscribed from onHPChanged");
         }
-
+        if (player && manaObserver) {
+          player.onManaChanged.remove(manaObserver);
+          console.log("DreamHopper: Unsubscribed from onManaChanged");
+        }
         if (player && xpObserver) {
-            player.onXPChanged.remove(xpObserver);
-            console.log("DreamHopper: Unsubscribed from onXPChanged");
-          }
-          if (player && levelObserver) {
-            player.onLevelChanged.remove(levelObserver);
-            console.log("DreamHopper: Unsubscribed from onLevelChanged");
-          }
+          player.onXPChanged.remove(xpObserver);
+          console.log("DreamHopper: Unsubscribed from onXPChanged");
+        }
+        if (player && levelObserver) {
+          player.onLevelChanged.remove(levelObserver);
+          console.log("DreamHopper: Unsubscribed from onLevelChanged");
+        }
         gameInstance.dispose();
         gameInstance = null;
       }
@@ -269,6 +283,7 @@ export default defineComponent({
       dreamCrystalManager,
       dialogState,
       playerHP,
+      playerMana, // Fixed: Added to return statement
       activeQuests,
       isDeathScreenVisible,
       handleAccept,

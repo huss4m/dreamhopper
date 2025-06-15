@@ -1,6 +1,35 @@
+import { Vector3, Color4 } from "@babylonjs/core";
+
 export enum AbilityType {
   RangedProjectile = "RangedProjectile",
-  Healing = "Healing", // New: Added Healing ability type
+  Healing = "Healing",
+}
+
+export interface AnimationConfig {
+  name: string;
+  speed: number;
+  loop: boolean;
+  triggerFrame?: number;
+}
+
+export interface DamageConfig {
+  min: number;
+  max: number;
+  levelScaling: number;
+}
+
+export interface HealingConfig {
+  baseHeal: number;
+  levelScaling: number;
+}
+
+export interface AbilitySoundConfig {
+  file: string;
+  volume: number;
+  loop: boolean;
+  spatialSound: boolean;
+  maxDistance: number;
+  attachToMesh: boolean;
 }
 
 export interface ParticleSystemConfig {
@@ -39,37 +68,15 @@ export interface ProjectileConfig {
   };
 }
 
-export interface HealingConfig { // New: Configuration for healing abilities
-  baseHeal: number;
-  levelScaling: number;
-}
-
-export interface AbilitySoundConfig {
-  file: string;
-  volume: number;
-  loop: boolean;
-  spatialSound: boolean;
-  maxDistance: number;
-  attachToMesh: boolean;
-}
-
 export interface AbilityConfig {
   id: string;
   name: string;
   type: AbilityType;
-  animation: {
-    name: string;
-    speed: number;
-    loop: boolean;
-    triggerFrame?: number;
-  };
-  damage?: { // Optional for non-damage abilities like Healing
-    min: number;
-    max: number;
-    levelScaling: number;
-  };
+  manaCost?: number; // New: Optional mana cost field
+  animation: AnimationConfig;
+  damage?: DamageConfig;
+  healing?: HealingConfig;
   sounds?: { [key: string]: AbilitySoundConfig };
   particles?: { [key: string]: ParticleSystemConfig };
-  projectile?: ProjectileConfig; // Optional for non-projectile abilities
-  healing?: HealingConfig; // New: Optional for healing abilities
+  projectile?: ProjectileConfig;
 }

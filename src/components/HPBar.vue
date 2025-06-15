@@ -23,6 +23,18 @@
         <div class="sparkle-particles"></div>
         <div class="arcane-glyphs"></div>
       </div>
+      <div class="mana-bar-outer">
+        <div
+          class="mana-bar-inner"
+          :class="{ low: isLowMana }"
+          :style="{ width: manaPercentage + '%' }"
+        >
+          <div class="shimmer-overlay"></div>
+        </div>
+        <div class="mana-text">{{ currentMana }} / {{ maxMana }}</div>
+        <div class="sparkle-particles"></div>
+        <div class="arcane-glyphs"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -41,6 +53,14 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    currentMana: {
+      type: Number,
+      required: true,
+    },
+    maxMana: {
+      type: Number,
+      required: true,
+    },
     level: {
       type: Number,
       required: true,
@@ -55,9 +75,19 @@ export default defineComponent({
       return props.currentHP / props.maxHP < 0.25;
     });
 
+    const manaPercentage = computed(() => {
+      return Math.max(0, Math.min(100, (props.currentMana / props.maxMana) * 100));
+    });
+
+    const isLowMana = computed(() => {
+      return props.currentMana / props.maxMana < 0.25;
+    });
+
     return {
       hpPercentage,
       isLowHP,
+      manaPercentage,
+      isLowMana,
     };
   },
 });
@@ -79,9 +109,9 @@ export default defineComponent({
   width: 440px;
   box-shadow: 0 0 25px #dab6ff77, 0 0 16px #9b5de5dd;
   font-family: 'Marcellus SC', serif;
-  /* Réduction du flou */
   backdrop-filter: blur(4px);
 }
+
 .portrait-wrapper {
   position: relative;
   width: 75px;
@@ -139,6 +169,7 @@ export default defineComponent({
   border-radius: 16px;
   overflow: hidden;
   box-shadow: inset 0 0 9px #000, 0 0 5px #c2a9f088;
+  margin-bottom: 8px; /* New: Space for mana bar */
 }
 
 .hp-bar-inner {
@@ -172,7 +203,47 @@ export default defineComponent({
   z-index: 3;
 }
 
-/* ✨ Sparkle Particles */
+.mana-bar-outer {
+  position: relative;
+  height: 24px;
+  background: #22172f;
+  border: 2px solid #72a4f055;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 9px #000, 0 0 5px #a9c2f088;
+}
+
+.mana-bar-inner {
+  height: 100%;
+  position: relative;
+  background: linear-gradient(to right, #72c5ff, #a3e1ff, #b4cffe);
+  transition: width 0.55s ease-in-out;
+  box-shadow: inset 0 0 6px #fff5, 0 0 8px #b4cffe99;
+  border-radius: 16px 0 0 16px;
+  overflow: hidden;
+}
+
+.mana-bar-inner.low {
+  background: linear-gradient(to right, #ff6b6b, #ffd166);
+  box-shadow: 0 0 11px #ff6b6bcc, inset 0 0 7px #ffd166bb;
+}
+
+.mana-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 24px;
+  text-shadow: 1px 1px 3px #000;
+  pointer-events: none;
+  z-index: 3;
+}
+
 .sparkle-particles::before,
 .sparkle-particles::after {
   content: "";
@@ -190,7 +261,6 @@ export default defineComponent({
   animation-delay: 3s;
 }
 
-/* ✨ Shimmer Effect */
 .shimmer-overlay {
   position: absolute;
   top: 0;
@@ -201,7 +271,6 @@ export default defineComponent({
   animation: shimmerMove 5s infinite;
 }
 
-/* 🕯️ Arcane Glyph Overlay */
 .arcane-glyphs {
   position: absolute;
   top: -5px;
@@ -213,6 +282,7 @@ export default defineComponent({
   z-index: 1;
   opacity: 0.1;
 }
+
 .level-display {
   position: absolute;
   bottom: -10px;
@@ -242,7 +312,6 @@ export default defineComponent({
   font-family: 'Marcellus SC', serif;
 }
 
-/* 🔮 Animations */
 @keyframes shimmerMove {
   0% {
     left: -100%;
