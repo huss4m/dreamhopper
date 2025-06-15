@@ -70,8 +70,8 @@ export class RangedProjectileStrategy implements AbilityStrategy {
     const moveDirection = target.mesh.getAbsolutePosition().subtract(sphere.position).normalize();
 
     const playerLevel = characterController.getPlayer().getLevel() || 1;
-    const minDamage = ability.damage.min + (playerLevel - 1) * ability.damage.levelScaling;
-    const maxDamage = ability.damage.max + (playerLevel - 1) * ability.damage.levelScaling;
+    const minDamage = ability.damage!.min + (playerLevel - 1) * ability.damage!.levelScaling;
+    const maxDamage = ability.damage!.max + (playerLevel - 1) * ability.damage!.levelScaling;
 
     const renderCallback = () => {
       const deltaTime = scene.getEngine().getDeltaTime() / 1000;

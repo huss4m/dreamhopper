@@ -3,7 +3,7 @@ import { CharacterController } from "./CharacterController";
 import { CharacterAttackSystem } from "./CharacterAttackSystem";
 import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
-import { AbilityConfig } from "./AbilityConfig";
+import { AbilityConfig, AbilityType } from "./AbilityConfig";
 
 export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];
@@ -195,21 +195,26 @@ export class CharacterAnimationManager {
         console.warn(`Cannot play ${name}; missing characterController, physicsController, or character mesh`);
         return;
       }
-      const target = this.targetingSystem?.getCurrentTarget();
-      if (!target || !target.getMesh()) {
-        console.warn(`Cannot play ${name}; no target selected or target has no mesh`);
-        return;
+
+      // MODIFIED: Skip target validation for Healing abilities
+      if (ability.type !== AbilityType.Healing) {
+        const target = this.targetingSystem?.getCurrentTarget();
+        if (!target || !target.getMesh()) {
+          console.warn(`Cannot play ${name}; no target selected or target has no mesh`);
+          return;
+        }
+        const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
+        const charPos = characterMesh.getAbsolutePosition();
+        const targetPos = target.getMesh()!.getAbsolutePosition();
+        const toTarget = targetPos.subtract(charPos).normalize();
+        const dot = Vector3.Dot(forward, toTarget);
+        const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+        if (angle > Math.PI / 2) {
+          console.warn(`Cannot play ${name}; target ${target.getId()} is outside front 180° arc`);
+          return;
+        }
       }
-      const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
-      const charPos = characterMesh.getAbsolutePosition();
-      const targetPos = target.getMesh()!.getAbsolutePosition();
-      const toTarget = targetPos.subtract(charPos).normalize();
-      const dot = Vector3.Dot(forward, toTarget);
-      const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-      if (angle > Math.PI / 2) {
-        console.warn(`Cannot play ${name}; target ${target.getId()} is outside front 180° arc`);
-        return;
-      }
+
       speed = ability.animation.speed;
       loop = ability.animation.loop;
 

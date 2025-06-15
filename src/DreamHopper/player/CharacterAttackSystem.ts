@@ -6,6 +6,7 @@ import { AbilityConfig, AbilityType, ParticleSystemConfig } from "./AbilityConfi
 import { AssetsManager } from "@babylonjs/core";
 import { AbilityStrategy } from "./AbilityStrategy";
 import { RangedProjectileStrategy } from "./RangedProjectileStrategy";
+import { HealingStrategy } from "./HealingStrategy"; // New: Import HealingStrategy
 
 export class CharacterAttackSystem {
   private abilities: Map<string, AbilityConfig> = new Map();
@@ -21,6 +22,7 @@ export class CharacterAttackSystem {
   ) {
     this.scene = scene;
     this.strategies.set(AbilityType.RangedProjectile, new RangedProjectileStrategy());
+    this.strategies.set(AbilityType.Healing, new HealingStrategy()); // New: Register HealingStrategy
   }
 
   public async initialize(): Promise<void> {
@@ -115,6 +117,24 @@ export class CharacterAttackSystem {
       return;
     }
 
+    if (ability.type === AbilityType.Healing) {
+      // Healing abilities are self-targeted, execute without target checks
+      strategy.execute(
+        ability,
+        characterMesh,
+        Vector3.Zero(),
+        { mesh: characterMesh, id: "player" },
+        this.scene,
+        this.characterController,
+        this.targetingSystem,
+        this.gameManager,
+        this.sounds,
+        this.createParticleSystem.bind(this)
+      );
+      return;
+    }
+
+    // RangedProjectile abilities require a target
     const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
     const currentTarget = this.targetingSystem?.getCurrentTarget();
     if (!currentTarget || !currentTarget.getMesh()) {

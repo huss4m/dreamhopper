@@ -1,5 +1,6 @@
 export enum AbilityType {
   RangedProjectile = "RangedProjectile",
+  Healing = "Healing", // New: Added Healing ability type
 }
 
 export interface ParticleSystemConfig {
@@ -38,6 +39,11 @@ export interface ProjectileConfig {
   };
 }
 
+export interface HealingConfig { // New: Configuration for healing abilities
+  baseHeal: number;
+  levelScaling: number;
+}
+
 export interface AbilitySoundConfig {
   file: string;
   volume: number;
@@ -57,12 +63,13 @@ export interface AbilityConfig {
     loop: boolean;
     triggerFrame?: number;
   };
-  damage: {
+  damage?: { // Optional for non-damage abilities like Healing
     min: number;
     max: number;
     levelScaling: number;
   };
   sounds?: { [key: string]: AbilitySoundConfig };
   particles?: { [key: string]: ParticleSystemConfig };
-  projectile?: ProjectileConfig;
+  projectile?: ProjectileConfig; // Optional for non-projectile abilities
+  healing?: HealingConfig; // New: Optional for healing abilities
 }
