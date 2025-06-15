@@ -1,16 +1,5 @@
-import { Vector3, Color3, Color4 } from "@babylonjs/core";
-
 export enum AbilityType {
   RangedProjectile = "RangedProjectile",
-}
-
-export interface AbilitySoundConfig {
-  file: string;
-  volume: number;
-  loop: boolean;
-  spatialSound: boolean;
-  maxDistance: number;
-  attachToMesh?: boolean;
 }
 
 export interface ParticleSystemConfig {
@@ -21,14 +10,14 @@ export interface ParticleSystemConfig {
   maxLifeTime: number;
   emitRate: number;
   blendMode: number;
-  gravity?: { x: number; y: number; z: number };
-  direction1?: { x: number; y: number; z: number };
-  direction2?: { x: number; y: number; z: number };
-  minEmitBox?: { x: number; y: number; z: number };
-  maxEmitBox?: { x: number; y: number; z: number };
   color1: { r: number; g: number; b: number; a: number };
   color2: { r: number; g: number; b: number; a: number };
   colorDead: { r: number; g: number; b: number; a: number };
+  minEmitBox?: { x: number; y: number; z: number };
+  maxEmitBox?: { x: number; y: number; z: number };
+  gravity?: { x: number; y: number; z: number };
+  direction1?: { x: number; y: number; z: number };
+  direction2?: { x: number; y: number; z: number };
   minAngularSpeed?: number;
   maxAngularSpeed?: number;
   minEmitPower?: number;
@@ -39,6 +28,7 @@ export interface ParticleSystemConfig {
 export interface ProjectileConfig {
   diameter: number;
   speed: number;
+  lifetime: number;
   material: {
     diffuseColor: { r: number; g: number; b: number };
     emissiveColor: { r: number; g: number; b: number };
@@ -46,7 +36,15 @@ export interface ProjectileConfig {
     specularPower: number;
     backFaceCulling: boolean;
   };
-  lifetime: number;
+}
+
+export interface AbilitySoundConfig {
+  file: string;
+  volume: number;
+  loop: boolean;
+  spatialSound: boolean;
+  maxDistance: number;
+  attachToMesh: boolean;
 }
 
 export interface AbilityConfig {
@@ -64,16 +62,7 @@ export interface AbilityConfig {
     max: number;
     levelScaling: number;
   };
-  sounds?: {
-    cast?: AbilitySoundConfig;
-    launch?: AbilitySoundConfig;
-    travel?: AbilitySoundConfig;
-    impact?: AbilitySoundConfig;
-  };
-  particles?: {
-    cast?: ParticleSystemConfig; // NEW: Added cast
-    projectile?: ParticleSystemConfig;
-    impact?: ParticleSystemConfig;
-  };
+  sounds?: { [key: string]: AbilitySoundConfig };
+  particles?: { [key: string]: ParticleSystemConfig };
   projectile?: ProjectileConfig;
 }
