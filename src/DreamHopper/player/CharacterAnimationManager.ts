@@ -15,7 +15,6 @@ export class CharacterAnimationManager {
   private footstepSounds: Sound[] = [];
   private footstepFrames: number[] = [];
   private footstepObserver: any = null;
-  // MODIFIED: Added triggerFrame to AbilityAnimationState
   public onAbilityAnimationState = new Observable<{
     abilityId: string;
     abilityName: string;
@@ -112,7 +111,7 @@ export class CharacterAnimationManager {
       const anim = this.getAnimationByName(ability.animation.name);
       if (anim) {
         anim.onAnimationEndObservable.add(() => {
-          console.log(`[${ability.id}] Animation ${ability.name} ended`);
+          // console.log(`[${ability.id}] Animation ${ability.name} ended`);
           this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, abilityName: ability.name, isPlaying: false });
           if (this.attackSystem) this.attackSystem.stopSounds();
         });
@@ -129,7 +128,7 @@ export class CharacterAnimationManager {
 
     const anim = this.getAnimationByName(ability.animation.name);
     if (anim && anim.isPlaying) {
-      console.log(`Canceling ability: abilityId=${abilityId}, abilityName=${ability.name}`);
+      // console.log(`Canceling ability: abilityId=${abilityId}, abilityName=${ability.name}`);
       anim.stop();
       this.onAbilityAnimationState.notifyObservers({ abilityId, abilityName: ability.name, isPlaying: false });
       this.abilitySpawned = false;
@@ -148,7 +147,6 @@ export class CharacterAnimationManager {
     }
     return false;
   }
-
 
   public getAbility(id: string): AbilityConfig | undefined {
     return this.abilities.get(id);
@@ -173,7 +171,7 @@ export class CharacterAnimationManager {
     }
 
     if (this.characterController?.getPlayer().isPlayerDead() && name !== "Death" && name !== "Idle") {
-      console.log(`Cannot play ${name}: player is dead`);
+      // console.log(`Cannot play ${name}: player is dead`);
       return;
     }
 
@@ -193,6 +191,19 @@ export class CharacterAnimationManager {
       const characterMesh = this.characterController?.characterMeshLoader.getCharacterMesh();
       if (!this.characterController || !this.characterController.physicsController || !characterMesh) {
         console.warn(`Cannot play ${name}; missing characterController, physicsController, or character mesh`);
+        return;
+      }
+
+      // New: Check mana availability without deducting
+      const player = this.characterController.getPlayer();
+      if (player.getMana() < ability.manaCost!) {
+        // console.log(`Cannot play ${name}: insufficient mana (${player.getMana()}/${ability.manaCost})`);
+        this.onAbilityAnimationState.notifyObservers({
+          abilityId: ability.id,
+          abilityName: ability.name,
+          isPlaying: false,
+          triggerFrame: ability.animation.triggerFrame,
+        });
         return;
       }
 
@@ -221,7 +232,7 @@ export class CharacterAnimationManager {
       if (this.attackSystem) {
         const castSound = this.attackSystem.sounds.get(`${ability.id}_cast`);
         if (castSound && castSound.isReady()) {
-          console.log(`Playing cast sound for ability: ${ability.id}`);
+          // console.log(`Playing cast sound for ability: ${ability.id}`);
           castSound.play();
         }
       }
@@ -328,7 +339,7 @@ export class CharacterAnimationManager {
 
     if (ability!) {
       this.abilitySpawned = false;
-      console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=0, triggerFrame=${ability!.animation.triggerFrame}`);
+      // console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=0, triggerFrame=${ability!.animation.triggerFrame}`);
       this.onAbilityAnimationState.notifyObservers({
         abilityId: ability!.id,
         abilityName: ability!.name,
@@ -343,7 +354,7 @@ export class CharacterAnimationManager {
           const from = newAnim.from;
           const to = newAnim.to;
           const progress = (currentFrame - from) / (to - from);
-          console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${progress}, triggerFrame=${ability!.animation.triggerFrame}`);
+          // console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${progress}, triggerFrame=${ability!.animation.triggerFrame}`);
           this.onAbilityAnimationState.notifyObservers({
             abilityId: ability!.id,
             abilityName: ability!.name,
@@ -360,7 +371,7 @@ export class CharacterAnimationManager {
               }
             }
             this.abilitySpawned = true;
-            console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${ability!.animation.triggerFrame}, triggerFrame=${ability!.animation.triggerFrame}`);
+            // console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${ability!.animation.triggerFrame}, triggerFrame=${ability!.animation.triggerFrame}`);
             this.onAbilityAnimationState.notifyObservers({
               abilityId: ability!.id,
               abilityName: ability!.name,
@@ -371,7 +382,7 @@ export class CharacterAnimationManager {
             this.scene.onBeforeRenderObservable.remove(observer);
           }
         } else {
-          console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=false`);
+          // console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=false`);
           this.onAbilityAnimationState.notifyObservers({
             abilityId: ability!.id,
             abilityName: ability!.name,

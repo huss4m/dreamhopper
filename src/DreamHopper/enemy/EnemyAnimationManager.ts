@@ -23,7 +23,7 @@ export class EnemyAnimationManager {
 
     public initialize(animationGroups: AnimationGroup[]): void {
         this.animationGroups = animationGroups;
-        console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Initialized with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
+        // console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Initialized with ${animationGroups.length} animation groups:`, animationGroups.map(ag => ag.name));
 
         this.loadFootstepSounds();
 
@@ -60,7 +60,7 @@ export class EnemyAnimationManager {
                         sound.attachToMesh(enemyMesh);
                     }
                     if (this.footstepSounds.length === soundFiles.length) {
-                        console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Successfully loaded ${this.footstepSounds.length} footstep sounds`);
+                        // console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Successfully loaded ${this.footstepSounds.length} footstep sounds`);
                     }
                 },
                 {
@@ -152,7 +152,7 @@ export class EnemyAnimationManager {
                     if (currentFrame === triggerFrame && !hasTriggered) {
                         this.onAnimationKeyFrame.notifyObservers({ name, frame: currentFrame });
                         hasTriggered = true;
-                        console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Keyframe ${triggerFrame} reached for ${name}`);
+                        // console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Keyframe ${triggerFrame} reached for ${name}`);
                     }
 
                     // Optional: Keep progress for debug logging
@@ -161,7 +161,7 @@ export class EnemyAnimationManager {
                     const frameRange = toFrame - fromFrame;
                     const progress = frameRange > 0 ? (currentFrame - fromFrame) / frameRange : 0;
                     this.onAnimationProgress.notifyObservers({ name, progress });
-                    //console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Attack animation ${name} frame: ${currentFrame}, progress: ${(progress * 100).toFixed(2)}%`);
+                    //// console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Attack animation ${name} frame: ${currentFrame}, progress: ${(progress * 100).toFixed(2)}%`);
                 } else {
                     this.scene.onBeforeRenderObservable.remove(this.animationKeyFrameObserver);
                     this.animationKeyFrameObserver = null;
@@ -171,7 +171,7 @@ export class EnemyAnimationManager {
             // Reset hasTriggered on loop
             newAnim.onAnimationGroupLoopObservable.add(() => {
                 hasTriggered = false;
-                console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Animation ${name} looped, reset keyframe trigger`);
+                // console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Animation ${name} looped, reset keyframe trigger`);
             });
         }
 
@@ -263,6 +263,6 @@ export class EnemyAnimationManager {
             this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
             this.footstepObserver = null;
         }
-        console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Disposed`);
+        // console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Disposed`);
     }
 }

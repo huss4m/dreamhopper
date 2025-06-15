@@ -4,6 +4,7 @@ import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
 import { AbilityStrategy } from "./AbilityStrategy";
+import { Player } from "./Player"; // New: Import Player
 
 export class RangedProjectileStrategy implements AbilityStrategy {
   execute(
@@ -16,7 +17,8 @@ export class RangedProjectileStrategy implements AbilityStrategy {
     targetingSystem?: TargetingSystem,
     gameManager?: GameManager,
     sounds?: Map<string, Sound>,
-    createParticleSystem?: (config: ParticleSystemConfig, emitter: Mesh | Vector3, name: string) => ParticleSystem
+    createParticleSystem?: (config: ParticleSystemConfig, emitter: Mesh | Vector3, name: string) => ParticleSystem,
+    player?: Player // New: Add player parameter
   ): void {
     if (!ability.projectile) {
       console.warn(`No projectile config for ability ${ability.id}`);
@@ -27,6 +29,15 @@ export class RangedProjectileStrategy implements AbilityStrategy {
     const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
 
     const sphere = MeshBuilder.CreateSphere(`${ability.id}_projectile`, { diameter: ability.projectile.diameter }, scene);
+
+    // New: Deduct mana when sphere is created
+    if (ability.manaCost && player && !player.deductMana(ability.manaCost)) {
+      console.warn(`Cannot spawn ${ability.id} projectile; insufficient mana (required: ${ability.manaCost}, available: ${player.getMana()})`);
+      sphere.dispose();
+      return;
+    }
+    console.log(`Deducted ${ability.manaCost} mana for ${ability.id} when projectile appeared`);
+
     const material = new StandardMaterial(`${ability.id}_mat`, scene);
     material.diffuseColor = new Color3(
       ability.projectile.material.diffuseColor.r,
@@ -66,8 +77,6 @@ export class RangedProjectileStrategy implements AbilityStrategy {
       console.log(`RangedProjectileStrategy: Playing launch sound ${ability.id}_launch`);
       launchSound.play();
     }
-
-    
 
     const moveDirection = target.mesh.getAbsolutePosition().subtract(sphere.position).normalize();
 

@@ -19,7 +19,7 @@ export class EnemyAttackSystem {
         this.game = game;
         this.attacks = enemy.config.attacks;
         this.preloadSounds(); // New
-        console.log(`EnemyAttackSystem for Enemy ${enemy.getId()}: Initialized with ${this.attacks.length} attacks`);
+        // console.log(`EnemyAttackSystem for Enemy ${enemy.getId()}: Initialized with ${this.attacks.length} attacks`);
     }
 
     // New: Preload sounds for attacks
@@ -42,7 +42,7 @@ export class EnemyAttackSystem {
                 nightmareBoltAttack.soundEffects.cast,
                 this.scene,
                 () => {
-                    console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Cast sound preloaded`);
+                    // console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Cast sound preloaded`);
                     this.castSound!.attachToMesh(enemyMesh);
                 },
                 { autoplay: false, loop: true, spatialSound: true, maxDistance: 50, volume: 0.4 }
@@ -55,7 +55,7 @@ export class EnemyAttackSystem {
                 nightmareBoltAttack.soundEffects.launch,
                 this.scene,
                 () => {
-                    console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Launch sound preloaded`);
+                    // console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Launch sound preloaded`);
                     this.launchSound!.attachToMesh(enemyMesh);
                 },
                 { autoplay: false, loop: false, spatialSound: true, maxDistance: 50, volume: 1.2 }
@@ -68,7 +68,7 @@ export class EnemyAttackSystem {
                 nightmareBoltAttack.soundEffects.ambient,
                 this.scene,
                 () => {
-                    console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Ambient sound preloaded`);
+                    // console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Ambient sound preloaded`);
                 },
                 { autoplay: false, loop: true, spatialSound: true, maxDistance: 50, volume: 1 }
             );
@@ -91,11 +91,11 @@ export class EnemyAttackSystem {
         const currentTime = Date.now();
         const lastTime = this.lastAttackTimes.get(attackId) || 0;
         if (currentTime - lastTime < attack.cooldown) {
-            console.log(`Enemy ${this.enemy.getId()}: Attack ${attackId} on cooldown`);
+            // console.log(`Enemy ${this.enemy.getId()}: Attack ${attackId} on cooldown`);
             return;
         }
 
-        console.log(`Enemy ${this.enemy.getId()}: Performing attack ${attackId}`);
+        // console.log(`Enemy ${this.enemy.getId()}: Performing attack ${attackId}`);
 
         if (attack.type === "ranged" && attack.projectile) {
             this.performRangedAttack(attack);
@@ -132,7 +132,7 @@ export class EnemyAttackSystem {
         // Play cast sound
         if (this.castSound && this.castSound.isReady()) {
             this.castSound.play();
-            console.log(`Enemy ${this.enemy.getId()}: Playing cast sound for ${attack.id}`);
+            // console.log(`Enemy ${this.enemy.getId()}: Playing cast sound for ${attack.id}`);
         }
 
         // Create projectile
@@ -176,7 +176,7 @@ export class EnemyAttackSystem {
         // Play launch sound
         if (this.launchSound && this.launchSound.isReady()) {
             this.launchSound.play();
-            console.log(`Enemy ${this.enemy.getId()}: Playing launch sound for ${attack.id}`);
+            // console.log(`Enemy ${this.enemy.getId()}: Playing launch sound for ${attack.id}`);
         }
 
         // Play ambient sound
@@ -186,7 +186,7 @@ export class EnemyAttackSystem {
             if (sphere && !sphere.isDisposed()) {
                 sphereAmbientSound!.attachToMesh(sphere);
                 sphereAmbientSound!.play();
-                console.log(`Enemy ${this.enemy.getId()}: Playing ambient sound for ${attack.id}`);
+                // console.log(`Enemy ${this.enemy.getId()}: Playing ambient sound for ${attack.id}`);
             } else {
                 sphereAmbientSound!.dispose();
                 sphereAmbientSound = null;
@@ -226,7 +226,7 @@ export class EnemyAttackSystem {
                     if (player) {
                         const damage = Math.floor(Math.random() * (attack.damageMax - attack.damageMin + 1)) + attack.damageMin;
                         player.takeDamage(damage);
-                        console.log(`Enemy ${this.enemy.getId()}: ${attack.id} hit player for ${damage} damage`);
+                        // console.log(`Enemy ${this.enemy.getId()}: ${attack.id} hit player for ${damage} damage`);
                     }
                 }
 
@@ -318,6 +318,6 @@ export class EnemyAttackSystem {
             this.ambientSound.dispose();
         }
         this.lastAttackTimes.clear();
-        console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Disposed`);
+        // console.log(`EnemyAttackSystem for Enemy ${this.enemy.getId()}: Disposed`);
     }
 }

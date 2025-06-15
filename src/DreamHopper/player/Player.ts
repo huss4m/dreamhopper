@@ -4,7 +4,6 @@ import { Item } from "../items/Item";
 import { Quest, QuestState } from "../npc/Quest";
 import { Game } from "../Game";
 import { Enemy } from "../enemy/Enemy";
-//import { BossEnemy } from "../enemy/BossEnemy";
 
 export class Player {
   private inventory: Item[] = [];
@@ -16,30 +15,29 @@ export class Player {
   private maxHP = 100;
   private currentHP = 100;
   private isDead = false;
-  private level = 1; // New: Track player level, starting at 1
+  private level = 1;
   private currentXP = 0;
-  private maxXP = 1000; // New: Base XP for level 1
+  private maxXP = 1000;
   public onDeathObservable = new Observable<void>();
   public onQuestStateChanged = new Observable<Quest>();
   public onHPChanged = new Observable<{ currentHP: number; maxHP: number }>();
   public onXPChanged = new Observable<{ currentXP: number; maxXP: number }>();
-  public onLevelChanged = new Observable<{ level: number }>(); // New: Notify level changes
+  public onLevelChanged = new Observable<{ level: number }>();
+  public onManaChanged = new Observable<{ currentMana: number; maxMana: number }>();
   isSheathed = false;
   posOffset: Vector3;
   rotOffset: Vector3;
   private game: Game | null = null;
   scene: Scene;
 
-  private baseRegenRate = 2; 
-  private hpRegenRate: number; 
+  private baseRegenRate = 2;
+  private hpRegenRate: number;
   private hpRegenInterval: number | null = null;
-  private baseManaRegenRate = 2; // New: Base mana regen rate
-  private manaRegenRate: number; // New: Mana regen rate
-  private manaRegenInterval: number | null = null; // New: Mana regen interval
-  private mana = 100;
+  private baseManaRegenRate = 2;
+  private manaRegenRate: number;
+  private manaRegenInterval: number | null = null;
+  public mana = 100;
   private maxMana = 100;
-
-  public onManaChanged = new Observable<{ currentMana: number; maxMana: number }>(); // New: Mana change observable
 
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator, game?: Game) {
     this.game = game!;
@@ -48,29 +46,24 @@ export class Player {
     this.rotOffset = new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3);
 
     this.hpRegenRate = this.baseRegenRate;
-    this.manaRegenRate = this.baseManaRegenRate; // New: Initialize mana regen rate
+    this.manaRegenRate = this.baseManaRegenRate;
 
     this.startHPRegeneration();
-    this.startManaRegeneration(); // New: Start mana regeneration
-    // Subscribe to enemy and boss death events to award XP
+    this.startManaRegeneration();
     this.setupEnemyDeathSubscriptions();
-    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Initial mana notification
-
+    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana });
   }
-
 
   private startHPRegeneration(): void {
     this.hpRegenInterval = setInterval(() => {
-    if (!this.isDead && this.currentHP < this.maxHP) {
-      this.currentHP = Math.min(this.currentHP + this.hpRegenRate, this.maxHP);
-      // console.log(`Player: Regenerated ${this.hpRegenRate} HP at level ${this.level}, now ${this.currentHP}/${this.maxHP}`);
-      this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
-    }
-  }, 5000);
+      if (!this.isDead && this.currentHP < this.maxHP) {
+        this.currentHP = Math.min(this.currentHP + this.hpRegenRate, this.maxHP);
+        this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
+      }
+    }, 5000);
   }
 
-
-   private startManaRegeneration(): void { // New: Mana regeneration
+  private startManaRegeneration(): void {
     this.manaRegenInterval = setInterval(() => {
       if (!this.isDead && this.mana < this.maxMana) {
         this.mana = Math.min(this.mana + this.manaRegenRate, this.maxMana);
@@ -80,20 +73,15 @@ export class Player {
   }
 
   private setupEnemyDeathSubscriptions(): void {
-  if (!this.game) {
-    console.error("Player: Cannot setup enemy death subscriptions, game instance is null");
-    return;
+    if (!this.game) {
+      console.error("Player: Cannot setup enemy death subscriptions, game instance is null");
+      return;
+    }
+    const enemies = this.game.getGameManager()?.getEnemies() || [];
+    enemies.forEach(enemy => this.subscribeToEnemyDeath(enemy));
   }
-  const enemies = this.game.getGameManager()?.getEnemies() || [];
-  //const bosses = this.game.getGameManager()?.getBosses() || [];
-  
-  enemies.forEach(enemy => this.subscribeToEnemyDeath(enemy));
- // bosses.forEach(boss => this.subscribeToEnemyDeath(boss));
 
-  // console.log(`Player: Subscribed to ${enemies.length} enemies and ${bosses.length} bosses for XP awards`);
-}
-
-  public getLevel(): number { // New: Getter for level
+  public getLevel(): number {
     return this.level;
   }
 
@@ -111,10 +99,8 @@ export class Player {
 
   public setHP(hp: number): void {
     this.currentHP = Math.max(0, Math.min(hp, this.maxHP));
-    // console.log(`Player: HP updated to ${this.currentHP}/${this.maxHP}`);
     if (this.currentHP === 0 && !this.isDead) {
       this.isDead = true;
-      // console.log("Player is Dead!");
       this.onDeathObservable.notifyObservers();
       const characterController = this.game?.getCharacterController();
       if (characterController) {
@@ -123,14 +109,15 @@ export class Player {
         console.warn("Player: Cannot play Death animation, CharacterController not found");
       }
     }
+    this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
   }
 
   public reset(): void {
     this.currentHP = this.maxHP;
+    this.mana = this.maxMana; // New: Reset mana
     this.isDead = false;
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
-    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana reset
-    // console.log("Player: Reset HP to max and cleared isDead state");
+    this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana });
   }
 
   public getInventory(): Item[] {
@@ -140,9 +127,7 @@ export class Player {
   public addItem(item: Item): void {
     if (!this.inventory.some(i => i.getName() === item.getName())) {
       this.inventory.push(item);
-      // console.log(`Player: Added ${item.getName()} to inventory`);
     } else {
-      // console.log(`Player: ${item.getName()} already in inventory`);
       item.dispose();
     }
   }
@@ -153,9 +138,6 @@ export class Player {
       const item = this.inventory[index];
       this.inventory.splice(index, 1);
       item.dispose();
-      // console.log(`Player: Removed ${itemName} from inventory`);
-    } else {
-      // console.log(`Player: ${itemName} not found in inventory`);
     }
   }
 
@@ -173,11 +155,9 @@ export class Player {
 
   public incrementCrystalCount(): void {
     this.collectedCrystals++;
-    // console.log(`Player: Incrementing crystal count, now ${this.collectedCrystals}/${this.totalCrystals}, activeQuests=${this.activeQuests.map(q => `${q.getId()}:${q.getState().status}`).join(", ")}`);
     this.activeQuests.forEach(quest => {
       if (quest.type === "COLLECT" && quest.getState().status === "inProgress") {
         quest.updateProgress(1);
-        // console.log(`Player: Updated COLLECT quest ${quest.getId()} - progress ${quest.getState().collectedCrystals}/${quest.requiredCrystals}, completed=${quest.isCompletedStatus()}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -186,11 +166,9 @@ export class Player {
   }
 
   public incrementEnemyKills(enemyType: "Enemy" | "BossEnemy"): void {
-    // console.log(`Player: Incrementing enemy kills for type ${enemyType}`);
     this.activeQuests.forEach(quest => {
       if (quest.type === "KILL") {
         quest.updateProgress(1, enemyType);
-        // console.log(`Player: Updated KILL quest ${quest.getId()} progress for ${enemyType}, enemiesKilled: ${quest.getState().enemiesKilled}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -200,7 +178,6 @@ export class Player {
 
   public setTotalCrystals(total: number): void {
     this.totalCrystals = total;
-    // console.log(`Player: Set total crystals to ${this.totalCrystals}`);
   }
 
   public getCollectedCrystals(): number {
@@ -214,7 +191,6 @@ export class Player {
   public resetCrystalCount(): void {
     this.collectedCrystals = 0;
     this.totalCrystals = 0;
-    // console.log("Player: Reset crystal count");
   }
 
   public acceptQuest(quest: Quest): void {
@@ -223,7 +199,6 @@ export class Player {
         !this.turnedInQuests.some(q => q.getId() === quest.getId())) {
       quest.accept();
       this.activeQuests.push(quest);
-      // console.log(`Player: Accepted quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
       this.onQuestStateChanged.notifyObservers(quest);
     }
@@ -241,10 +216,7 @@ export class Player {
       });
       this.activeQuests = this.activeQuests.filter(q => q.getId() !== questId);
       this.completedQuests.push(quest);
-      // console.log(`Player: Forced completion of quest ${questId}`);
       this.updateNPCQuest(quest);
-    } else {
-      // console.log(`Player: Quest ${questId} not found in active quests`);
     }
   }
 
@@ -255,7 +227,6 @@ export class Player {
       this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
       this.turnedInQuests.push(quest);
       this.addXP(quest.getXPReward());
-      // console.log(`Player: Turned in quest ${quest.getId()}`);
       this.updateNPCQuest(quest);
       this.onQuestStateChanged.notifyObservers(quest);
     }
@@ -283,7 +254,6 @@ export class Player {
         });
         this.activeQuests = this.activeQuests.filter(q => q.getId() !== quest.getId());
         this.completedQuests.push(quest);
-        // console.log(`Player: Completed quest ${quest.getId()}`);
         this.updateNPCQuest(quest);
         this.onQuestStateChanged.notifyObservers(quest);
       }
@@ -296,15 +266,12 @@ export class Player {
       return;
     }
     const npcs = this.game.getGameManager().getNPCs();
-    // console.log(`Player: Found ${npcs.length} NPCs to check for quest ${quest.getId()}`);
     let updated = false;
     npcs.forEach(npc => {
       const npcQuest = npc.getQuest();
-      // console.log(`Player: Checking NPC ${npc.getId()}, quest=${npcQuest?.getId() || 'none'}, status=${npcQuest?.getState().status || 'none'}`);
       if (npcQuest?.getId() === quest.getId()) {
         npc.setQuest(quest);
         npc.updateQuestMarker();
-        // console.log(`Player: Updated NPC ${npc.getId()} quest ${quest.getId()} to status: ${quest.getState().status}`);
         updated = true;
       }
     });
@@ -331,7 +298,7 @@ export class Player {
           this.completedQuests.push(quest);
           this.updateNPCQuest(quest);
         } else if (state.status === "turnedIn" && this.completedQuests.includes(quest)) {
-          this.completedQuests = this.completedQuests.filter(q => q.getId() === quest.id);
+          this.completedQuests = this.completedQuests.filter(q => q.getId() !== quest.id);
           this.turnedInQuests.push(quest);
           this.updateNPCQuest(quest);
         }
@@ -341,11 +308,9 @@ export class Player {
 
   public takeDamage(damage: number): void {
     this.currentHP = Math.max(0, Math.min(this.currentHP - damage, this.maxHP));
-    // console.log(`Player: Took ${damage} damage, HP updated to ${this.currentHP}/${this.maxHP}`);
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     if (this.currentHP === 0 && !this.isDead) {
       this.isDead = true;
-      // console.log("Player is Dead!");
       this.onDeathObservable.notifyObservers();
       const characterController = this.game?.getCharacterController();
       if (characterController) {
@@ -356,7 +321,7 @@ export class Player {
     }
   }
 
-    public heal(amount: number): boolean { // New: Heal method
+  public heal(amount: number): boolean {
     if (this.isDead || this.currentHP >= this.maxHP) {
       return false;
     }
@@ -375,40 +340,40 @@ export class Player {
 
   public addXP(amount: number): void {
     this.currentXP += amount;
-    // console.log(`Player: Added ${amount} XP, current XP: ${this.currentXP}/${this.maxXP} at level ${this.level}`);
     this.onXPChanged.notifyObservers({ currentXP: this.currentXP, maxXP: this.maxXP });
 
     while (this.currentXP >= this.maxXP) {
-        this.level++;
-        this.hpRegenRate = this.baseRegenRate + (this.level - 1) * 2;
-        const oldMaxHP = this.maxHP;
-        this.maxHP = 100 + (this.level - 1) * 20; 
-        const hpPercentage = this.currentHP / oldMaxHP;
-        this.currentHP = Math.round(this.maxHP * hpPercentage); 
-        // console.log(`Player: Leveled up to level ${this.level}! New max HP: ${this.maxHP}, current HP: ${this.currentHP}`);
-        this.currentXP -= this.maxXP;
-        this.maxXP = Math.round(1000 * Math.pow(1.5, this.level - 1));
-        this.onLevelChanged.notifyObservers({ level: this.level });
-        this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP }); // Notify HP change
-        this.onXPChanged.notifyObservers({ currentXP: this.currentXP, maxXP: this.maxXP });
-        this.triggerLevelUpEffect();
+      this.level++;
+      this.hpRegenRate = this.baseRegenRate + (this.level - 1) * 2;
+      this.manaRegenRate = this.baseManaRegenRate + (this.level - 1) * 0.5; // New: Scale mana regen
+      const oldMaxHP = this.maxHP;
+      const oldMaxMana = this.maxMana; // New: Store old max mana
+      this.maxHP = 100 + (this.level - 1) * 20;
+      this.maxMana = 100 + (this.level - 1) * 20; // New: Scale max mana
+      const hpPercentage = this.currentHP / oldMaxHP;
+      const manaPercentage = this.mana / oldMaxMana; // New: Maintain mana percentage
+      this.currentHP = Math.round(this.maxHP * hpPercentage);
+      this.mana = Math.round(this.maxMana * manaPercentage); // New: Adjust mana
+      this.currentXP -= this.maxXP;
+      this.maxXP = Math.round(1000 * Math.pow(1.5, this.level - 1));
+      this.onLevelChanged.notifyObservers({ level: this.level });
+      this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
+      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana change
+      this.onXPChanged.notifyObservers({ currentXP: this.currentXP, maxXP: this.maxXP });
+      this.triggerLevelUpEffect();
     }
-}
+  }
 
+  public subscribeToEnemyDeath(entity: Enemy): void {
+    entity.onDeath.add(() => {
+      this.addXP(entity.xpReward);
+    });
+  }
 
-  public subscribeToEnemyDeath(entity: Enemy ): void {
-  entity.onDeath.add(() => {
-    this.addXP(entity.xpReward);
-    // console.log(`Player: Awarded 100 XP for ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} transformation`);
-  });
-  // console.log(`Player: Subscribed to ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} for XP awards`);
-}
-
-
-
-   public deductMana(amount: number): boolean {
+  public deductMana(amount: number): boolean {
     if (this.mana >= amount) {
       this.mana -= amount;
+      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana change
       return true;
     }
     return false;
@@ -418,8 +383,7 @@ export class Player {
     return this.mana;
   }
 
-
-private triggerLevelUpEffect(): void {
+  private triggerLevelUpEffect(): void {
     if (!this.game) {
       console.error("Player: Cannot trigger level-up effect, game instance is null");
       return;
@@ -444,7 +408,7 @@ private triggerLevelUpEffect(): void {
     particleSystem.maxLifeTime = 2.5;
     particleSystem.emitRate = 200;
     particleSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-    particleSystem.gravity = new Vector3(0, 0.2, 0); // Slight upward drift
+    particleSystem.gravity = new Vector3(0, 0.2, 0);
     particleSystem.direction1 = new Vector3(-0.5, 0.5, -0.5);
     particleSystem.direction2 = new Vector3(0.5, 1.0, 0.5);
     particleSystem.minAngularSpeed = -Math.PI / 4;
@@ -452,21 +416,19 @@ private triggerLevelUpEffect(): void {
     particleSystem.minEmitPower = 0.5;
     particleSystem.maxEmitPower = 1.5;
     particleSystem.start();
-     const levelUpSound = new Sound(
-    "levelUpSound",
-    "./sfx/impactchime.wav",
-    this.scene,
-    () => {
-      levelUpSound.play();
-    },
-    { volume: 0.7 }
-  );
-    // console.log(`Player: Triggered level-up particle effect at level ${this.level}`);
+    const levelUpSound = new Sound(
+      "levelUpSound",
+      "./sfx/impactchime.wav",
+      this.scene,
+      () => {
+        levelUpSound.play();
+      },
+      { volume: 0.7 }
+    );
     setTimeout(() => {
       particleSystem.stop();
       setTimeout(() => {
         particleSystem.dispose();
-        // console.log(`Player: Disposed level-up particle effect for level ${this.level}`);
       }, 3000);
     }, 2000);
   }
@@ -480,24 +442,20 @@ private triggerLevelUpEffect(): void {
     this.onQuestStateChanged.clear();
     this.onHPChanged.clear();
     this.onXPChanged.clear();
-    this.onLevelChanged.clear(); // New: Clear level change observable
+    this.onLevelChanged.clear();
+    this.onManaChanged.clear(); // New: Clear mana observable
     this.inventory.forEach(item => item.dispose());
     this.inventory = [];
     this.activeQuests = [];
     this.completedQuests = [];
     this.turnedInQuests = [];
-
-     if (this.hpRegenInterval !== null) 
-      {
-        clearInterval(this.hpRegenInterval);
-        this.hpRegenInterval = null;
-        // console.log("Player: Cleared HP regeneration interval");
-      }
-
-       if (this.manaRegenInterval !== null) { // New: Clear mana regen interval
+    if (this.hpRegenInterval !== null) {
+      clearInterval(this.hpRegenInterval);
+      this.hpRegenInterval = null;
+    }
+    if (this.manaRegenInterval !== null) {
       clearInterval(this.manaRegenInterval);
       this.manaRegenInterval = null;
     }
-    // console.log("Player: Disposed");
   }
 }
