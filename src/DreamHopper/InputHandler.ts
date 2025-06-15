@@ -32,6 +32,7 @@ export class InputHandler {
   private rotationSpeed = 0.1;
   private wasSpacePressed = false;
   private wasDreamboltPressed = false;
+  private wasFireballPressed = false; // NEW
   private wasSheathePressed = false;
   private wasQuestDialogPressed = false;
   private wasLayoutTogglePressed = false;
@@ -91,6 +92,9 @@ export class InputHandler {
       if (key === '&') {
         key = '1';
       }
+       if (key === 'É' || key === 'é') { // MODIFIED: Handle both cases
+      key = '2';
+    }
 
       //// // console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
       if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
@@ -171,6 +175,12 @@ export class InputHandler {
           this.characterController.castAbility("dreambolt");
         }
         break;
+      case "castFireball":
+        if (!this.characterController.isAnimationPlaying("Fireball")) {
+          console.log('Executing castFireball, calling castAbility("fireball")'); // NEW
+          this.characterController.castAbility("fireball");
+        }
+        break;
       case "toggleSheathe":
         if (!this.wasSheathePressed) {
           this.characterController.toggleSheathe();
@@ -223,7 +233,7 @@ export class InputHandler {
 
     const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
     const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
-
+    const isFireballPlaying = this.characterController.isAnimationPlaying("Fireball");
     // Check if dialog should close
     if (this.game.getShowQuestDialog() && this.lastDialogTargetId) {
       const targetingSystem = this.game.getTargetingSystem();
@@ -265,6 +275,17 @@ export class InputHandler {
       this.wasDreamboltPressed = true;
     } else if (!this.keyStates["1"] && !this.keyStates["&"]) {
       this.wasDreamboltPressed = false;
+    }
+
+
+    if (this.keyStates["2"] && !this.wasFireballPressed && !isFireballPlaying) {
+      console.log('Key 2 detected, wasFireballPressed:', this.wasFireballPressed, 'isFireballPlaying:', isFireballPlaying); // NEW
+      const fireballBinding = this.keyBindings["2"];
+      console.log('Fireball binding:', fireballBinding); // NEW
+      if (fireballBinding) this.executeAction(fireballBinding);
+      this.wasFireballPressed = true;
+    } else if (!this.keyStates["2"]) {
+      this.wasFireballPressed = false;
     }
 
     if (this.currentLayout === "AZERTY" && this.keyStates["W"] && !this.wasSheathePressed) {
@@ -319,12 +340,13 @@ export class InputHandler {
       }
     }
 
-    if (isDreamboltPlaying) {
+   if (isDreamboltPlaying || isFireballPlaying) {
   const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
   if (hasMovement) {
-    // console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
-    this.characterController.animationManager.cancelAbility("dreambolt"); // NEW: Changed to cancelAbility
+    console.log(`InputHandler: Movement detected during ${isDreamboltPlaying ? "Dreambolt" : "Fireball"}, cancelling cast`);
+    this.characterController.animationManager.cancelAbility(isDreamboltPlaying ? "dreambolt" : "fireball");
   }
+
 }
 
     for (const binding of activeActions) {
@@ -332,12 +354,12 @@ export class InputHandler {
       isMoving = true;
     }
 
-    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !isDreamboltPlaying) {
-      this.characterController.playIdleAnimation();
-      if (!this.characterController.physicsController?.isJumping) {
-        this.characterController.moveForward(0);
-      }
-    }
+   if (!isMoving && !this.keyStates[" "] && !character.isJumping && !isDreamboltPlaying && !isFireballPlaying) {
+  this.characterController.playIdleAnimation();
+  if (!this.characterController.physicsController?.isJumping) {
+    this.characterController.moveForward(0);
+  }
+}
 
     if (this.isRightMouseDown) {
       this.characterController.syncRotationWithCamera();

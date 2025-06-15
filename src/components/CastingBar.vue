@@ -1,3 +1,4 @@
+```vue
 <template>
   <div v-if="isVisible" class="casting-bar">
     <div class="casting-bar-container">
@@ -10,12 +11,13 @@
 <script lang="ts">
 import { defineComponent, ref, watch, onMounted, onUnmounted } from "vue";
 import { Observable } from "@babylonjs/core";
-import { AbilityConfig } from "@/DreamHopper/player/AbilityConfig"; // Import AbilityConfig interface
 
 interface AbilityAnimationState {
   abilityId: string;
+  abilityName: string;
   isPlaying: boolean;
   progress?: number;
+  triggerFrame?: number; // NEW: Added to receive triggerFrame from observable
 }
 
 export default defineComponent({
@@ -29,62 +31,64 @@ export default defineComponent({
   setup(props) {
     const isVisible = ref(false);
     const progress = ref(0);
-    const abilityName = ref(""); // Dynamic ability name
-    const abilities = ref<AbilityConfig[]>([]); // Store abilities from JSON
+    const abilityName = ref("");
     let updateCallback: ((state: AbilityAnimationState) => void) | null = null;
 
-    // Load abilities.json
-    const loadAbilities = async () => {
-      try {
-        const response = await fetch("./abilities.json");
-        abilities.value = await response.json();
-        console.log("CastingBar: Loaded abilities", abilities.value);
-      } catch (error) {
-        console.error("CastingBar: Failed to load abilities.json", error);
-      }
-    };
-
-    const updateCastingBar = ({ abilityId, isPlaying, progress: animProgress }: AbilityAnimationState) => {
-      const ability = abilities.value.find((a) => a.id === abilityId);
-      if (!ability) {
-        console.warn(`CastingBar: Ability ${abilityId} not found`);
+    const updateCastingBar = ({ abilityId, abilityName: name, isPlaying, progress: animProgress, triggerFrame }: AbilityAnimationState) => {
+      console.log(`CastingBar received: abilityId=${abilityId}, abilityName=${name}, isPlaying=${isPlaying}, progress=${animProgress}, triggerFrame=${triggerFrame}`);
+      if (!name) {
+        console.warn(`CastingBar: Ability name not provided for ${abilityId}`);
         isVisible.value = false;
         progress.value = 0;
         return;
       }
 
-      // Set the ability name for display
-      abilityName.value = ability.name;
+      abilityName.value = name;
 
-      // Show the casting bar until the trigger frame (if defined)
-      const triggerFrame = ability.animation.triggerFrame ?? 1.0; // Default to 1.0 if not specified
-      if (isPlaying && typeof animProgress === "number" && animProgress < triggerFrame) {
-        isVisible.value = true;
-        progress.value = Math.min((animProgress / triggerFrame) * 100, 100);
-        console.log(`Casting bar progress for ${abilityId}: ${progress.value}% (animation: ${animProgress * 100}%)`);
+      // Use triggerFrame from observable, default to 1.0 if missing
+      const effectiveTriggerFrame = triggerFrame ?? 1.0;
+
+      if (isPlaying && typeof animProgress === "number") {
+        if (animProgress < effectiveTriggerFrame) {
+          isVisible.value = true;
+          // Scale progress so triggerFrame maps to 100%
+          progress.value = Math.min((animProgress / effectiveTriggerFrame) * 100, 100);
+          console.log(
+            `Casting bar progress for ${abilityId}: ${progress.value}% (animProgress: ${(animProgress * 100).toFixed(2)}%, triggerFrame: ${(effectiveTriggerFrame * 100).toFixed(2)}%)`
+          );
+        } else {
+          // Hide immediately when triggerFrame is reached or exceeded
+          isVisible.value = false;
+          progress.value = 0;
+          console.log(`Casting bar hidden for ${abilityId} at triggerFrame: ${(effectiveTriggerFrame * 100).toFixed(2)}%`);
+        }
       } else {
         isVisible.value = false;
         progress.value = 0;
-        console.log(`Casting bar hidden for ${abilityId}`);
+        console.log(`Casting bar hidden for ${abilityId} (not playing or no progress)`);
       }
     };
 
     const setupObserver = () => {
+      console.log("CastingBar: Setting up observer, animationManager=", !!props.animationManager);
       if (props.animationManager?.onAbilityAnimationState) {
         updateCallback = updateCastingBar;
         props.animationManager.onAbilityAnimationState.add(updateCallback);
         console.log("CastingBar: Attached ability animation state observer");
+      } else {
+        console.warn("CastingBar: No animationManager or onAbilityAnimationState found");
       }
     };
 
-    onMounted(async () => {
-      await loadAbilities(); // Load abilities on mount
+    onMounted(() => {
+      console.log("CastingBar: Mounted, calling setupObserver");
       setupObserver();
     });
 
     watch(
       () => props.animationManager,
       (newVal, oldVal) => {
+        console.log("CastingBar: animationManager changed, newVal=", !!newVal);
         if (oldVal?.onAbilityAnimationState && updateCallback) {
           oldVal.onAbilityAnimationState.removeCallback(updateCallback);
           console.log("CastingBar: Removed old ability animation state observer");
@@ -94,6 +98,7 @@ export default defineComponent({
     );
 
     onUnmounted(() => {
+      console.log("CastingBar: Unmounting");
       if (props.animationManager?.onAbilityAnimationState && updateCallback) {
         props.animationManager.onAbilityAnimationState.removeCallback(updateCallback);
         console.log("CastingBar: Removed ability animation state observer on unmount");

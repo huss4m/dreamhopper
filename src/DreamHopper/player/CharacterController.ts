@@ -250,9 +250,9 @@ public castAbility(abilityId: string, animationData?: AnimationData): void {
     }
     if (animationData) {
       const { name, speed = 1 } = animationData;
-      this.animationManager.playAnimation(name, speed);
+      this.animationManager.playAnimation(name, speed, undefined, undefined, undefined, abilityId); // NEW: Pass abilityId
     } else {
-      this.animationManager.playAnimation(ability.animation.name);
+      this.animationManager.playAnimation(ability.animation.name, undefined, undefined, undefined, undefined, abilityId); // NEW: Pass abilityId
     }
   }
 }

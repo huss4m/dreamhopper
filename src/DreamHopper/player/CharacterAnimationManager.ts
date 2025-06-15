@@ -11,14 +11,19 @@ export class CharacterAnimationManager {
   private isJumping = false;
   private isBlending = false;
   private blendFrameId: number | null = null;
-  // MODIFIED: Renamed from dreamboltSpawned to abilitySpawned for generalization
   private abilitySpawned = false;
   private footstepSounds: Sound[] = [];
   private footstepFrames: number[] = [];
   private footstepObserver: any = null;
-    public onAbilityAnimationState = new Observable<{ abilityId: string; isPlaying: boolean; progress?: number }>();
+  // MODIFIED: Added triggerFrame to AbilityAnimationState
+  public onAbilityAnimationState = new Observable<{
+    abilityId: string;
+    abilityName: string;
+    isPlaying: boolean;
+    progress?: number;
+    triggerFrame?: number;
+  }>();
   private attackSystem: CharacterAttackSystem | null = null;
-    // ADDED: Map to store ability configurations from JSON
   private abilities: Map<string, AbilityConfig> = new Map();
 
   constructor(
@@ -32,16 +37,12 @@ export class CharacterAnimationManager {
     }
   }
 
-
-
-
   public setAttackSystem(attackSystem: CharacterAttackSystem): void {
     this.attackSystem = attackSystem;
   }
 
   public async initialize(animationGroups: AnimationGroup[]): Promise<void> {
     this.animationGroups = animationGroups;
-    // ADDED: Load abilities from JSON during initialization
     await this.loadAbilities();
     this.loadFootstepSounds();
 
@@ -53,11 +54,9 @@ export class CharacterAnimationManager {
     }
 
     this.setupJumpDetection();
-     // MODIFIED: Replaced setupDreamboltDetection with generalized setupAbilityDetection
     this.setupAbilityDetection();
   }
 
-// ADDED: Method to load abilities.json and store in abilities Map
   private async loadAbilities(): Promise<void> {
     const assetsManager = new AssetsManager(this.scene);
     const assetTask = assetsManager.addTextFileTask("abilities", "./abilities.json");
@@ -65,6 +64,7 @@ export class CharacterAnimationManager {
     const abilities: AbilityConfig[] = JSON.parse(assetTask.text);
     abilities.forEach(ability => this.abilities.set(ability.id, ability));
   }
+
   private loadFootstepSounds(): void {
     const soundFiles = [
       "./sfx/footstep1.wav",
@@ -107,35 +107,31 @@ export class CharacterAnimationManager {
     }
   }
 
-
-
-
-    // ADDED: Generalized method to handle any ability animation end events
   private setupAbilityDetection(): void {
     this.abilities.forEach(ability => {
       const anim = this.getAnimationByName(ability.animation.name);
       if (anim) {
-        anim.onAnimationGroupEndObservable.add(() => {
-          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: false });
+        anim.onAnimationEndObservable.add(() => {
+          console.log(`[${ability.id}] Animation ${ability.name} ended`);
+          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, abilityName: ability.name, isPlaying: false });
           if (this.attackSystem) this.attackSystem.stopSounds();
         });
       }
     });
   }
-// MODIFIED: Renamed from cancelDreambolt to cancelAbility and generalized
-  public cancelAbility(abilityId: string): void {
-    // ADDED: Retrieve ability from Map
+
+  public cancelAbility(abilityId: string): boolean {
     const ability = this.abilities.get(abilityId);
     if (!ability) {
       console.warn(`Ability ${abilityId} not found`);
-      return;
+      return false;
     }
 
     const anim = this.getAnimationByName(ability.animation.name);
     if (anim && anim.isPlaying) {
+      console.log(`Canceling ability: abilityId=${abilityId}, abilityName=${ability.name}`);
       anim.stop();
-      this.onAbilityAnimationState.notifyObservers({ abilityId, isPlaying: false });
-      // MODIFIED: Changed dreamboltSpawned to abilitySpawned
+      this.onAbilityAnimationState.notifyObservers({ abilityId, abilityName: ability.name, isPlaying: false });
       this.abilitySpawned = false;
       this.currentAnimationName = null;
       if (this.blendFrameId !== null) {
@@ -148,194 +144,232 @@ export class CharacterAnimationManager {
         this.getAnimationByName("Idle")!.play(true);
         this.currentAnimationName = "Idle";
       }
+      return true;
     }
+    return false;
   }
 
-  // In CharacterAnimationManager.ts
-public playAnimation(
-  name: string,
-  speed = 1.0,
-  fromFrame?: number,
-  toFrame?: number,
-  loop?: boolean
-): void {
-  const newAnim = this.getAnimationByName(name);
-  if (!newAnim) {
-    console.warn(`Animation group '${name}' not found`);
-    return;
-  }
-
-  if (this.characterController?.getPlayer().isPlayerDead() && name !== "Death" && name !== "Idle") {
-    return;
-  }
-
-  // MODIFIED: Play cast sound for ability animations
-  const ability = Array.from(this.abilities.values()).find(a => a.animation.name === name);
-  if (ability) {
-    const characterMesh = this.characterController?.characterMeshLoader.getCharacterMesh();
-    if (!this.characterController || !this.characterController.physicsController || !characterMesh) {
-      console.warn(`Cannot play ${name}; missing characterController, physicsController, or character mesh`);
+  public playAnimation(
+    name: string,
+    speed = 1.0,
+    fromFrame?: number,
+    toFrame?: number,
+    loop?: boolean,
+    abilityId?: string
+  ): void {
+    const newAnim = this.getAnimationByName(name);
+    if (!newAnim) {
+      console.warn(`Animation group '${name}' not found`);
       return;
     }
-    const target = this.targetingSystem?.getCurrentTarget();
-    if (!target || !target.getMesh()) {
-      console.warn(`Cannot play ${name}; no target selected or target has no mesh`);
-      return;
-    }
-    const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
-    const charPos = characterMesh.getAbsolutePosition();
-    const targetPos = target.getMesh()!.getAbsolutePosition();
-    const toTarget = targetPos.subtract(charPos).normalize();
-    const dot = Vector3.Dot(forward, toTarget);
-    const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
-    if (angle > Math.PI / 2) {
-      console.warn(`Cannot play ${name}; target ${target.getId()} is outside front 180° arc`);
-      return;
-    }
-    speed = ability.animation.speed;
-    loop = ability.animation.loop;
 
-    // NEW: Play cast sound if defined
-    if (this.attackSystem) {
-      const castSound = this.attackSystem.sounds.get(`${ability.id}_cast`);
-      if (castSound && castSound.isReady()) {
-        console.log(`Playing cast sound for ability: ${ability.id}`); // TEMP: Debug log
-        castSound.play();
+    if (this.characterController?.getPlayer().isPlayerDead() && name !== "Death" && name !== "Idle") {
+      console.log(`Cannot play ${name}: player is dead`);
+      return;
+    }
+
+    let ability: AbilityConfig | undefined;
+    if (abilityId) {
+      ability = this.abilities.get(abilityId);
+      if (!ability) {
+        console.warn(`Ability ${abilityId} not found for animation ${name}`);
+      } else if (ability.animation.name !== name) {
+        console.warn(`Ability ${abilityId} animation mismatch: expected ${ability.animation.name}, got ${name}`);
       }
+    } else {
+      ability = Array.from(this.abilities.values()).find(a => a.animation.name === name);
     }
-  }
 
-  if (this.footstepObserver) {
-    this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
-    this.footstepObserver = null;
-    this.footstepFrames = [];
-  }
+    if (ability) {
+      const characterMesh = this.characterController?.characterMeshLoader.getCharacterMesh();
+      if (!this.characterController || !this.characterController.physicsController || !characterMesh) {
+        console.warn(`Cannot play ${name}; missing characterController, physicsController, or character mesh`);
+        return;
+      }
+      const target = this.targetingSystem?.getCurrentTarget();
+      if (!target || !target.getMesh()) {
+        console.warn(`Cannot play ${name}; no target selected or target has no mesh`);
+        return;
+      }
+      const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
+      const charPos = characterMesh.getAbsolutePosition();
+      const targetPos = target.getMesh()!.getAbsolutePosition();
+      const toTarget = targetPos.subtract(charPos).normalize();
+      const dot = Vector3.Dot(forward, toTarget);
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+      if (angle > Math.PI / 2) {
+        console.warn(`Cannot play ${name}; target ${target.getId()} is outside front 180° arc`);
+        return;
+      }
+      speed = ability.animation.speed;
+      loop = ability.animation.loop;
 
-  const walkingAnimations = ["Run", "RunBackwards", "RightStrafe", "StrafeLeft"];
-  if (walkingAnimations.includes(name) && this.footstepSounds.length > 0) {
-    const frameRange = (toFrame ?? newAnim.to) - (fromFrame ?? newAnim.from);
-    this.footstepFrames = [
-      (fromFrame ?? newAnim.from) + 0.25 * frameRange,
-      (fromFrame ?? newAnim.from) + 0.75 * frameRange,
-    ];
-
-    this.footstepObserver = this.scene.onBeforeRenderObservable.add(() => {
-      if (newAnim.isPlaying && newAnim.animatables.length > 0) {
-        const animatable = newAnim.animatables[0];
-        const currentFrame = animatable.masterFrame;
-
-        for (let i = 0; i < this.footstepFrames.length; i++) {
-          const frame = this.footstepFrames[i];
-          if (currentFrame >= frame && currentFrame < frame + 1) {
-            const soundIndex = Math.floor(Math.random() * this.footstepSounds.length);
-            this.footstepSounds[soundIndex].play();
-            if (newAnim.isStarted && (loop ?? true)) {
-              this.footstepFrames[i] += frameRange;
-            }
-          }
+      if (this.attackSystem) {
+        const castSound = this.attackSystem.sounds.get(`${ability.id}_cast`);
+        if (castSound && castSound.isReady()) {
+          console.log(`Playing cast sound for ability: ${ability.id}`);
+          castSound.play();
         }
-      } else {
-        this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
-        this.footstepObserver = null;
-        this.footstepFrames = [];
       }
-    });
-  }
-
-  const skipBlending = this.currentAnimationName === "Death";
-
-  if ((ability || name === "Jump" || name === "Death") && this.currentAnimationName !== name) {
-    const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
-    if (prevAnim) {
-      prevAnim.stop();
-      prevAnim.setWeightForAllAnimatables(0);
     }
-  } else if (name === this.currentAnimationName && newAnim.isPlaying) {
-    return;
-  }
 
-  if (this.blendFrameId !== null) {
-    cancelAnimationFrame(this.blendFrameId);
-    this.blendFrameId = null;
-  }
+    if (this.footstepObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
+      this.footstepObserver = null;
+      this.footstepFrames = [];
+    }
 
-  const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
+    const walkingAnimations = ["Run", "RunBackwards", "RightStrafe", "StrafeLeft"];
+    if (walkingAnimations.includes(name) && this.footstepSounds.length > 0) {
+      const frameRange = (toFrame ?? newAnim.to) - (fromFrame ?? newAnim.from);
+      this.footstepFrames = [
+        (fromFrame ?? newAnim.from) + 0.25 * frameRange,
+        (fromFrame ?? newAnim.from) + 0.75 * frameRange,
+      ];
 
-  if (prevAnim && !skipBlending && !ability && name !== "Jump" && name !== "Death") {
-    prevAnim.setWeightForAllAnimatables(0);
-    prevAnim.stop();
-  }
+      this.footstepObserver = this.scene.onBeforeRenderObservable.add(() => {
+        if (newAnim.isPlaying && newAnim.animatables.length > 0) {
+          const animatable = newAnim.animatables[0];
+          const currentFrame = animatable.masterFrame;
 
-  newAnim.stop();
-  const isLooping = name === "Death" ? false : loop ?? !(name === "Jump" || ability);
-  newAnim.start(isLooping, speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
-  newAnim.setWeightForAllAnimatables(skipBlending ? 1 : 0);
-
-  this.currentAnimationName = name;
-
-  if (skipBlending) {
-    if (prevAnim) prevAnim.stop();
-    newAnim.setWeightForAllAnimatables(1);
-    this.isBlending = false;
-  } else {
-    this.isBlending = true;
-    const blendDuration = 300;
-    const startTime = performance.now();
-
-    const blendStep = (now: number) => {
-      const t = Math.min((now - startTime) / blendDuration, 1);
-      newAnim.setWeightForAllAnimatables(t);
-      if (prevAnim) prevAnim.setWeightForAllAnimatables(1 - t);
-
-      if (t < 1) {
-        this.blendFrameId = requestAnimationFrame(blendStep);
-      } else {
-        if (prevAnim) prevAnim.stop();
-        newAnim.setWeightForAllAnimatables(1);
-        this.isBlending = false;
-        this.blendFrameId = null;
-      }
-    };
-
-    this.blendFrameId = requestAnimationFrame(blendStep);
-  }
-
-  if (newAnim.name === "Jump") {
-    this.isJumping = true;
-  }
-
-  if (ability) {
-    this.abilitySpawned = false;
-    this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress: 0 });
-    const observer = this.scene.onBeforeRenderObservable.add(() => {
-      if (newAnim.isPlaying && newAnim.animatables.length > 0) {
-        const animatable = newAnim.animatables[0];
-        const currentFrame = animatable.masterFrame;
-        const from = newAnim.from;
-        const to = newAnim.to;
-        const progress = (currentFrame - from) / (to - from);
-        this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress });
-        if (ability.animation.triggerFrame && progress >= ability.animation.triggerFrame && !this.abilitySpawned) {
-          if (this.attackSystem) {
-            this.attackSystem.triggerAbility(ability.id);
-            // NEW: Stop cast sound at triggerFrame
-            const castSound = this.attackSystem.sounds.get(`${ability.id}_cast`);
-            if (castSound) {
-              castSound.stop();
+          for (let i = 0; i < this.footstepFrames.length; i++) {
+            const frame = this.footstepFrames[i];
+            if (currentFrame >= frame && currentFrame < frame + 1) {
+              const soundIndex = Math.floor(Math.random() * this.footstepSounds.length);
+              this.footstepSounds[soundIndex].play();
+              if (newAnim.isStarted && (loop ?? true)) {
+                this.footstepFrames[i] += frameRange;
+              }
             }
           }
-          this.abilitySpawned = true;
-          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress: ability.animation.triggerFrame });
+        } else {
+          this.scene.onBeforeRenderObservable.remove(this.footstepObserver);
+          this.footstepObserver = null;
+          this.footstepFrames = [];
+        }
+      });
+    }
+
+    const skipBlending = this.currentAnimationName === "Death";
+
+    if ((ability || name === "Jump" || name === "Death") && this.currentAnimationName !== name) {
+      const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
+      if (prevAnim) {
+        prevAnim.stop();
+        prevAnim.setWeightForAllAnimatables(0);
+      }
+    } else if (name === this.currentAnimationName && newAnim.isPlaying) {
+      return;
+    }
+
+    if (this.blendFrameId !== null) {
+      cancelAnimationFrame(this.blendFrameId);
+      this.blendFrameId = null;
+    }
+
+    const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
+
+    if (prevAnim && !skipBlending && !ability && name !== "Jump" && name !== "Death") {
+      prevAnim.setWeightForAllAnimatables(0);
+      prevAnim.stop();
+    }
+
+    newAnim.stop();
+    const isLooping = name === "Death" ? false : loop ?? !(name === "Jump" || ability);
+    newAnim.start(isLooping, speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
+    newAnim.setWeightForAllAnimatables(skipBlending ? 1 : 0);
+
+    this.currentAnimationName = name;
+
+    if (skipBlending) {
+      if (prevAnim) prevAnim.stop();
+      newAnim.setWeightForAllAnimatables(1);
+      this.isBlending = false;
+    } else {
+      this.isBlending = true;
+      const blendDuration = 300;
+      const startTime = performance.now();
+
+      const blendStep = (now: number) => {
+        const t = Math.min((now - startTime) / blendDuration, 1);
+        newAnim.setWeightForAllAnimatables(t);
+        if (prevAnim) prevAnim.setWeightForAllAnimatables(1 - t);
+
+        if (t < 1) {
+          this.blendFrameId = requestAnimationFrame(blendStep);
+        } else {
+          if (prevAnim) prevAnim.stop();
+          newAnim.setWeightForAllAnimatables(1);
+          this.isBlending = false;
+          this.blendFrameId = null;
+        }
+      };
+
+      this.blendFrameId = requestAnimationFrame(blendStep);
+    }
+
+    if (newAnim.name === "Jump") {
+      this.isJumping = true;
+    }
+
+    if (ability!) {
+      this.abilitySpawned = false;
+      console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=0, triggerFrame=${ability!.animation.triggerFrame}`);
+      this.onAbilityAnimationState.notifyObservers({
+        abilityId: ability!.id,
+        abilityName: ability!.name,
+        isPlaying: true,
+        progress: 0,
+        triggerFrame: ability!.animation.triggerFrame,
+      });
+      const observer = this.scene.onBeforeRenderObservable.add(() => {
+        if (newAnim.isPlaying && newAnim.animatables.length > 0) {
+          const animatable = newAnim.animatables[0];
+          const currentFrame = animatable.masterFrame;
+          const from = newAnim.from;
+          const to = newAnim.to;
+          const progress = (currentFrame - from) / (to - from);
+          console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${progress}, triggerFrame=${ability!.animation.triggerFrame}`);
+          this.onAbilityAnimationState.notifyObservers({
+            abilityId: ability!.id,
+            abilityName: ability!.name,
+            isPlaying: true,
+            progress,
+            triggerFrame: ability!.animation.triggerFrame,
+          });
+          if (ability!.animation.triggerFrame && progress >= ability!.animation.triggerFrame && !this.abilitySpawned) {
+            if (this.attackSystem) {
+              this.attackSystem.triggerAbility(ability!.id);
+              const castSound = this.attackSystem.sounds.get(`${ability!.id}_cast`);
+              if (castSound) {
+                castSound.stop();
+              }
+            }
+            this.abilitySpawned = true;
+            console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=true, progress=${ability!.animation.triggerFrame}, triggerFrame=${ability!.animation.triggerFrame}`);
+            this.onAbilityAnimationState.notifyObservers({
+              abilityId: ability!.id,
+              abilityName: ability!.name,
+              isPlaying: true,
+              progress: ability!.animation.triggerFrame,
+              triggerFrame: ability!.animation.triggerFrame,
+            });
+            this.scene.onBeforeRenderObservable.remove(observer);
+          }
+        } else {
+          console.log(`Notifying ability state: abilityId=${ability!.id}, abilityName=${ability!.name}, isPlaying=false`);
+          this.onAbilityAnimationState.notifyObservers({
+            abilityId: ability!.id,
+            abilityName: ability!.name,
+            isPlaying: false,
+            triggerFrame: ability!.animation.triggerFrame,
+          });
+          if (this.attackSystem) this.attackSystem.stopSounds();
           this.scene.onBeforeRenderObservable.remove(observer);
         }
-      } else {
-        this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: false });
-        if (this.attackSystem) this.attackSystem.stopSounds();
-        this.scene.onBeforeRenderObservable.remove(observer);
-      }
-    });
+      });
+    }
   }
-}
 
   public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
     let currentWeight = 1;
@@ -428,7 +462,6 @@ public playAnimation(
     }
     if (this.attackSystem) this.attackSystem.stopSounds();
     this.currentAnimationName = null;
-    // MODIFIED: Changed dreamboltSpawned to abilitySpawned
     this.abilitySpawned = false;
   }
 

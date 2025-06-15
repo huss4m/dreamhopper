@@ -63,6 +63,12 @@
           "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
           "action": "castDreambolt"
         },
+        "2": {
+          "key": "2",
+          "continuous": false,
+          "animation": { "name": "Fireball", "loop": 0, "speed": 1},
+          "action": "castFireball"
+        },
         "W": {
           "key": "W",
           "continuous": false,
@@ -140,6 +146,12 @@
           "continuous": false,
           "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
           "action": "castDreambolt"
+        },
+        "2": {
+          "key": "2",
+          "continuous": false,
+          "animation": { "name": "Dreambolt", "loop": 0, "speed": 1 },
+          "action": "castFireball"
         },
         "T": {
           "key": "T",

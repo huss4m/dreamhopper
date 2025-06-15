@@ -121,5 +121,131 @@
          },
          "lifetime": 5000
        }
-     }
-   ]
+     },
+
+
+     {
+    "id": "fireball",
+    "name": "Fireball",
+    "type": "RangedProjectile",
+    "animation": {
+      "name": "Dreambolt",
+      "speed": 1,
+      "loop": false,
+      "triggerFrame": 0.5
+    },
+    "damage": {
+      "min": 25,
+      "max": 45,
+      "levelScaling": 6
+    },
+    "sounds": {
+      "cast": {
+        "file": "./sfx/castBolt2.wav",
+        "volume": 1.0,
+        "loop": true,
+        "spatialSound": true,
+        "maxDistance": 50,
+        "attachToMesh": true
+      },
+      "launch": {
+        "file": "./sfx/boltLaunch.wav",
+        "volume": 1.0,
+        "loop": false,
+        "spatialSound": true,
+        "maxDistance": 50,
+        "attachToMesh": true
+      },
+      "travel": {
+        "file": "./sfx/bolt2.mp3",
+        "volume": 1.0,
+        "loop": true,
+        "spatialSound": true,
+        "maxDistance": 50,
+        "attachToMesh": true
+      },
+      "impact": {
+        "file": "./sfx/impactchime.wav",
+        "volume": 0.04,
+        "loop": false,
+        "spatialSound": true,
+        "maxDistance": 50,
+        "attachToMesh": false
+      }
+    },
+    "particles": {
+      "cast": {
+        "texture": "./Flare.png",
+        "minSize": 0.1,
+        "maxSize": 0.3,
+        "minLifeTime": 0.5,
+        "maxLifeTime": 1.0,
+        "emitRate": 50,
+        "blendMode": 2,
+        "color1": { "r": 1.0, "g": 0.5, "b": 0.0, "a": 1.0 },
+        "color2": { "r": 1.0, "g": 0.7, "b": 0.2, "a": 0.6 },
+        "colorDead": { "r": 0.5, "g": 0.0, "b": 0.0, "a": 0.0 },
+        "minEmitBox": { "x": -0.05, "y": -0.05, "z": -0.05 },
+        "maxEmitBox": { "x": 0.05, "y": 0.05, "z": 0.05 },
+        "gravity": { "x": 0, "y": 0.1, "z": 0 },
+        "direction1": { "x": -0.1, "y": 0.1, "z": -0.1 },
+        "direction2": { "x": 0.1, "y": 0.3, "z": 0.1 },
+        "minAngularSpeed": -0.2,
+        "maxAngularSpeed": 0.2,
+        "minEmitPower": 0.5,
+        "maxEmitPower": 1.0,
+        "updateSpeed": 0.01
+      },
+      "projectile": {
+        "texture": "./Flare.png",
+        "minSize": 0.7,
+        "maxSize": 1.5,
+        "minLifeTime": 0.15,
+        "maxLifeTime": 0.4,
+        "emitRate": 400,
+        "blendMode": 2,
+        "color1": { "r": 1.0, "g": 0.5, "b": 0.0, "a": 1.0 },
+        "color2": { "r": 1.0, "g": 0.7, "b": 0.2, "a": 0.6 },
+        "colorDead": { "r": 0.5, "g": 0.0, "b": 0.0, "a": 0.0 },
+        "minEmitBox": { "x": 0, "y": 0, "z": 0 },
+        "maxEmitBox": { "x": 0, "y": 0, "z": 0 },
+        "gravity": { "x": 0, "y": 0, "z": 0 },
+        "direction1": { "x": 0, "y": 0, "z": 0 },
+        "direction2": { "x": 0, "y": 0, "z": 0 }
+      },
+      "impact": {
+        "texture": "./star_1.png",
+        "minSize": 0.15,
+        "maxSize": 0.5,
+        "minLifeTime": 2.5,
+        "maxLifeTime": 4.0,
+        "emitRate": 1000,
+        "blendMode": 2,
+        "color1": { "r": 1.0, "g": 0.5, "b": 0.0, "a": 1.0 },
+        "color2": { "r": 1.0, "g": 0.7, "b": 0.2, "a": 1.0 },
+        "colorDead": { "r": 0.5, "g": 0.0, "b": 0.0, "a": 0.3 },
+        "gravity": { "x": 0, "y": -0.5, "z": 0 },
+        "direction1": { "x": -1, "y": -1, "z": -1 },
+        "direction2": { "x": 1, "y": 1, "z": 1 },
+        "minAngularSpeed": -0.5235987755982988,
+        "maxAngularSpeed": 0.5235987755982988,
+        "minEmitPower": 0.5,
+        "maxEmitPower": 1.2,
+        "updateSpeed": 0.05
+      }
+    },
+    "projectile": {
+      "diameter": 0.6,
+      "speed": 12,
+      "material": {
+        "diffuseColor": { "r": 1.0, "g": 0.5, "b": 0.0 },
+        "emissiveColor": { "r": 1.0, "g": 0.7, "b": 0.2 },
+        "alpha": 0.9,
+        "specularPower": 0,
+        "backFaceCulling": false
+      },
+      "lifetime": 4000
+    }
+  }
+]
+   
