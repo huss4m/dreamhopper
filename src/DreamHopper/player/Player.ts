@@ -34,6 +34,9 @@ export class Player {
   private hpRegenRate: number; 
   private hpRegenInterval: number | null = null;
 
+  private mana = 100;
+  private maxMana = 100;
+
   constructor(scene: Scene, assetManager: AssetManager, shadowGenerator: CascadedShadowGenerator, game?: Game) {
     this.game = game!;
     this.scene = scene;
@@ -336,6 +339,15 @@ export class Player {
     }
   }
 
+    public heal(amount: number): boolean { // New: Heal method
+    if (this.isDead || this.currentHP >= this.maxHP) {
+      return false;
+    }
+    this.currentHP = Math.min(this.currentHP + amount, this.maxHP);
+    this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
+    return true;
+  }
+
   public getCurrentXP(): number {
     return this.currentXP;
   }
@@ -375,6 +387,19 @@ export class Player {
   // console.log(`Player: Subscribed to ${entity instanceof Enemy ? 'Enemy' : 'BossEnemy'} ${entity.getId()} for XP awards`);
 }
 
+
+
+   public deductMana(amount: number): boolean {
+    if (this.mana >= amount) {
+      this.mana -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  public getMana(): number {
+    return this.mana;
+  }
 
 
 private triggerLevelUpEffect(): void {
