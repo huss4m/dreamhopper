@@ -292,6 +292,18 @@ export class EnemyAttackSystem {
         return explosion;
     }
 
+
+        public canPerformAttack(attackId: string): boolean {
+        const attack = this.attacks.find(a => a.id === attackId);
+        if (!attack) {
+            console.warn(`Enemy ${this.enemy.getId()}: Attack ${attackId} not found for canPerformAttack check`);
+            return false;
+        }
+        const currentTime = performance.now();
+        const lastTime = this.lastAttackTimes.get(attackId) || 0;
+        return currentTime - lastTime >= attack.cooldown;
+    }
+
     public dispose(): void {
         if (this.castSound) {
             this.castSound.stop();
