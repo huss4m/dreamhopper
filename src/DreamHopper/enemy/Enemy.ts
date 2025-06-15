@@ -110,114 +110,131 @@ export class Enemy implements Hoverable, Targettable {
     }
 
   protected setupBehavior(): void {
-    if (this.isNPC) {
-      console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+  if (this.isNPC) {
+    console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+    return;
+  }
+
+  // Subscribe to keyframe events for attack animations
+  const keyFrameObserver = this.animationManager.onAnimationKeyFrame.add(({ name, frame }) => {
+    const attack = this.config.attacks.find(a => a.animation === name && a.triggerFrame === frame);
+    if (attack) {
+      this.performAttack(attack.id);
+      console.log(`Enemy ${this.id}: Triggered attack ${attack.id} at frame ${frame}`);
+    }
+  });
+
+  // [NEW] Subscribe to animation end events to reset isAttacking
+  this.config.attacks.forEach(attack => {
+    const anim = this.animationManager.getAnimationByName(attack.animation);
+    if (anim) {
+      anim.onAnimationGroupEndObservable.add(() => {
+        if (this.isAttacking && this.animationManager.currentAnimationName === attack.animation) {
+          this.isAttacking = false;
+          console.log(`Enemy ${this.id}: Attack animation ${attack.animation} ended, resetting isAttacking`);
+        }
+      });
+    }
+  });
+
+  this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
+    if (!this.enemyMesh || !this.physicsController) {
+      console.error(`Enemy ${this.id}: Behavior skipped - enemyMesh: ${!!this.enemyMesh}, physicsController: ${!!this.physicsController}, isNPC: ${this.isNPC}, isDead: ${this.isDead}`);
       return;
     }
 
-    // Subscribe to keyframe events for attack animations
-    const keyFrameObserver = this.animationManager.onAnimationKeyFrame.add(({ name, frame }) => {
-      const attack = this.config.attacks.find(a => a.animation === name && a.triggerFrame === frame);
-      if (attack) {
-        this.performAttack(attack.id);
-        console.log(`Enemy ${this.id}: Triggered attack ${attack.id} at frame ${frame}`);
-      }
-    });
+    const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
+    if (!playerMesh) {
+      console.warn(`Enemy ${this.id}: Player mesh not found`);
+      return;
+    }
 
-    this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
-      if (!this.enemyMesh || !this.physicsController) {
-        console.error(`Enemy ${this.id}: Behavior skipped - enemyMesh: ${!!this.enemyMesh}, physicsController: ${!!this.physicsController}, isNPC: ${this.isNPC}, isDead: ${this.isDead}`);
-        return;
-      }
-
-      const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
-      if (!playerMesh) {
-        console.warn(`Enemy ${this.id}: Player mesh not found`);
-        return;
-      }
-
-      const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-      const cullingDistance = 110;
-      if (distanceToPlayer > cullingDistance) {
-        if (this.isAggroed || this.isAttacking) {
-          this.isAggroed = false;
-          this.isAttacking = false;
-          this.physicsController.stopAllMovement();
-          this.startWandering();
-          console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
-        }
-        return;
-      }
-
-      if (this.isDead() || this.game.getCharacterController()?.getPlayer()?.isPlayerDead()) {
-        if (this.isAggroed || this.isAttacking) {
-          this.isAggroed = false;
-          this.isAttacking = false;
-          this.physicsController.stopAllMovement();
-          this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
-          console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
-        }
-        return;
-      }
-
-      if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
-        this.isAggroed = true;
-        this.isAttacking = false;
-        this.physicsController.stopAllMovement();
-        console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
-      } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
+    const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
+    const cullingDistance = 110;
+    if (distanceToPlayer > cullingDistance) {
+      if (this.isAggroed || this.isAttacking) {
         this.isAggroed = false;
         this.isAttacking = false;
         this.physicsController.stopAllMovement();
         this.startWandering();
-        console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+        console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
       }
+      return;
+    }
 
-      if (this.isAggroed) {
-        const hasLOS = this.hasLineOfSightToPlayer(playerMesh);
+    if (this.isDead() || this.game.getCharacterController()?.getPlayer()?.isPlayerDead()) {
+      if (this.isAggroed || this.isAttacking) {
+        this.isAggroed = false;
+        this.isAttacking = false;
+        this.physicsController.stopAllMovement();
+        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
+      }
+      return;
+    }
 
-        if (distanceToPlayer <= this.attackRange && hasLOS) {
-          this.physicsController.stopAllMovement();
-          const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
-          this.physicsController.orientToForwardDirection(directionToPlayer);
-          if (!this.isAttacking) {
-            this.isAttacking = true;
-            // Select a valid attack from config.attacks
-            const validAttack = this.config.attacks.find(attack => 
-              attack.range >= distanceToPlayer && this.attackSystem.canPerformAttack(attack.id)
-            );
-            if (validAttack) {
-              const animation = this.attackSystem.getAttackAnimation(validAttack.id);
-              if (animation) {
-                this.animationManager.playAnimation(animation, 1.0, undefined, undefined, true);
-                console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animation} for attack ${validAttack.id}`);
-              } else {
-                console.warn(`Enemy ${this.id}: No animation found for attack ${validAttack.id}`);
-              }
+    if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
+      this.isAggroed = true;
+      this.isAttacking = false;
+      this.physicsController.stopAllMovement();
+      console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
+    } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
+      this.isAggroed = false;
+      this.isAttacking = false;
+      this.physicsController.stopAllMovement();
+      this.startWandering();
+      console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+    }
+
+    if (this.isAggroed) {
+      const hasLOS = this.hasLineOfSightToPlayer(playerMesh);
+
+      if (distanceToPlayer <= this.attackRange && hasLOS) {
+        this.physicsController.stopAllMovement();
+        const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
+        this.physicsController.orientToForwardDirection(directionToPlayer);
+        // [MODIFIED] Check if not attacking or no attack animation is playing
+        if (!this.isAttacking || !this.config.attacks.some(a => this.animationManager.isAnimationPlaying(a.animation))) {
+          this.isAttacking = true;
+          const validAttack = this.config.attacks.find(attack => 
+            attack.range >= distanceToPlayer 
+          );
+          if (validAttack) {
+            const animation = this.attackSystem.getAttackAnimation(validAttack.id);
+            if (animation) {
+             
+              this.animationManager.playAnimation(animation, 1.0, undefined, undefined, true);
+              console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animation} for attack ${validAttack.id}`);
             } else {
-              console.warn(`Enemy ${this.id}: No valid attack available at distance ${distanceToPlayer.toFixed(2)}`);
+              console.warn(`Enemy ${this.id}: No animation found for attack ${validAttack.id}`);
             }
-          }
-        } else {
-          if (this.isAttacking) {
+          } else {
+            // [NEW] Fallback to Idle if no valid attack
             this.isAttacking = false;
-            this.physicsController.stopAllMovement();
-            console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
+            this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+            console.log(`Enemy ${this.id}: No valid attack available at distance ${distanceToPlayer.toFixed(2)}, playing Idle`);
           }
-          this.moveTo(playerMesh.position);
-          this.animationManager.playAnimation(this.config.animations.run);
-          console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
         }
       } else {
-        const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
-        if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
-          this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
-        } else {
-          this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+        if (this.isAttacking) {
+          this.isAttacking = false;
+          this.physicsController.stopAllMovement();
+          console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
         }
+        this.moveTo(playerMesh.position);
+        this.animationManager.playAnimation(this.config.animations.run);
+        console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
       }
-    });
-  }
+    } else {
+      const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
+      if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
+        this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
+      } else {
+        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+      }
+    }
+  });
+}
   protected setupHealthBarObserver(): void {
   const nearUpdateInterval = 100; // Update nearby health bars every 100ms
   const farUpdateInterval = 500; // Update distant health bars every 500ms

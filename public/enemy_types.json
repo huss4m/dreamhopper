@@ -47,7 +47,7 @@
                     "damageMin": 5,
                     "damageMax": 10,
                     "range": 10,
-                    "cooldown": 2000,
+                    "cooldown": 0,
                     "triggerFrame": 75,
                     "projectile": {
                         "diameter": 0.5,

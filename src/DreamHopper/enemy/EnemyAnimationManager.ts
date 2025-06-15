@@ -4,7 +4,7 @@ import { Enemy } from "./Enemy";
 
 export class EnemyAnimationManager {
     protected animationGroups: AnimationGroup[] = [];
-    protected currentAnimationName: string | null = null;
+    public currentAnimationName: string | null = null;
     protected isBlending = false;
     protected blendFrameId: number | null = null;
     protected footstepSounds: Sound[] = [];
@@ -161,7 +161,7 @@ export class EnemyAnimationManager {
                     const frameRange = toFrame - fromFrame;
                     const progress = frameRange > 0 ? (currentFrame - fromFrame) / frameRange : 0;
                     this.onAnimationProgress.notifyObservers({ name, progress });
-                    console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Attack animation ${name} frame: ${currentFrame}, progress: ${(progress * 100).toFixed(2)}%`);
+                    //console.log(`EnemyAnimationManager for Enemy ${this.enemy?.getId()}: Attack animation ${name} frame: ${currentFrame}, progress: ${(progress * 100).toFixed(2)}%`);
                 } else {
                     this.scene.onBeforeRenderObservable.remove(this.animationKeyFrameObserver);
                     this.animationKeyFrameObserver = null;
@@ -228,6 +228,17 @@ export class EnemyAnimationManager {
     public getAnimationGroups(): AnimationGroup[] {
         return this.animationGroups;
     }
+
+    public isAnimationPlaying(name: string): boolean {
+      const anim = this.getAnimationByName(name);
+      return anim?.isPlaying || false;
+    }
+
+      // [NEW] Getter for current animation name
+    public getCurrentAnimationName(): string | null {
+      return this.currentAnimationName;
+    }
+
 
     public dispose(): void {
         if (this.blendFrameId !== null) {

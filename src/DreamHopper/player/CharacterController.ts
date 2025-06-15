@@ -22,6 +22,7 @@ import { Player } from "./Player";
 import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
 import { Targettable } from "../Targettable";
+import { CharacterAttackSystem } from "./CharacterAttackSystem";
 
 interface AnimationData {
   name: string;
@@ -38,6 +39,7 @@ export class CharacterController {
   private player: Player;
   particleSystem: { rightHand: ParticleSystem; leftHand: ParticleSystem } | null = null;
   characterMesh!: Mesh | null;
+  private attackSystem: CharacterAttackSystem;
 
   constructor(
     private scene: Scene,
@@ -53,16 +55,20 @@ export class CharacterController {
     this.characterMeshLoader = new CharacterMeshLoader(scene, assetManager, shadowGenerator);
     this.itemAttachmentManager = new ItemAttachmentManager(scene, shadowGenerator);
     this.player = new Player(scene, assetManager, shadowGenerator, this.gameManager.game);
+    this.attackSystem = new CharacterAttackSystem(scene, this, targetingSystem, gameManager);
     this.initialize();
   }
 
   private async initialize(): Promise<void> {
     await this.characterMeshLoader.loadCharacter(new Vector3(5, 5, 0));
 
+    this.attackSystem.initialize(); // [NEW] Initialize attack system
+    this.animationManager.setAttackSystem(this.attackSystem); // [NEW] Set attack system
+
     const characterMesh = this.characterMeshLoader.getCharacterMesh();
     this.characterMesh = characterMesh;
     const skeleton = this.characterMeshLoader.getSkeleton();
-    
+
     if (characterMesh && skeleton) {
       const physicsConfig: CharacterPhysicsConfig = {
         colliderType: ColliderType.Capsule,
@@ -102,11 +108,9 @@ export class CharacterController {
           if (isPlaying) {
             this.particleSystem.rightHand.start();
             this.particleSystem.leftHand.start();
-            // // // // console.log("Started hand particle systems for Dreambolt animation");
           } else {
             this.particleSystem.rightHand.stop();
             this.particleSystem.leftHand.stop();
-            // // // // console.log("Stopped hand particle systems after Dreambolt animation");
           }
         }
       });
@@ -131,7 +135,7 @@ export class CharacterController {
       ? new Vector3(0, 0, -0.21)
       : new Vector3(0.8, 0.05, 0.05);
     this.player.rotOffset = this.player.isSheathed
-      ? new Vector3(-11 * Math.PI / 12, Math.PI / 11, Math.PI / 3)
+      ? new Vector3((-11 * Math.PI) / 12, Math.PI / 11, Math.PI / 3)
       : new Vector3(Math.PI, 0, 0);
     this.updateSwordAttachment();
   }
@@ -149,13 +153,12 @@ export class CharacterController {
 
   public playIdleAnimation(): void {
     if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Dreambolt") && !this.player.isPlayerDead()) {
-      if(this.animationManager.getAnimationByName("Death")?.isPlaying) {
+      if (this.animationManager.getAnimationByName("Death")?.isPlaying) {
         this.animationManager.stopAllAnimations();
       }
       this.animationManager.playAnimation("Idle", 1);
     }
   }
-
 
   public playDeathAnimation(): void {
     if (!this.player.isPlayerDead()) {
@@ -163,143 +166,115 @@ export class CharacterController {
       return;
     }
 
-    // Stop all other animations
     this.animationManager.getAnimationGroups().forEach(group => {
       if (group.isPlaying) {
         group.stop();
       }
     });
 
-    // Play the Death animation (non-looping)
     const deathAnim = this.animationManager.getAnimationByName("Death");
     if (deathAnim) {
       deathAnim.play(false);
-      // // // console.log("CharacterController: Playing Death animation");
     } else {
       console.warn("CharacterController: Death animation not found");
     }
   }
 
   public jump(animationData?: AnimationData): void {
-    if(!this.player.isPlayerDead()) {
-        if (animationData) {
-              const { name, speed = 1 } = animationData;
-              this.animationManager.playAnimation(name, speed, 8, 95);
-            } else {
-              this.animationManager.playAnimation("Jump", 1, 8, 95);
-            }
-            if (this.physicsController) {
-              this.physicsController.applyJumpForce();
-            }
+    if (!this.player.isPlayerDead()) {
+      if (animationData) {
+        const { name, speed = 1 } = animationData;
+        this.animationManager.playAnimation(name, speed, 8, 95);
+      } else {
+        this.animationManager.playAnimation("Jump", 1, 8, 95);
+      }
+      if (this.physicsController) {
+        this.physicsController.applyJumpForce();
+      }
     }
-    
   }
 
   public castDreambolt(animationData?: AnimationData): void {
-     if(!this.player.isPlayerDead()) {
-          if (animationData) {
-      const { name, speed = 1 } = animationData;
-      this.animationManager.playAnimation(name, speed);
-    } else {
-      this.animationManager.playAnimation("Dreambolt", 1);
+    if (!this.player.isPlayerDead()) {
+      if (animationData) {
+        const { name, speed = 1 } = animationData;
+        this.animationManager.playAnimation(name, speed);
+      } else {
+        this.animationManager.playAnimation("Dreambolt", 1);
+      }
     }
-     }
-
-
   }
 
   public moveForward(speed: number, animationData?: AnimationData): void {
-    if(!this.player.isPlayerDead()) {
-
+    if (!this.player.isPlayerDead()) {
       this.physicsController?.moveForward(speed);
-          if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-            this.playAnimationWithData(animationData);
-          }
-
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
-   
   }
 
   public moveDiagonallyRight(speed: number, animationData?: AnimationData): void {
-
-    if(!this.player.isPlayerDead()) {
-          this.physicsController?.moveDiagonallyRight(speed);
-    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-      this.playAnimationWithData(animationData);
-    }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.moveDiagonallyRight(speed);
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
   }
 
   public moveDiagonallyLeft(speed: number, animationData?: AnimationData): void {
-
-     if(!this.player.isPlayerDead()) {
-          this.physicsController?.moveDiagonallyLeft(speed);
-    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-      this.playAnimationWithData(animationData);
-     }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.moveDiagonallyLeft(speed);
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
   }
 
   public strafeLeft(speed: number, animationData?: AnimationData): void {
-
-     if(!this.player.isPlayerDead()) {
-
-         this.physicsController?.strafeLeft(speed);
-    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-      this.playAnimationWithData(animationData);
-     }
- 
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.strafeLeft(speed);
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
   }
 
   public strafeRight(speed: number, animationData?: AnimationData): void {
-
-     if(!this.player.isPlayerDead()) {
-    this.physicsController?.strafeRight(speed);
-    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-      this.playAnimationWithData(animationData);
-
-     }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.strafeRight(speed);
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
   }
 
   public backPedal(speed: number, animationData?: AnimationData): void {
-
-     if(!this.player.isPlayerDead()) {
-    this.physicsController?.backPedal(speed);
-    if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
-      this.playAnimationWithData(animationData);
-
-     }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.backPedal(speed);
+      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+        this.playAnimationWithData(animationData);
+      }
     }
   }
 
   public rotateLeft(yaw: number): void {
-
-     if(!this.player.isPlayerDead()) {
-  
-    this.physicsController?.rotateLeft(yaw);
-     }
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.rotateLeft(yaw);
+    }
   }
 
   public rotateRight(yaw: number): void {
-
-     if(!this.player.isPlayerDead()) {
-          this.physicsController?.rotateRight(yaw);
-     }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.rotateRight(yaw);
+    }
   }
 
   public syncRotationWithCamera(): void {
-
-     if(!this.player.isPlayerDead()) {
-          this.physicsController?.syncRotationWithCamera(this.camera);
-     }
-
+    if (!this.player.isPlayerDead()) {
+      this.physicsController?.syncRotationWithCamera(this.camera);
+    }
   }
 
   public getCharacter(): Character {
@@ -382,5 +357,6 @@ export class CharacterController {
       this.particleSystem.leftHand.dispose();
       this.particleSystem = null;
     }
+    this.attackSystem.dispose();
   }
 }
