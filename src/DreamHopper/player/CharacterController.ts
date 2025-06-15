@@ -41,11 +41,12 @@ export class CharacterController {
   private itemAttachmentManager: ItemAttachmentManager;
   public characterMeshLoader: CharacterMeshLoader;
   private player: Player;
-  private particleSystems: { [key: string]: ParticleSystem } | null = null;
+  // MODIFIED: Change particleSystems type to map ability IDs to rightHand/leftHand particle systems
+private particleSystems: { [key: string]: { rightHand: ParticleSystem; leftHand: ParticleSystem } } | null = null;
   characterMesh!: Mesh | null;
   private attackSystem: CharacterAttackSystem;
 private abilities: Map<string, AbilityConfig> = new Map();
-
+private activeAbilityId: string | null = null; // Track the currently active ability
 
   constructor(
     private scene: Scene,
@@ -121,14 +122,16 @@ private async loadAbilities(): Promise<void> {
     await this.updateSwordAttachment();
 
     this.setupParticleSystem();
-    this.animationManager.onAbilityAnimationState.add(({ abilityId, isPlaying }) => { // NEW: Changed to onAbilityAnimationState
-      if (abilityId === "dreambolt" && this.particleSystems) { // NEW: Changed to particleSystems
+    this.animationManager.onAbilityAnimationState.add(({ abilityId, isPlaying }) => {
+      if (this.particleSystems && this.particleSystems[abilityId]) {
         if (isPlaying) {
-          this.particleSystems.rightHand.start();
-          this.particleSystems.leftHand.start();
+          this.particleSystems[abilityId].rightHand.start();
+          this.particleSystems[abilityId].leftHand.start();
+          this.activeAbilityId = abilityId;
         } else {
-          this.particleSystems.rightHand.stop();
-          this.particleSystems.leftHand.stop();
+          this.particleSystems[abilityId].rightHand.stop();
+          this.particleSystems[abilityId].leftHand.stop();
+          this.activeAbilityId = null;
         }
       }
     });
@@ -170,7 +173,7 @@ private async loadAbilities(): Promise<void> {
   }
 
   public playIdleAnimation(): void {
-    if (!this.getCharacter().isJumping && !this.isAnimationPlaying("Dreambolt") && !this.player.isPlayerDead()) {
+    if (!this.getCharacter().isJumping && !this.isAnyAbilityAnimationPlaying() && !this.player.isPlayerDead()) {
       if (this.animationManager.getAnimationByName("Death")?.isPlaying) {
         this.animationManager.stopAllAnimations();
       }
@@ -212,33 +215,62 @@ private async loadAbilities(): Promise<void> {
     }
   }
 
-  public castDreambolt(animationData?: AnimationData): void {
-  if (!this.player.isPlayerDead()) {
-    const ability = this.abilities.get("dreambolt"); // NEW: Get Dreambolt ability from abilities Map
-    if (!ability) {
-      console.warn("Dreambolt ability not found"); // NEW: Warn if ability is missing
-      return;
-    }
+//   public castDreambolt(animationData?: AnimationData): void {
+//   if (!this.player.isPlayerDead()) {
+//     const ability = this.abilities.get("dreambolt"); // NEW: Get Dreambolt ability from abilities Map
+//     if (!ability) {
+//       console.warn("Dreambolt ability not found"); // NEW: Warn if ability is missing
+//       return;
+//     }
    
 
     
+//     if (animationData) {
+//       const { name, speed = 1 } = animationData;
+//       this.animationManager.playAnimation(name, speed); // NEW: Keep support for animationData override
+//     } else {
+//       this.animationManager.playAnimation(ability.animation.name); // NEW: Use JSON-defined animation name
+//     }
+//   }
+// }
+
+// public cancelDreambolt(): void {
+//   this.animationManager.cancelAbility("dreambolt"); // NEW: Call cancelAbility to stop Dreambolt animation
+// }
+
+
+
+// NEW: Generic method to cast any ability
+public castAbility(abilityId: string, animationData?: AnimationData): void {
+  if (!this.player.isPlayerDead()) {
+    const ability = this.abilities.get(abilityId);
+    if (!ability) {
+      console.warn(`Ability ${abilityId} not found`);
+      return;
+    }
     if (animationData) {
       const { name, speed = 1 } = animationData;
-      this.animationManager.playAnimation(name, speed); // NEW: Keep support for animationData override
+      this.animationManager.playAnimation(name, speed);
     } else {
-      this.animationManager.playAnimation(ability.animation.name); // NEW: Use JSON-defined animation name
+      this.animationManager.playAnimation(ability.animation.name);
     }
   }
 }
 
-public cancelDreambolt(): void {
-  this.animationManager.cancelAbility("dreambolt"); // NEW: Call cancelAbility to stop Dreambolt animation
+// NEW: Generic method to cancel any ability
+public cancelAbility(abilityId: string): void {
+  this.animationManager.cancelAbility(abilityId);
+  if (this.activeAbilityId === abilityId) {
+    this.activeAbilityId = null;
+  }
 }
+
+
 
   public moveForward(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.moveForward(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -247,7 +279,7 @@ public cancelDreambolt(): void {
   public moveDiagonallyRight(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.moveDiagonallyRight(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -256,7 +288,7 @@ public cancelDreambolt(): void {
   public moveDiagonallyLeft(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.moveDiagonallyLeft(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -265,7 +297,7 @@ public cancelDreambolt(): void {
   public strafeLeft(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.strafeLeft(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -274,7 +306,7 @@ public cancelDreambolt(): void {
   public strafeRight(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.strafeRight(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -283,7 +315,7 @@ public cancelDreambolt(): void {
   public backPedal(speed: number, animationData?: AnimationData): void {
     if (!this.player.isPlayerDead()) {
       this.physicsController?.backPedal(speed);
-      if (!this.isAnimationPlaying("Dreambolt") && !this.isAnimationPlaying("Jump")) {
+      if (!this.isAnyAbilityAnimationPlaying() && !this.isAnimationPlaying("Jump")) {
         this.playAnimationWithData(animationData);
       }
     }
@@ -322,95 +354,97 @@ public cancelDreambolt(): void {
     return this.animationManager.isAnimationPlaying(name);
   }
 
-  private setupParticleSystem(): void {
-     const skeleton = this.characterMeshLoader.getSkeleton();
-     const characterMesh = this.characterMeshLoader.getCharacterMesh();
+  public isAnyAbilityAnimationPlaying(): boolean {
+  if (this.activeAbilityId) {
+    const ability = this.abilities.get(this.activeAbilityId);
+    if (ability && ability.animation.name) {
+      const isPlaying = this.isAnimationPlaying(ability.animation.name);
+      console.log(`Checking if ${ability.animation.name} is playing: ${isPlaying}`); // TEMP: Debug log
+      return isPlaying;
+    }
+  }
+  return false;
+}
 
-     if (!skeleton || !characterMesh) {
-       console.error("Skeleton or character mesh not loaded.");
-       return;
-     }
+  // MODIFIED: Update setupParticleSystem to create particle systems for all abilities
+private setupParticleSystem(): void {
+  const skeleton = this.characterMeshLoader.getSkeleton();
+  const characterMesh = this.characterMeshLoader.getCharacterMesh();
 
-     const ability = this.abilities.get("dreambolt");
-     if (!ability) {
-       console.warn("Dreambolt ability not found");
-       return;
-     }
+  if (!skeleton || !characterMesh) {
+    console.error("Skeleton or character mesh not loaded.");
+    return;
+  }
 
-     if (!ability.particles?.cast) {
-       console.warn("No cast particles defined for Dreambolt; skipping particle setup");
-       return;
-     }
+  this.particleSystems = {};
 
-     const createParticleSystem = (boneName: string, systemName: string): ParticleSystem => {
-       const config = ability.particles!.cast;
-       const particleSystem = new ParticleSystem(systemName, 1000, this.scene);
-       particleSystem.particleTexture = new Texture(config!.texture, this.scene);
+  // Create particle systems for each ability with cast particles
+  this.abilities.forEach((ability, abilityId) => {
+    if (!ability.particles?.cast) {
+      console.warn(`No cast particles defined for ability ${abilityId}; skipping particle setup`);
+      return;
+    }
 
-       const handBone = skeleton.bones.find(bone => bone.name === boneName);
-       if (!handBone) {
-         console.error(`Bone ${boneName} not found in skeleton.`);
-         return particleSystem;
-       }
+    const createParticleSystem = (boneName: string, systemName: string): ParticleSystem => {
+      const config = ability.particles!.cast;
+      const particleSystem = new ParticleSystem(systemName, 1000, this.scene);
+      particleSystem.particleTexture = new Texture(config!.texture, this.scene);
 
-       const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.1 }, this.scene);
-       dummyMesh.isVisible = false;
-       dummyMesh.parent = handBone.getTransformNode();
-       dummyMesh.position = new Vector3(0, 0, 0);
+      const handBone = skeleton.bones.find(bone => bone.name === boneName);
+      if (!handBone) {
+        console.error(`Bone ${boneName} not found in skeleton.`);
+        return particleSystem;
+      }
 
-       particleSystem.emitter = dummyMesh;
-       particleSystem.minSize = config!.minSize;
-       particleSystem.maxSize = config!.maxSize;
-       particleSystem.minLifeTime = config!.minLifeTime;
-       particleSystem.maxLifeTime = config!.maxLifeTime;
-       particleSystem.emitRate = config!.emitRate;
-       particleSystem.blendMode = config!.blendMode;
-       if (config!.gravity) particleSystem.gravity = new Vector3(config!.gravity.x, config!.gravity.y, config!.gravity.z);
-       if (config!.direction1) particleSystem.direction1 = new Vector3(config!.direction1.x, config!.direction1.y, config!.direction1.z);
-       if (config!.direction2) particleSystem.direction2 = new Vector3(config!.direction2.x, config!.direction2.y, config!.direction2.z);
-       if (config!.minEmitBox) particleSystem.minEmitBox = new Vector3(config!.minEmitBox.x, config!.minEmitBox.y, config!.minEmitBox.z);
-       if (config!.maxEmitBox) particleSystem.maxEmitBox = new Vector3(config!.maxEmitBox.x, config!.maxEmitBox.y, config!.maxEmitBox.z);
-       if (config!.minAngularSpeed) particleSystem.minAngularSpeed = config!.minAngularSpeed;
-       if (config!.maxAngularSpeed) particleSystem.maxAngularSpeed = config!.maxAngularSpeed;
-       if (config!.minEmitPower) particleSystem.minEmitPower = config!.minEmitPower;
-       if (config!.maxEmitPower) particleSystem.maxEmitPower = config!.maxEmitPower;
-       if (config!.updateSpeed) particleSystem.updateSpeed = config!.updateSpeed;
-       particleSystem.color1 = new Color4(config!.color1.r, config!.color1.g, config!.color1.b, config!.color1.a);
-       particleSystem.color2 = new Color4(config!.color2.r, config!.color2.g, config!.color2.b, config!.color2.a);
-       particleSystem.colorDead = new Color4(config!.colorDead.r, config!.colorDead.g, config!.colorDead.b, config!.colorDead.a);
-       return particleSystem;
-     };
+      const dummyMesh = MeshBuilder.CreateBox(`${boneName}_emitter`, { size: 0.1 }, this.scene);
+      dummyMesh.isVisible = false;
+      dummyMesh.parent = handBone.getTransformNode();
+      dummyMesh.position = new Vector3(0, 0, 0);
 
-     this.particleSystems = {
-       rightHand: createParticleSystem("mixamorig:RightHand", "rightHandParticles"),
-       leftHand: createParticleSystem("mixamorig:LeftHand", "leftHandParticles"),
-     };
+      particleSystem.emitter = dummyMesh;
+      particleSystem.minSize = config!.minSize;
+      particleSystem.maxSize = config!.maxSize;
+      particleSystem.minLifeTime = config!.minLifeTime;
+      particleSystem.maxLifeTime = config!.maxLifeTime;
+      particleSystem.emitRate = config!.emitRate;
+      particleSystem.blendMode = config!.blendMode;
+      if (config!.gravity) particleSystem.gravity = new Vector3(config!.gravity.x, config!.gravity.y, config!.gravity.z);
+      if (config!.direction1) particleSystem.direction1 = new Vector3(config!.direction1.x, config!.direction1.y, config!.direction1.z);
+      if (config!.direction2) particleSystem.direction2 = new Vector3(config!.direction2.x, config!.direction2.y, config!.direction2.z);
+      if (config!.minEmitBox) particleSystem.minEmitBox = new Vector3(config!.minEmitBox.x, config!.minEmitBox.y, config!.minEmitBox.z);
+      if (config!.maxEmitBox) particleSystem.maxEmitBox = new Vector3(config!.maxEmitBox.x, config!.maxEmitBox.y, config!.maxEmitBox.z);
+      if (config!.minAngularSpeed) particleSystem.minAngularSpeed = config!.minAngularSpeed;
+      if (config!.maxAngularSpeed) particleSystem.maxAngularSpeed = config!.maxAngularSpeed;
+      if (config!.minEmitPower) particleSystem.minEmitPower = config!.minEmitPower;
+      if (config!.maxEmitPower) particleSystem.maxEmitPower = config!.maxEmitPower;
+      if (config!.updateSpeed) particleSystem.updateSpeed = config!.updateSpeed;
+      particleSystem.color1 = new Color4(config!.color1.r, config!.color1.g, config!.color1.b, config!.color1.a);
+      particleSystem.color2 = new Color4(config!.color2.r, config!.color2.g, config!.color2.b, config!.color2.a);
+      particleSystem.colorDead = new Color4(config!.colorDead.r, config!.colorDead.g, config!.colorDead.b, config!.colorDead.a);
+      return particleSystem;
+    };
 
-     this.animationManager.onAbilityAnimationState.add(({ abilityId, isPlaying }) => {
-       if (abilityId === "dreambolt" && this.particleSystems) {
-         if (isPlaying) {
-           this.particleSystems.rightHand.start();
-           this.particleSystems.leftHand.start();
-         } else {
-           this.particleSystems.rightHand.stop();
-           this.particleSystems.leftHand.stop();
-         }
-       }
-     });
-   }
+    this.particleSystems![abilityId] = {
+      rightHand: createParticleSystem("mixamorig:RightHand", `${abilityId}_rightHandParticles`),
+      leftHand: createParticleSystem("mixamorig:LeftHand", `${abilityId}_leftHandParticles`),
+    };
+  });
+}
 
-  public dispose(): void {
+ public dispose(): void {
   this.animationManager.dispose();
   this.physicsController?.dispose();
   this.itemAttachmentManager?.dispose();
   this.characterMeshLoader.dispose();
   this.player.getInventory().forEach(item => item.dispose());
   if (this.particleSystems) {
-    this.particleSystems.rightHand?.stop(); // NEW: Updated to particleSystems
-    this.particleSystems.rightHand?.dispose(); // NEW: Updated to particleSystems
-    this.particleSystems.leftHand?.stop(); // NEW: Updated to particleSystems
-    this.particleSystems.leftHand?.dispose(); // NEW: Updated to particleSystems
-    this.particleSystems = null; // NEW: Updated to particleSystems
+    Object.values(this.particleSystems).forEach(systems => {
+      systems.rightHand?.stop();
+      systems.rightHand?.dispose();
+      systems.leftHand?.stop();
+      systems.leftHand?.dispose();
+    });
+    this.particleSystems = null;
   }
   this.attackSystem.dispose();
 }

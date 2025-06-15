@@ -168,7 +168,7 @@ export class InputHandler {
         break;
       case "castDreambolt":
         if (!this.characterController.isAnimationPlaying("Dreambolt")) {
-          this.characterController.castDreambolt(binding.animation);
+          this.characterController.castAbility("dreambolt");
         }
         break;
       case "toggleSheathe":
