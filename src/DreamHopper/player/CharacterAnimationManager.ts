@@ -1,8 +1,9 @@
-import { AnimationGroup, Scene, Sound, Observable, Vector3 } from "@babylonjs/core";
+import { AnimationGroup, Scene, Sound, Observable, Vector3, AssetsManager } from "@babylonjs/core";
 import { CharacterController } from "./CharacterController";
 import { CharacterAttackSystem } from "./CharacterAttackSystem";
 import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
+import { AbilityConfig } from "./AbilityConfig";
 
 export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];
@@ -10,12 +11,15 @@ export class CharacterAnimationManager {
   private isJumping = false;
   private isBlending = false;
   private blendFrameId: number | null = null;
-  private dreamboltSpawned = false;
+  // MODIFIED: Renamed from dreamboltSpawned to abilitySpawned for generalization
+  private abilitySpawned = false;
   private footstepSounds: Sound[] = [];
   private footstepFrames: number[] = [];
   private footstepObserver: any = null;
-  public onDreamboltAnimationState = new Observable<{ isPlaying: boolean; progress?: number }>();
+    public onAbilityAnimationState = new Observable<{ abilityId: string; isPlaying: boolean; progress?: number }>();
   private attackSystem: CharacterAttackSystem | null = null;
+    // ADDED: Map to store ability configurations from JSON
+  private abilities: Map<string, AbilityConfig> = new Map();
 
   constructor(
     private scene: Scene,
@@ -28,12 +32,17 @@ export class CharacterAnimationManager {
     }
   }
 
+
+
+
   public setAttackSystem(attackSystem: CharacterAttackSystem): void {
     this.attackSystem = attackSystem;
   }
 
   public async initialize(animationGroups: AnimationGroup[]): Promise<void> {
     this.animationGroups = animationGroups;
+    // ADDED: Load abilities from JSON during initialization
+    await this.loadAbilities();
     this.loadFootstepSounds();
 
     if (this.getAnimationByName("Idle")) {
@@ -44,9 +53,18 @@ export class CharacterAnimationManager {
     }
 
     this.setupJumpDetection();
-    this.setupDreamboltDetection();
+     // MODIFIED: Replaced setupDreamboltDetection with generalized setupAbilityDetection
+    this.setupAbilityDetection();
   }
 
+// ADDED: Method to load abilities.json and store in abilities Map
+  private async loadAbilities(): Promise<void> {
+    const assetsManager = new AssetsManager(this.scene);
+    const assetTask = assetsManager.addTextFileTask("abilities", "./abilities.json");
+    await assetsManager.loadAsync();
+    const abilities: AbilityConfig[] = JSON.parse(assetTask.text);
+    abilities.forEach(ability => this.abilities.set(ability.id, ability));
+  }
   private loadFootstepSounds(): void {
     const soundFiles = [
       "./sfx/footstep1.wav",
@@ -89,24 +107,36 @@ export class CharacterAnimationManager {
     }
   }
 
-  private setupDreamboltDetection(): void {
-    const dreamboltAnim = this.getAnimationByName("Dreambolt");
-    if (dreamboltAnim) {
-      dreamboltAnim.onAnimationGroupEndObservable.add(() => {
-        this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
-        if (this.attackSystem) this.attackSystem.stopSounds();
-      });
-    } else {
-      console.warn("Dreambolt animation not found");
-    }
-  }
 
-  public cancelDreambolt(): void {
-    const dreamboltAnim = this.getAnimationByName("Dreambolt");
-    if (dreamboltAnim && dreamboltAnim.isPlaying) {
-      dreamboltAnim.stop();
-      this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
-      this.dreamboltSpawned = false;
+
+
+    // ADDED: Generalized method to handle any ability animation end events
+  private setupAbilityDetection(): void {
+    this.abilities.forEach(ability => {
+      const anim = this.getAnimationByName(ability.animation.name);
+      if (anim) {
+        anim.onAnimationGroupEndObservable.add(() => {
+          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: false });
+          if (this.attackSystem) this.attackSystem.stopSounds();
+        });
+      }
+    });
+  }
+// MODIFIED: Renamed from cancelDreambolt to cancelAbility and generalized
+  public cancelAbility(abilityId: string): void {
+    // ADDED: Retrieve ability from Map
+    const ability = this.abilities.get(abilityId);
+    if (!ability) {
+      console.warn(`Ability ${abilityId} not found`);
+      return;
+    }
+
+    const anim = this.getAnimationByName(ability.animation.name);
+    if (anim && anim.isPlaying) {
+      anim.stop();
+      this.onAbilityAnimationState.notifyObservers({ abilityId, isPlaying: false });
+      // MODIFIED: Changed dreamboltSpawned to abilitySpawned
+      this.abilitySpawned = false;
       this.currentAnimationName = null;
       if (this.blendFrameId !== null) {
         cancelAnimationFrame(this.blendFrameId);
@@ -138,34 +168,32 @@ export class CharacterAnimationManager {
       return;
     }
 
-    if (name === "Dreambolt") {
-      if (
-        !this.characterController ||
-        !this.characterController.physicsController ||
-        !this.characterController.characterMeshLoader.getCharacterMesh()
-      ) {
-        console.warn("Cannot cast Dreambolt; missing characterController, physicsController, or character mesh");
+    // ADDED: Check if animation is an ability and apply JSON properties
+    const ability = Array.from(this.abilities.values()).find(a => a.animation.name === name);
+    if (ability) {
+      const characterMesh = this.characterController?.characterMeshLoader.getCharacterMesh();
+      if (!this.characterController || !this.characterController.physicsController || !characterMesh) {
+        console.warn(`Cannot play ${name}; missing characterController, physicsController, or character mesh`);
         return;
       }
-      // [NEW] Validate target before playing animation
       const target = this.targetingSystem?.getCurrentTarget();
       if (!target || !target.getMesh()) {
-        console.warn("Cannot cast Dreambolt; no target selected or target has no mesh");
+        console.warn(`Cannot play ${name}; no target selected or target has no mesh`);
         return;
       }
-      // [NEW] Ensure target is in front 180° arc
-      const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh()!;
       const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
       const charPos = characterMesh.getAbsolutePosition();
-      const targetMesh = target.getMesh()!;
-      const targetPos = targetMesh.getAbsolutePosition();
+      const targetPos = target.getMesh()!.getAbsolutePosition();
       const toTarget = targetPos.subtract(charPos).normalize();
       const dot = Vector3.Dot(forward, toTarget);
       const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
       if (angle > Math.PI / 2) {
-        console.warn(`Cannot cast Dreambolt; target ${target.getId()} is outside front 180° arc`);
+        console.warn(`Cannot play ${name}; target ${target.getId()} is outside front 180° arc`);
         return;
       }
+      // ADDED: Use JSON-defined animation speed and loop
+      speed = ability.animation.speed;
+      loop = ability.animation.loop;
     }
 
     if (this.footstepObserver) {
@@ -207,7 +235,7 @@ export class CharacterAnimationManager {
 
     const skipBlending = this.currentAnimationName === "Death";
 
-    if ((name === "Dreambolt" || name === "Jump" || name === "Death") && this.currentAnimationName !== name) {
+    if ((ability || name === "Jump" || name === "Death") && this.currentAnimationName !== name) {
       const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
       if (prevAnim) {
         prevAnim.stop();
@@ -224,13 +252,13 @@ export class CharacterAnimationManager {
 
     const prevAnim = this.getAnimationByName(this.currentAnimationName || "");
 
-    if (prevAnim && !skipBlending && name !== "Dreambolt" && name !== "Jump" && name !== "Death") {
+    if (prevAnim && !skipBlending && !ability && name !== "Jump" && name !== "Death") {
       prevAnim.setWeightForAllAnimatables(0);
       prevAnim.stop();
     }
 
     newAnim.stop();
-    const isLooping = name === "Death" ? false : loop ?? !(name === "Jump" || name === "Dreambolt");
+    const isLooping = name === "Death" ? false : loop ?? !(name === "Jump" || ability);
     newAnim.start(isLooping, speed, fromFrame ?? 0, toFrame ?? newAnim.to, false);
     newAnim.setWeightForAllAnimatables(skipBlending ? 1 : 0);
 
@@ -267,9 +295,10 @@ export class CharacterAnimationManager {
       this.isJumping = true;
     }
 
-    if (name === "Dreambolt") {
-      this.dreamboltSpawned = false;
-      this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0 });
+    if (ability) {
+      // MODIFIED: Generalized from Dreambolt-specific logic to handle any ability
+      this.abilitySpawned = false;
+      this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress: 0 });
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -277,15 +306,15 @@ export class CharacterAnimationManager {
           const from = newAnim.from;
           const to = newAnim.to;
           const progress = (currentFrame - from) / (to - from);
-          this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress });
-          if (progress >= 0.5 && !this.dreamboltSpawned) {
-            if (this.attackSystem) this.attackSystem.triggerDreambolt();
-            this.dreamboltSpawned = true;
-            this.onDreamboltAnimationState.notifyObservers({ isPlaying: true, progress: 0.5 });
+          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress });
+          if (ability.animation.triggerFrame && progress >= ability.animation.triggerFrame && !this.abilitySpawned) {
+            if (this.attackSystem) this.attackSystem.triggerAbility(ability.id);
+            this.abilitySpawned = true;
+            this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: true, progress: ability.animation.triggerFrame });
             this.scene.onBeforeRenderObservable.remove(observer);
           }
         } else {
-          this.onDreamboltAnimationState.notifyObservers({ isPlaying: false });
+          this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, isPlaying: false });
           if (this.attackSystem) this.attackSystem.stopSounds();
           this.scene.onBeforeRenderObservable.remove(observer);
         }
@@ -384,7 +413,8 @@ export class CharacterAnimationManager {
     }
     if (this.attackSystem) this.attackSystem.stopSounds();
     this.currentAnimationName = null;
-    this.dreamboltSpawned = false;
+    // MODIFIED: Changed dreamboltSpawned to abilitySpawned
+    this.abilitySpawned = false;
   }
 
   public dispose(): void {
@@ -397,6 +427,6 @@ export class CharacterAnimationManager {
       this.footstepObserver = null;
     }
     if (this.attackSystem) this.attackSystem.dispose();
-    this.onDreamboltAnimationState.clear();
+    this.onAbilityAnimationState.clear();
   }
 }

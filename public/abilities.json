@@ -1,188 +1,125 @@
-{
-  "abilities": [
-    {
-      "id": "dreambolt",
-      "name": "Dreambolt",
-      "type": "attack",
-      "subtype": "projectile",
-      "cooldown": 2,
-      "manaCost": 10,
-      "animation": {
-        "name": "Dreambolt",
-        "speed": 1,
-        "loop": false
-      },
-      "effects": [
-        {
-          "type": "damage",
-          "minBase": 20,
-          "maxBase": 40,
-          "levelScaling": 5,
-          "target": "enemy"
-        },
-        {
-          "type": "projectile",
-          "speed": 10,
-          "size": 0.5,
-          "range": 50,
-          "maxAngle": 90,
-          "material": {
-            "diffuseColor": [1.0, 0.85, 0.9],
-            "emissiveColor": [1.0, 0.95, 0.97],
-            "alpha": 0.8
-          },
-          "particleSystem": {
-            "texture": "./Flare.png",
-            "emitRate": 400,
-            "minSize": 0.7,
-            "maxSize": 1.5,
-            "minLifeTime": 0.15,
-            "maxLifeTime": 0.4,
-            "color1": [0.9, 0.2, 1.0, 1.0],
-            "color2": [0.8, 0.5, 0.9, 0.6],
-            "colorDead": [0, 0, 0.2, 0.0],
-            "blendMode": "BLENDMODE_ADD"
-          }
-        },
-        {
-          "type": "particle",
-          "trigger": "onHit",
-          "particleSystem": {
-            "texture": "./star_1.png",
-            "emitRate": 1000,
-            "minSize": 0.15,
-            "maxSize": 0.5,
-            "minLifeTime": 2.5,
-            "maxLifeTime": 4.0,
-            "color1": [1.0, 0.0, 1.0, 1.0],
-            "color2": [0.2, 0.8, 1.0, 1.0],
-            "colorDead": [1.0, 1.0, 0.5, 0.3],
-            "blendMode": "BLENDMODE_ADD",
-            "gravity": [0, -0.5, 0],
-            "direction1": [-1, -1, -1],
-            "direction2": [1, 1, 1],
-            "minAngularSpeed": -0.5236,
-            "maxAngularSpeed": 0.5236,
-            "minEmitPower": 0.5,
-            "maxEmitPower": 1.2,
-            "duration": 1000
-          }
-        }
-      ],
-      "sounds": [
-        {
-          "id": "castBolt",
-          "file": "./sfx/castBolt2.wav",
-          "loop": true,
-          "spatial": true,
-          "volume": 1,
-          "maxDistance": 50
-        },
-        {
-          "id": "boltLaunch",
-          "file": "./sfx/boltLaunch.wav",
-          "loop": false,
-          "spatial": true,
-          "volume": 1,
-          "maxDistance": 50
-        },
-        {
-          "id": "dreamboltTravel",
-          "file": "./sfx/bolt2.mp3",
-          "loop": true,
-          "spatial": true,
-          "volume": 1,
-          "maxDistance": 50
-        },
-        {
-          "id": "impactChime",
-          "file": "./sfx/impactchime.wav",
-          "loop": false,
-          "spatial": true,
-          "volume": 0.04,
-          "maxDistance": 50
-        }
-      ]
-    },
-    {
-      "id": "heal",
-      "name": "Heal",
-      "type": "support",
-      "subtype": "heal",
-      "cooldown": 5,
-      "manaCost": 15,
-      "animation": {
-        "name": "Dreambolt",
-        "speed": 1,
-        "loop": false
-      },
-      "effects": [
-        {
-          "type": "heal",
-          "baseAmount": 50,
-          "levelScaling": 10,
-          "target": "self"
-        },
-        {
-          "type": "particle",
-          "trigger": "onCast",
-          "particleSystem": {
-            "texture": "./Flare.png",
-            "emitRate": 400,
-            "minSize": 0.7,
-            "maxSize": 1.5,
-            "minLifeTime": 0.15,
-            "maxLifeTime": 0.4,
-            "color1": [0.9, 0.2, 1.0, 1.0],
-            "color2": [0.8, 0.5, 0.9, 0.6],
-            "colorDead": [0, 0, 0.2, 0.0],
-            "blendMode": "BLENDMODE_ADD",
-            "duration": 1000 
-          }
-        },
-        {
-          "type": "particle",
-          "trigger": "onCast",
-          "particleSystem": {
-            "texture": "./star_1.png",
-            "emitRate": 1000,
-            "minSize": 0.15,
-            "maxSize": 0.5,
-            "minLifeTime": 2.5,
-            "maxLifeTime": 4.0,
-            "color1": [1.0, 0.0, 1.0, 1.0],
-            "color2": [0.2, 0.8, 1.0, 1.0],
-            "colorDead": [1.0, 1.0, 0.5, 0.3],
-            "blendMode": "BLENDMODE_ADD",
-            "gravity": [0, -0.5, 0],
-            "direction1": [-1, -1, -1],
-            "direction2": [1, 1, 1],
-            "minAngularSpeed": -0.5236,
-            "maxAngularSpeed": 0.5236,
-            "minEmitPower": 0.5,
-            "maxEmitPower": 1.2,
-            "duration": 1000 
-          }
-        }
-      ],
-      "sounds": [
-        {
-          "id": "healCast",
-          "file": "./sfx/castBolt2.wav",
-          "loop": true,
-          "spatial": true,
-          "volume": 1,
-          "maxDistance": 50
-        },
-        {
-          "id": "healChime",
-          "file": "./sfx/impactchime.wav",
-          "loop": false,
-          "spatial": true,
-          "volume": 0.04,
-          "maxDistance": 50
-        }
-      ]
-    }
-  ]
-}
+[
+     {
+       "id": "dreambolt",
+       "name": "Dreambolt",
+       "type": "RangedProjectile",
+       "animation": {
+         "name": "Dreambolt",
+         "speed": 1.0,
+         "loop": false,
+         "triggerFrame": 0.5
+       },
+       "damage": {
+         "min": 20,
+         "max": 40,
+         "levelScaling": 5
+       },
+       "sounds": {
+         "cast": {
+           "file": "./sfx/castBolt2.wav",
+           "volume": 1.0,
+           "loop": true,
+           "spatialSound": true,
+           "maxDistance": 50,
+           "attachToMesh": true
+         },
+         "launch": {
+           "file": "./sfx/boltLaunch.wav",
+           "volume": 1.0,
+           "loop": false,
+           "spatialSound": true,
+           "maxDistance": 50,
+           "attachToMesh": true
+         },
+         "travel": {
+           "file": "./sfx/bolt2.mp3",
+           "volume": 1.0,
+           "loop": true,
+           "spatialSound": true,
+           "maxDistance": 50,
+           "attachToMesh": true
+         },
+         "impact": {
+           "file": "./sfx/impactchime.wav",
+           "volume": 0.04,
+           "loop": false,
+           "spatialSound": true,
+           "maxDistance": 50,
+           "attachToMesh": false
+         }
+       },
+       "particles": {
+         "cast": {
+           "texture": "./Flare.png",
+           "minSize": 0.1,
+           "maxSize": 0.3,
+           "minLifeTime": 0.5,
+           "maxLifeTime": 1.0,
+           "emitRate": 50,
+           "blendMode": 2,
+           "color1": { "r": 0.9, "g": 0.2, "b": 1.0, "a": 1.0 },
+           "color2": { "r": 0.8, "g": 0.5, "b": 0.9, "a": 0.6 },
+           "colorDead": { "r": 0.0, "g": 0.0, "b": 0.2, "a": 0.0 },
+           "minEmitBox": { "x": -0.05, "y": -0.05, "z": -0.05 },
+           "maxEmitBox": { "x": 0.05, "y": 0.05, "z": 0.05 },
+           "gravity": { "x": 0, "y": 0.1, "z": 0 },
+           "direction1": { "x": -0.1, "y": 0.1, "z": -0.1 },
+           "direction2": { "x": 0.1, "y": 0.3, "z": 0.1 },
+           "minAngularSpeed": -0.2,
+           "maxAngularSpeed": 0.2,
+           "minEmitPower": 0.5,
+           "maxEmitPower": 1.0,
+           "updateSpeed": 0.01
+         },
+         "projectile": {
+           "texture": "./Flare.png",
+           "minSize": 0.7,
+           "maxSize": 1.5,
+           "minLifeTime": 0.15,
+           "maxLifeTime": 0.4,
+           "emitRate": 400,
+           "blendMode": 2,
+           "color1": { "r": 0.9, "g": 0.2, "b": 1.0, "a": 1.0 },
+           "color2": { "r": 0.8, "g": 0.5, "b": 0.9, "a": 0.6 },
+           "colorDead": { "r": 0.0, "g": 0.0, "b": 0.2, "a": 0.0 },
+           "minEmitBox": { "x": 0, "y": 0, "z": 0 },
+           "maxEmitBox": { "x": 0, "y": 0, "z": 0 },
+           "gravity": { "x": 0, "y": 0, "z": 0 },
+           "direction1": { "x": 0, "y": 0, "z": 0 },
+           "direction2": { "x": 0, "y": 0, "z": 0 }
+         },
+         "impact": {
+           "texture": "./star_1.png",
+           "minSize": 0.15,
+           "maxSize": 0.5,
+           "minLifeTime": 2.5,
+           "maxLifeTime": 4.0,
+           "emitRate": 1000,
+           "blendMode": 2,
+           "color1": { "r": 1.0, "g": 0.0, "b": 1.0, "a": 1.0 },
+           "color2": { "r": 0.2, "g": 0.8, "b": 1.0, "a": 1.0 },
+           "colorDead": { "r": 1.0, "g": 1.0, "b": 0.5, "a": 0.3 },
+           "gravity": { "x": 0, "y": -0.5, "z": 0 },
+           "direction1": { "x": -1, "y": -1, "z": -1 },
+           "direction2": { "x": 1, "y": 1, "z": 1 },
+           "minAngularSpeed": -0.5235987755982988,
+           "maxAngularSpeed": 0.5235987755982988,
+           "minEmitPower": 0.5,
+           "maxEmitPower": 1.2,
+           "updateSpeed": 0.05
+         }
+       },
+       "projectile": {
+         "diameter": 0.5,
+         "speed": 10,
+         "material": {
+           "diffuseColor": { "r": 1.0, "g": 0.85, "b": 0.9 },
+           "emissiveColor": { "r": 1.0, "g": 0.95, "b": 0.97 },
+           "alpha": 0.8,
+           "specularPower": 0,
+           "backFaceCulling": false
+         },
+         "lifetime": 5000
+       }
+     }
+   ]

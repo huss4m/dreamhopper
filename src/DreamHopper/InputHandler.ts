@@ -320,12 +320,12 @@ export class InputHandler {
     }
 
     if (isDreamboltPlaying) {
-      const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
-      if (hasMovement) {
-        // console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
-        this.characterController.animationManager.cancelDreambolt();
-      }
-    }
+  const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
+  if (hasMovement) {
+    // console.log("InputHandler: Movement detected during Dreambolt, cancelling cast");
+    this.characterController.animationManager.cancelAbility("dreambolt"); // NEW: Changed to cancelAbility
+  }
+}
 
     for (const binding of activeActions) {
       this.executeAction(binding);

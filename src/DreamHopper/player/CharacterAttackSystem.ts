@@ -1,320 +1,280 @@
-import {
-  Scene,
-  Mesh,
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Vector3,
-  ParticleSystem,
-  Texture,
-  Color4,
-  Sound,
-  Tags,
-} from "@babylonjs/core";
-import { CharacterController } from "./CharacterController";
-import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager";
-import { Enemy } from "../enemy/Enemy";
+import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, Color4, ParticleSystem, Texture, Sound, Tags, Vector3 } from "@babylonjs/core";
+   import { CharacterController } from "./CharacterController";
+   import { TargetingSystem } from "../TargetingSystem";
+   import { GameManager } from "../GameManager";
+   import { Enemy } from "../enemy/Enemy";
+   import { AbilityConfig, AbilityType, AbilitySoundConfig, ParticleSystemConfig, ProjectileConfig } from "./AbilityConfig";
+   import { AssetsManager } from "@babylonjs/core";
 
-export class CharacterAttackSystem {
-  private castBolt2Sound: Sound | null = null;
-  private dreamboltSound: Sound | null = null;
-  private boltLaunchSound: Sound | null = null;
-  private impactChimeSound: Sound | null = null;
+   export class CharacterAttackSystem {
+     private abilities: Map<string, AbilityConfig> = new Map();
+     private sounds: Map<string, Sound> = new Map();
+     private scene: Scene;
 
-  constructor(
-    private scene: Scene,
-    private characterController: CharacterController,
-    private targetingSystem?: TargetingSystem,
-    private gameManager?: GameManager
-  ) {
-    // [CHANGED] Removed preloadDreamboltSounds call from constructor
-  }
+     constructor(
+       scene: Scene,
+       private characterController: CharacterController,
+       private targetingSystem?: TargetingSystem,
+       private gameManager?: GameManager
+     ) {
+       this.scene = scene;
+     }
 
-  // [NEW] Initialize method to preload sounds after mesh is loaded
-  public initialize(): void {
-    this.preloadDreamboltSounds();
-  }
+     public async initialize(): Promise<void> {
+       await this.loadAbilities();
+       this.preloadSounds();
+     }
 
-  private preloadDreamboltSounds(): void {
-    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
-    if (!characterMesh) {
-      console.warn("Character mesh not available for Dreambolt sound preloading");
-      return;
-    }
+     private async loadAbilities(): Promise<void> {
+       const assetsManager = new AssetsManager(this.scene);
+       const assetTask = assetsManager.addTextFileTask("abilities", "./abilities.json");
+       await assetsManager.loadAsync();
+       const abilities: AbilityConfig[] = JSON.parse(assetTask.text);
+       abilities.forEach(ability => this.abilities.set(ability.id, ability));
+     }
 
-    this.castBolt2Sound = new Sound(
-      "castBoltSound",
-      "./sfx/castBolt2.wav",
-      this.scene,
-      () => this.castBolt2Sound!.attachToMesh(characterMesh),
-      { autoplay: false, loop: true, spatialSound: true, maxDistance: 50, volume: 1 }
-    );
+     private preloadSounds(): void {
+       const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+       if (!characterMesh) {
+         console.warn("CharacterAttackSystem: Character mesh not available for sound preloading");
+         return;
+       }
 
-    this.boltLaunchSound = new Sound(
-      "boltLaunchSound",
-      "./sfx/boltLaunch.wav",
-      this.scene,
-      () => this.boltLaunchSound!.attachToMesh(characterMesh),
-      { autoplay: false, loop: false, spatialSound: true, maxDistance: 50, volume: 1.0 }
-    );
+       this.abilities.forEach(ability => {
+         const soundConfigs = ability.sounds || {};
+         for (const [key, soundConfig] of Object.entries(soundConfigs)) {
+           console.log(`CharacterAttackSystem: Preloading sound ${ability.id}_${key} with file ${soundConfig.file}`);
+           const sound = new Sound(
+             `${ability.id}_${key}`,
+             soundConfig.file,
+             this.scene,
+             () => {
+               console.log(`CharacterAttackSystem: Sound ${ability.id}_${key} preloaded successfully`);
+               if (soundConfig.attachToMesh && !characterMesh.isDisposed()) {
+                 sound.attachToMesh(characterMesh);
+               }
+             },
+             {
+               autoplay: false,
+               loop: soundConfig.loop,
+               spatialSound: soundConfig.spatialSound,
+               maxDistance: soundConfig.maxDistance / 2,
+               volume: soundConfig.volume * 2,
+             }
+           );
+           this.sounds.set(`${ability.id}_${key}`, sound);
+         }
+       });
+     }
 
-    this.dreamboltSound = new Sound(
-      "dreamboltSound",
-      "./sfx/bolt2.mp3",
-      this.scene,
-      null,
-      { autoplay: false, loop: true, spatialSound: true, maxDistance: 50, volume: 1 }
-    );
 
-    this.impactChimeSound = new Sound(
-      "impactChimeSound",
-      "./sfx/impactchime.wav",
-      this.scene,
-      null,
-      { autoplay: false, loop: false, spatialSound: true, maxDistance: 50, volume: 0.04 }
-    );
-  }
 
-  private triggerFireworks(position: Vector3): void {
-    const fireworks = new ParticleSystem("fairyFireworks", 2000, this.scene);
-    fireworks.particleTexture = new Texture("./star_1.png", this.scene);
-    fireworks.emitter = position;
-    fireworks.minEmitBox = new Vector3(0, 0, 0);
-    fireworks.maxEmitBox = new Vector3(0, 0, 0);
-    fireworks.color1 = new Color4(1.0, 0.0, 1.0, 1.0);
-    fireworks.color2 = new Color4(0.2, 0.8, 1.0, 1.0);
-    fireworks.colorDead = new Color4(1.0, 1.0, 0.5, 0.3);
-    fireworks.minSize = 0.15;
-    fireworks.maxSize = 0.5;
-    fireworks.minLifeTime = 2.5;
-    fireworks.maxLifeTime = 4.0;
-    fireworks.emitRate = 1000;
-    fireworks.blendMode = ParticleSystem.BLENDMODE_ADD;
-    fireworks.gravity = new Vector3(0, -0.5, 0);
-    fireworks.direction1 = new Vector3(-1, -1, -1);
-    fireworks.direction2 = new Vector3(1, 1, 1);
-    fireworks.minAngularSpeed = -Math.PI / 6;
-    fireworks.maxAngularSpeed = Math.PI / 6;
-    fireworks.minEmitPower = 0.5;
-    fireworks.maxEmitPower = 1.2;
-    fireworks.updateSpeed = 0.05;
-    fireworks.start();
-    setTimeout(() => {
-      fireworks.stop();
-      setTimeout(() => fireworks.dispose(), 5000);
-    }, 1000);
-  }
+     private createParticleSystem(config: ParticleSystemConfig, emitter: Mesh | Vector3, name: string): ParticleSystem {
+       const particles = new ParticleSystem(name, 1000, this.scene);
+       particles.particleTexture = new Texture(config.texture, this.scene);
+       particles.emitter = emitter;
+       particles.minSize = config.minSize;
+       particles.maxSize = config.maxSize;
+       particles.minLifeTime = config.minLifeTime;
+       particles.maxLifeTime = config.maxLifeTime;
+       particles.emitRate = config.emitRate;
+       particles.blendMode = config.blendMode;
+       if (config.gravity) particles.gravity = new Vector3(config.gravity.x, config.gravity.y, config.gravity.z);
+       if (config.direction1) particles.direction1 = new Vector3(config.direction1.x, config.direction1.y, config.direction1.z);
+       if (config.direction2) particles.direction2 = new Vector3(config.direction2.x, config.direction2.y, config.direction2.z);
+       if (config.minEmitBox) particles.minEmitBox = new Vector3(config.minEmitBox.x, config.minEmitBox.y, config.minEmitBox.z);
+       if (config.maxEmitBox) particles.maxEmitBox = new Vector3(config.maxEmitBox.x, config.maxEmitBox.y, config.minEmitBox!.z);
+       if (config.minAngularSpeed) particles.minAngularSpeed = config.minAngularSpeed;
+       if (config.maxAngularSpeed) particles.maxAngularSpeed = config.maxAngularSpeed;
+       if (config.minEmitPower) particles.minEmitPower = config.minEmitPower;
+       if (config.maxEmitPower) particles.maxEmitPower = config.maxEmitPower;
+       if (config.updateSpeed) particles.updateSpeed = config.updateSpeed;
+       particles.color1 = new Color4(config.color1.r, config.color1.g, config.color1.b, config.color1.a);
+       particles.color2 = new Color4(config.color2.r, config.color2.g, config.color2.b, config.color2.a);
+       particles.colorDead = new Color4(config.colorDead.r, config.colorDead.g, config.colorDead.b, config.colorDead.a);
+       return particles;
+     }
 
-  public triggerDreambolt(): void {
-    if (!this.characterController || !this.characterController.physicsController || !this.characterController.characterMeshLoader.getCharacterMesh()) {
-      console.warn("Cannot trigger Dreambolt; missing characterController, physicsController, or character mesh");
-      return;
-    }
+     public triggerAbility(abilityId: string): void {
+       const ability = this.abilities.get(abilityId);
+       if (!ability) {
+         console.warn(`Ability ${abilityId} not found`);
+         return;
+       }
 
-    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh()!;
-    const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
-    const charPos = characterMesh.getAbsolutePosition();
+       if (ability.type !== AbilityType.RangedProjectile) {
+         console.warn(`Unsupported ability type: ${ability.type}`);
+         return;
+       }
 
-    const target = this.targetingSystem?.getCurrentTarget();
-    if (!target || !target.getMesh()) {
-      console.warn("Cannot trigger Dreambolt; no target selected or target has no mesh");
-      return;
-    }
+       const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+       if (!characterMesh || !this.characterController.physicsController) {
+         console.warn(`Cannot trigger ${abilityId}; missing character mesh or physics controller`);
+         return;
+       }
 
-    const targetMesh = target.getMesh()!;
-    const targetPos = targetMesh.getAbsolutePosition();
-    const toTarget = targetPos.subtract(charPos).normalize();
-    const dot = Vector3.Dot(forward, toTarget);
-    const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+       const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
+       const currentTarget = this.targetingSystem?.getCurrentTarget();
+       if (!currentTarget || !currentTarget.getMesh()) {
+         console.warn(`Cannot trigger ${abilityId}; no target selected or target has no mesh`);
+         return;
+       }
 
-    if (angle > Math.PI / 2) {
-      console.warn(`Cannot trigger Dreambolt; target ${target.getId()} is outside front 180° arc`);
-      return;
-    }
+       const targetMesh = currentTarget.getMesh()!;
+       const targetPos = targetMesh.getAbsolutePosition();
+       const charPos = characterMesh.getAbsolutePosition();
+       const toTarget = targetPos.subtract(charPos).normalize();
+       const dot = Vector3.Dot(forward, toTarget);
+       const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+       if (angle > Math.PI / 2) {
+         console.warn(`Cannot trigger ${abilityId}; target is outside front 180° arc`);
+         return;
+       }
 
-    if (this.castBolt2Sound && this.castBolt2Sound.isReady()) {
-      this.castBolt2Sound.play();
-    } else {
-      console.warn("castBolt2Sound not preloaded or not ready");
-    }
+       this.executeRangedProjectile(ability, characterMesh, forward, { mesh: targetMesh, id: currentTarget.getId() });
+     }
 
-    this.spawnDreamboltSphere();
-  }
+     private executeRangedProjectile(ability: AbilityConfig, characterMesh: Mesh, forward: Vector3, target: { mesh: Mesh; id: string }): void {
+       if (!ability.projectile) return;
 
-  private spawnDreamboltSphere(): void {
-    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh()!;
-    const forward = this.characterController.physicsController!.forwardDirection.scale(-1).normalize();
-    const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
-    const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
+       const spawnOffset = forward.add(new Vector3(0, 1.2, 0));
+       const startPos = characterMesh.getAbsolutePosition().add(spawnOffset);
 
-    const sphere = MeshBuilder.CreateSphere("dreambolt", { diameter: 0.5 }, this.scene);
-    const material = new StandardMaterial("dreamboltMat", this.scene);
-    material.diffuseColor = new Color3(1.0, 0.85, 0.9);
-    material.emissiveColor = new Color3(1.0, 0.95, 0.97);
-    material.alpha = 0.8;
-    material.specularPower = 0;
-    material.backFaceCulling = false;
-    sphere.material = material;
-    sphere.isVisible = true;
-    sphere.position = startPos;
-    sphere.checkCollisions = true;
+       const sphere = MeshBuilder.CreateSphere(`${ability.id}_projectile`, { diameter: ability.projectile.diameter }, this.scene);
+       const material = new StandardMaterial(`${ability.id}_mat`, this.scene);
+       material.diffuseColor = new Color3(ability.projectile.material.diffuseColor.r, ability.projectile.material.diffuseColor.g, ability.projectile.material.diffuseColor.b);
+       material.emissiveColor = new Color3(ability.projectile.material.emissiveColor.r, ability.projectile.material.emissiveColor.g, ability.projectile.material.emissiveColor.b);
+       material.alpha = ability.projectile.material.alpha;
+       material.specularPower = ability.projectile.material.specularPower;
+       material.backFaceCulling = ability.projectile.material.backFaceCulling;
+       sphere.material = material;
+       sphere.position = startPos;
+       sphere.checkCollisions = true;
 
-    const particles = new ParticleSystem("boltParticles", 1000, this.scene);
-    particles.particleTexture = new Texture("./Flare.png", this.scene);
-    particles.emitter = sphere;
-    particles.minEmitBox = Vector3.Zero();
-    particles.maxEmitBox = Vector3.Zero();
-    particles.color1 = new Color4(0.9, 0.2, 1.0, 1.0);
-    particles.color2 = new Color4(0.8, 0.5, 0.9, 0.6);
-    particles.colorDead = new Color4(0, 0, 0.2, 0.0);
-    particles.minSize = 0.7;
-    particles.maxSize = 1.5;
-    particles.minLifeTime = 0.15;
-    particles.maxLifeTime = 0.4;
-    particles.emitRate = 400;
-    particles.blendMode = ParticleSystem.BLENDMODE_ADD;
-    particles.gravity = Vector3.Zero();
-    particles.direction1 = Vector3.Zero();
-    particles.direction2 = Vector3.Zero();
-    particles.start();
+       let particles: ParticleSystem | null = null;
+       if (ability.particles?.projectile) {
+         particles = this.createParticleSystem(ability.particles.projectile, sphere, `${ability.id}_projectile_particles`);
+         particles.start();
+       }
 
-    if (this.boltLaunchSound && this.boltLaunchSound.isReady()) {
-      this.boltLaunchSound.play();
-    } else {
-      console.warn("boltLaunchSound not preloaded or not ready");
-    }
+       let travelSound: Sound | null = null;
+       const originalTravelSound = this.sounds.get(`${ability.id}_travel`);
+       if (originalTravelSound && !sphere.isDisposed()) {
+         travelSound = originalTravelSound.clone();
+         if (travelSound) {
+           travelSound.attachToMesh(sphere);
+           travelSound.play();
+         }
+       }
 
-    let sphereDreamboltSound: Sound | null = null;
-    if (this.dreamboltSound) {
-      sphereDreamboltSound = this.dreamboltSound.clone();
-      if (sphere && !sphere.isDisposed()) {
-        sphereDreamboltSound!.attachToMesh(sphere);
-        sphereDreamboltSound!.play();
-      } else {
-        sphereDreamboltSound!.dispose();
-        sphereDreamboltSound = null;
-      }
-    } else {
-      console.warn("dreamboltSound not preloaded");
-    }
+       const launchSound = this.sounds.get(`${ability.id}_launch`);
+       if (launchSound && launchSound.isReady()) {
+         console.log(`CharacterAttackSystem: Playing launch sound ${ability.id}_launch`);
+         launchSound.play();
+       }
 
-    let moveDirection: Vector3;
-    if (this.targetingSystem && this.targetingSystem.getCurrentTarget() && this.targetingSystem.getCurrentTarget()!.getMesh()) {
-      const target = this.targetingSystem.getCurrentTarget();
-      const targetMesh = target!.getMesh()!;
-      targetMesh.computeWorldMatrix(true);
-      targetMesh.refreshBoundingInfo();
-      const boundingBox = targetMesh.getBoundingInfo().boundingBox;
-      const targetMidpoint = boundingBox.minimumWorld.add(boundingBox.maximumWorld).scale(0.5);
-      moveDirection = targetMidpoint.subtract(sphere.position);
-      if (moveDirection.lengthSquared() > 0.0001) {
-        moveDirection = moveDirection.normalize();
-      } else {
-        moveDirection = forward;
-      }
-    } else {
-      moveDirection = forward;
-    }
+       const moveDirection = target.mesh.getAbsolutePosition().subtract(sphere.position).normalize();
 
-    const speed = 10;
-    const BASE_DREAMBOLT_MIN_DAMAGE = 20;
-    const BASE_DREAMBOLT_MAX_DAMAGE = 40;
-    const playerLevel = this.characterController.getPlayer().getLevel() || 1;
-    const DREAMBOLT_MIN_DAMAGE = BASE_DREAMBOLT_MIN_DAMAGE + (playerLevel - 1) * 5;
-    const DREAMBOLT_MAX_DAMAGE = BASE_DREAMBOLT_MAX_DAMAGE + (playerLevel - 1) * 5;
+       const playerLevel = this.characterController.getPlayer().getLevel() || 1;
+       const minDamage = ability.damage.min + (playerLevel - 1) * ability.damage.levelScaling;
+       const maxDamage = ability.damage.max + (playerLevel - 1) * ability.damage.levelScaling;
 
-    const renderCallback = () => {
-      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
-      const moveDistance = speed * deltaTime;
-      sphere.position.addInPlace(moveDirection.scale(moveDistance));
+       const renderCallback = () => {
+         const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+         const moveDistance = ability.projectile!.speed * deltaTime;
+         sphere.position.addInPlace(moveDirection.scale(moveDistance));
 
-      const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
-      for (const hitbox of hitboxes) {
-        if (sphere.intersectsMesh(hitbox, true)) {
-          const tags = Tags.GetTags(hitbox);
-          const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
-          if (enemyId) {
-            const target: Enemy | undefined = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
-            if (target) {
-              this.triggerFireworks(sphere.position.clone());
-              let impactSound: Sound | null = null;
-              if (this.impactChimeSound && this.impactChimeSound.isReady()) {
-                impactSound = this.impactChimeSound.clone();
-                const targetMesh = target.getMesh();
-                if (targetMesh && !targetMesh.isDisposed()) {
-                  impactSound!.attachToMesh(targetMesh);
-                  impactSound!.play();
-                } else {
-                  impactSound!.dispose();
-                  impactSound = null;
-                }
-              } else {
-                console.warn("impactChimeSound not preloaded or not ready");
-              }
+         const hitboxes = this.scene.meshes.filter(mesh => Tags.MatchesQuery(mesh, "hitbox"));
+         for (const hitbox of hitboxes) {
+           if (sphere.intersectsMesh(hitbox, true)) {
+             const tags = Tags.GetTags(hitbox);
+             const enemyId = tags ? tags.split(" ").find((tag: string) => tag.startsWith("enemyID:"))?.split(":")[1] : undefined;
+             if (enemyId) {
+               const enemy = this.gameManager?.getEnemies().find(e => e.getId() === enemyId);
+               if (enemy) {
+                 if (ability.particles?.impact) {
+                   const impactParticles = this.createParticleSystem(ability.particles.impact, sphere.position.clone(), `${ability.id}_impact_particles`);
+                   impactParticles.start();
+                   setTimeout(() => {
+                     impactParticles.stop();
+                     impactParticles.dispose();
+                   }, 1000);
+                 }
 
-              const damage = Math.floor(Math.random() * (DREAMBOLT_MAX_DAMAGE - DREAMBOLT_MIN_DAMAGE + 1)) + DREAMBOLT_MIN_DAMAGE;
-              target.takeDamage(damage);
+                 let impactSound: Sound | null = null;
+                 const originalImpactSound = this.sounds.get(`${ability.id}_impact`);
+                 if (originalImpactSound && !hitbox.isDisposed()) {
+                   impactSound = originalImpactSound.clone();
+                   if (impactSound) {
+                     impactSound.attachToMesh(hitbox);
+                     impactSound.play();
+                   }
+                 }
 
-              particles.stop();
-              particles.dispose();
-              sphere.dispose();
-              if (sphereDreamboltSound) {
-                sphereDreamboltSound.stop();
-                sphereDreamboltSound.dispose();
-              }
-              if (this.boltLaunchSound) {
-                this.boltLaunchSound.stop();
-              }
-              if (impactSound) {
-                const soundDuration = impactSound.getAudioBuffer()?.duration || 1;
-                setTimeout(() => {
-                  if (impactSound) {
-                    impactSound.stop();
-                    impactSound.dispose();
-                  }
-                }, soundDuration * 1000);
-              }
-              this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-              return;
-            } else {
-              console.warn(`No enemy found with id ${enemyId} in GameManager`);
-            }
-          }
-        }
-      }
-    };
+                 const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+                 enemy.takeDamage(damage);
 
-    this.scene.onBeforeRenderObservable.add(renderCallback);
-    setTimeout(() => {
-      if (sphere && !sphere.isDisposed()) {
-        particles.stop();
-        particles.dispose();
-        sphere.dispose();
-        if (sphereDreamboltSound) {
-          sphereDreamboltSound.stop();
-          sphereDreamboltSound.dispose();
-        }
-        if (this.boltLaunchSound) {
-          this.boltLaunchSound.stop();
-        }
-        this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
-      }
-    }, 5000);
-  }
+                 particles?.stop();
+                 particles?.dispose();
+                 sphere.dispose();
+                 travelSound?.stop();
+                 travelSound?.dispose();
+                 launchSound?.stop();
+                 const activeCastSound = this.sounds.get(`${ability.id}_cast_active`);
+                 if (activeCastSound) {
+                   activeCastSound.stop();
+                   activeCastSound.dispose();
+                   this.sounds.delete(`${ability.id}_cast_active`);
+                 }
+                 if (impactSound) {
+                   const soundDuration = impactSound.getAudioBuffer()?.duration || 1;
+                   setTimeout(() => {
+                     impactSound?.stop();
+                     impactSound?.dispose();
+                   }, soundDuration * 1000);
+                 }
+                 this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
+                 return;
+               }
+             }
+           }
+         }
+       };
 
-  public stopSounds(): void {
-    if (this.castBolt2Sound) this.castBolt2Sound.stop();
-    if (this.boltLaunchSound) this.boltLaunchSound.stop();
-    if (this.dreamboltSound) this.dreamboltSound.stop();
-    if (this.impactChimeSound) this.impactChimeSound.stop();
-  }
+       this.scene.onBeforeRenderObservable.add(renderCallback);
+       setTimeout(() => {
+         if (sphere && !sphere.isDisposed()) {
+           particles?.stop();
+           particles?.dispose();
+           sphere.dispose();
+           travelSound?.stop();
+           travelSound?.dispose();
+           launchSound?.stop();
+           const activeCastSound = this.sounds.get(`${ability.id}_cast_active`);
+           if (activeCastSound) {
+             activeCastSound.stop();
+             activeCastSound.dispose();
+             this.sounds.delete(`${ability.id}_cast_active`);
+           }
+           this.scene.onBeforeRenderObservable.removeCallback(renderCallback);
+         }
+       }, ability.projectile!.lifetime);
+     }
 
-  public dispose(): void {
-    this.stopSounds();
-    if (this.castBolt2Sound) this.castBolt2Sound.dispose();
-    if (this.boltLaunchSound) this.boltLaunchSound.dispose();
-    if (this.dreamboltSound) this.dreamboltSound.dispose();
-    if (this.impactChimeSound) this.impactChimeSound.dispose();
-  }
-}
+     public stopSounds(): void {
+       this.sounds.forEach(sound => sound.stop());
+       // NEW: Dispose and remove active cast sound
+       this.sounds.forEach((sound, key) => {
+         if (key.endsWith("_cast_active")) {
+           sound.dispose();
+           this.sounds.delete(key);
+         }
+       });
+     }
+
+     public dispose(): void {
+       this.stopSounds();
+       this.sounds.forEach(sound => sound.dispose());
+       this.sounds.clear();
+     }
+   }

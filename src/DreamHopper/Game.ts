@@ -1051,6 +1051,8 @@ private async createGrass(grassCount: number): Promise<void> {
       this.gameManager
     );
 
+    await this.characterController.initialize();
+
     const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
     if (characterMesh) {
       this.shadowGenerator.addShadowCaster(characterMesh, true);
