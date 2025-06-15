@@ -28,9 +28,9 @@ export class CharacterCameraController {
     camera.upperRadiusLimit = 10;
     camera.wheelPrecision = 15;
     camera.panningSensibility = 0;
-    camera.angularSensibilityX = 250;
-    camera.angularSensibilityY = 250;
-    camera.inertia = 0.3;
+    camera.angularSensibilityX = 200;
+    camera.angularSensibilityY = 200;
+    camera.inertia = 0;
     camera.minZ = 0.1;   
     camera.maxZ = 100; 
     //camera.checkCollisions = true;
