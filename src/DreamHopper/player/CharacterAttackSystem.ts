@@ -8,7 +8,7 @@ import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, Color4, ParticleSys
 
    export class CharacterAttackSystem {
      private abilities: Map<string, AbilityConfig> = new Map();
-     private sounds: Map<string, Sound> = new Map();
+     public sounds: Map<string, Sound> = new Map();
      private scene: Scene;
 
      constructor(
