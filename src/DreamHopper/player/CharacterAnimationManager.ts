@@ -149,6 +149,15 @@ export class CharacterAnimationManager {
     return false;
   }
 
+
+  public getAbility(id: string): AbilityConfig | undefined {
+    return this.abilities.get(id);
+  }
+
+  public getAbilities(): Map<string, AbilityConfig> {
+    return this.abilities;
+  }
+
   public playAnimation(
     name: string,
     speed = 1.0,

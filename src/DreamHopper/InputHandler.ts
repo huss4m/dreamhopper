@@ -3,10 +3,11 @@ import {
   ActionManager,
   KeyboardEventTypes,
   PointerEventTypes,
-  Vector3
+  Vector3,
 } from "@babylonjs/core";
 import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
+import { CharacterAnimationManager } from "./player/CharacterAnimationManager";
 
 interface KeyAction {
   key: string;
@@ -27,15 +28,10 @@ interface Layout {
 
 export class InputHandler {
   private keyStates: { [key: string]: boolean } = {};
+  private wasKeyPressed: { [key: string]: boolean } = {};
   private isRightMouseDown = false;
   private moveSpeed = 5;
   private rotationSpeed = 0.1;
-  private wasSpacePressed = false;
-  private wasDreamboltPressed = false;
-  private wasFireballPressed = false; // NEW
-  private wasSheathePressed = false;
-  private wasQuestDialogPressed = false;
-  private wasLayoutTogglePressed = false;
   private layouts: { [key: string]: Layout } = {};
   private currentLayout = "AZERTY";
   private keyBindings: { [key: string]: KeyAction } = {};
@@ -46,17 +42,16 @@ export class InputHandler {
     private scene: Scene,
     private characterController: CharacterController,
     private canvas: HTMLCanvasElement,
-    private game: Game
+    private game: Game,
+    private animationManager: CharacterAnimationManager
   ) {}
 
   public async init(): Promise<boolean> {
     try {
-      const response = await fetch('./controls/keybindings.json');
+      const response = await fetch("./controls/keybindings.json");
       if (!response.ok) throw new Error(`Failed to load keybindings: ${response.status}`);
       this.layouts = (await response.json()).layouts;
-      // // console.log('InputHandler: Loaded layouts:', this.layouts);
 
-      // Set default layout
       for (const [layoutName, layout] of Object.entries(this.layouts)) {
         if (layout.default) {
           this.currentLayout = layoutName;
@@ -64,16 +59,14 @@ export class InputHandler {
           break;
         }
       }
-      // // console.log(`InputHandler: Set default layout to ${this.currentLayout}`);
 
       this.setupKeyboardControls();
       this.setupPointerControls();
       this.isInitialized = true;
       return true;
     } catch (error) {
-      console.error('InputHandler: Error loading keybindings:', error);
+      console.error("InputHandler: Error loading keybindings:", error);
       this.keyBindings["T"] = { key: "T", action: "openQuestDialog" };
-      // // console.log('InputHandler: Using fallback keybindings:', this.keyBindings);
       return false;
     }
   }
@@ -88,16 +81,12 @@ export class InputHandler {
       let key = kbInfo.event.key.toUpperCase();
       const isDown = kbInfo.type === KeyboardEventTypes.KEYDOWN;
 
-      // Normalize '&' to '1' for caps lock agnostic behavior
-      if (key === '&') {
-        key = '1';
-      }
-       if (key === 'É' || key === 'é') { // MODIFIED: Handle both cases
-      key = '2';
-    }
+      if (key === "&") key = "1";
+      if (key === "É" || key === "é") key = "2";
+      if (key === "\"") key = "3";
+      if (key === "'") key = "4";
 
-      //// // console.log(`InputHandler: Key ${key} ${isDown ? 'down' : 'up'}`);
-      if (Object.values(this.keyBindings).some(binding => binding.key === key)) {
+      if (Object.values(this.keyBindings).some((binding) => binding.key.includes(key))) {
         this.keyStates[key] = isDown;
       }
     });
@@ -123,9 +112,37 @@ export class InputHandler {
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
+  private getAbilityIdFromAction(action: string): string | null {
+    if (typeof action === "string" && action.startsWith("cast")) {
+      return action.replace(/^cast/, "").toLowerCase();
+    }
+    return null;
+  }
+
+  private isAnyAbilityAnimationPlaying(): string | null {
+  let playingAbilityId: string | null = null;
+  this.animationManager.getAbilities().forEach((ability, abilityId) => {
+    if (this.animationManager.isAnimationPlaying(ability.animation.name)) {
+      playingAbilityId = abilityId;
+    }
+  });
+  return playingAbilityId;
+}
+
   private executeAction(binding: KeyAction): void {
     const character = this.characterController.getCharacter();
-    switch (binding.action) {
+    const action = binding.action as string;
+    const abilityId = this.getAbilityIdFromAction(action);
+
+    if (abilityId) {
+      const ability = this.animationManager.getAbility(abilityId);
+      if (ability && !this.animationManager.isAnimationPlaying(ability.animation.name)) {
+        this.characterController.castAbility(abilityId);
+      }
+      return;
+    }
+
+    switch (action) {
       case "moveForward":
         this.characterController.physicsController!.isDiagonal = false;
         if (!this.characterController.physicsController?.isJumping) {
@@ -154,7 +171,7 @@ export class InputHandler {
         this.characterController.rotateRight(this.rotationSpeed);
         break;
       case "jump":
-        if (!this.wasSpacePressed && !character.isJumping) {
+        if (!character.isJumping) {
           this.characterController.jump(binding.animation);
         }
         break;
@@ -170,57 +187,31 @@ export class InputHandler {
           this.characterController.moveDiagonallyLeft(this.moveSpeed, binding.animation);
         }
         break;
-      case "castDreambolt":
-        if (!this.characterController.isAnimationPlaying("Dreambolt")) {
-          this.characterController.castAbility("dreambolt");
-        }
-        break;
-      case "castFireball":
-        if (!this.characterController.isAnimationPlaying("Fireball")) {
-          console.log('Executing castFireball, calling castAbility("fireball")'); // NEW
-          this.characterController.castAbility("fireball");
-        }
-        break;
       case "toggleSheathe":
-        if (!this.wasSheathePressed) {
-          this.characterController.toggleSheathe();
-        }
+        this.characterController.toggleSheathe();
         break;
-      case "openQuestDialog":
-        if (!this.wasQuestDialogPressed) {
-          const targetingSystem = this.game.getTargetingSystem();
-          if (targetingSystem.isNPCTarget()) {
-            const playerMesh = this.characterController.characterMeshLoader.getCharacterMesh();
-            const npcMesh = targetingSystem.getCurrentTarget()?.getMesh();
-            if (playerMesh && npcMesh) {
-              const distance = Vector3.Distance(playerMesh.position, /*npcMesh.position*/ new Vector3(5,1,5));
-              if (distance <= 5) {
-                // console.log(`InputHandler: Toggling quest dialog for NPC (distance: ${distance.toFixed(2)} units)`);
-                this.game.toggleQuestDialog();
-                if (this.game.getShowQuestDialog()) {
-                  this.lastDialogTargetId = targetingSystem.getCurrentTarget()?.getId() || null;
-                  // console.log(`InputHandler: Dialog opened for NPC ID: ${this.lastDialogTargetId}`);
-                } else {
-                  this.lastDialogTargetId = null;
-                  // console.log("InputHandler: Dialog closed or not opened");
-                }
+      case "openQuestDialog": {
+        const targetingSystem = this.game.getTargetingSystem();
+        if (targetingSystem.isNPCTarget()) {
+          const playerMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+          const npcMesh = targetingSystem.getCurrentTarget()?.getMesh();
+          if (playerMesh && npcMesh) {
+            const distance = Vector3.Distance(playerMesh.position, new Vector3(5, 1, 5));
+            if (distance <= 5) {
+              this.game.toggleQuestDialog();
+              if (this.game.getShowQuestDialog()) {
+                this.lastDialogTargetId = targetingSystem.getCurrentTarget()?.getId() || null;
               } else {
-                // console.log(`InputHandler: Cannot toggle quest dialog; NPC too far (distance: ${distance.toFixed(2)} units)`);
+                this.lastDialogTargetId = null;
               }
-            } else {
-              // console.log("InputHandler: Cannot toggle quest dialog; player or NPC mesh not found");
             }
-          } else {
-            // console.log("InputHandler: Cannot toggle quest dialog; no NPC targeted");
           }
         }
         break;
+      }
       case "toggleLayout":
-        if (!this.wasLayoutTogglePressed) {
-          this.currentLayout = this.currentLayout === "AZERTY" ? "QWERTY" : "AZERTY";
-          this.keyBindings = this.layouts[this.currentLayout].bindings;
-          // console.log(`InputHandler: Switched to ${this.currentLayout} layout`);
-        }
+        this.currentLayout = this.currentLayout === "AZERTY" ? "QWERTY" : "AZERTY";
+        this.keyBindings = this.layouts[this.currentLayout].bindings;
         break;
     }
   }
@@ -230,11 +221,15 @@ export class InputHandler {
 
     const character = this.characterController.getCharacter();
     let isMoving = false;
+    const movementActions = [
+      "moveForward",
+      "backPedal",
+      "strafeLeft",
+      "strafeRight",
+      "moveDiagonallyRight",
+      "moveDiagonallyLeft",
+    ];
 
-    const movementActions = ["moveForward", "backPedal", "strafeLeft", "strafeRight", "moveDiagonallyRight", "moveDiagonallyLeft"];
-    const isDreamboltPlaying = this.characterController.isAnimationPlaying("Dreambolt");
-    const isFireballPlaying = this.characterController.isAnimationPlaying("Fireball");
-    // Check if dialog should close
     if (this.game.getShowQuestDialog() && this.lastDialogTargetId) {
       const targetingSystem = this.game.getTargetingSystem();
       const currentTarget = targetingSystem.getCurrentTarget();
@@ -247,70 +242,42 @@ export class InputHandler {
         !playerMesh ||
         !npcMesh
       ) {
-        // console.log("InputHandler: Closing quest dialog; NPC no longer targeted or meshes unavailable");
         this.game.toggleQuestDialog();
         this.lastDialogTargetId = null;
       } else {
-        const distance = Vector3.Distance(playerMesh.position, new Vector3(5,1,5));
+        const distance = Vector3.Distance(playerMesh.position, new Vector3(5, 1, 5));
         if (distance > 5) {
-          // console.log(`InputHandler: Closing quest dialog; player too far from NPC (distance: ${distance.toFixed(2)} units)`);
           this.game.toggleQuestDialog();
           this.lastDialogTargetId = null;
         }
       }
     }
 
-    // Handle key actions
-    if (this.keyStates[" "] && !this.wasSpacePressed && !character.isJumping) {
-      const jumpBinding = this.keyBindings["SPACE"];
-      if (jumpBinding) this.executeAction(jumpBinding);
-      this.wasSpacePressed = true;
-    } else if (!this.keyStates[" "]) {
-      this.wasSpacePressed = false;
-    }
+    for (const [bindingKey, binding] of Object.entries(this.keyBindings)) {
+      const keys = binding.key.split("+");
+      const isPressed = keys.every((key) => this.keyStates[key]);
+      const wasPressed = this.wasKeyPressed[bindingKey] || false;
 
-    if ((this.keyStates["1"] || this.keyStates["&"]) && !this.wasDreamboltPressed && !isDreamboltPlaying) {
-      const dreamboltBinding = this.keyBindings["1"] || this.keyBindings["&"];
-      if (dreamboltBinding) this.executeAction(dreamboltBinding);
-      this.wasDreamboltPressed = true;
-    } else if (!this.keyStates["1"] && !this.keyStates["&"]) {
-      this.wasDreamboltPressed = false;
-    }
-
-
-    if (this.keyStates["2"] && !this.wasFireballPressed && !isFireballPlaying) {
-      console.log('Key 2 detected, wasFireballPressed:', this.wasFireballPressed, 'isFireballPlaying:', isFireballPlaying); // NEW
-      const fireballBinding = this.keyBindings["2"];
-      console.log('Fireball binding:', fireballBinding); // NEW
-      if (fireballBinding) this.executeAction(fireballBinding);
-      this.wasFireballPressed = true;
-    } else if (!this.keyStates["2"]) {
-      this.wasFireballPressed = false;
-    }
-
-    if (this.currentLayout === "AZERTY" && this.keyStates["W"] && !this.wasSheathePressed) {
-      const sheatheBinding = this.keyBindings["W"];
-      if (sheatheBinding) this.executeAction(sheatheBinding);
-      this.wasSheathePressed = true;
-    } else if (!this.keyStates["W"]) {
-      this.wasSheathePressed = false;
-    }
-
-    if (this.keyStates["T"] && !this.wasQuestDialogPressed) {
-      // console.log("InputHandler: T key pressed, executing openQuestDialog");
-      const questDialogBinding = this.keyBindings["T"];
-      if (questDialogBinding) this.executeAction(questDialogBinding);
-      this.wasQuestDialogPressed = true;
-    } else if (!this.keyStates["T"]) {
-      this.wasQuestDialogPressed = false;
-    }
-
-    if (this.keyStates["L"] && !this.wasLayoutTogglePressed) {
-      const layoutToggleBinding = this.keyBindings["L"];
-      if (layoutToggleBinding) this.executeAction(layoutToggleBinding);
-      this.wasLayoutTogglePressed = true;
-    } else if (!this.keyStates["L"]) {
-      this.wasLayoutTogglePressed = false;
+      if (isPressed && !wasPressed) {
+        const abilityId = this.getAbilityIdFromAction(binding.action as string);
+        if (abilityId) {
+          const ability = this.animationManager.getAbility(abilityId);
+          if (binding.key === "2") {
+            console.log(
+              `Key 2 detected, wasPressed: ${wasPressed}, isAnimationPlaying: ${ability ? this.animationManager.isAnimationPlaying(ability.animation.name) : false}`
+            );
+            console.log("Fireball binding:", binding);
+          }
+          if (ability && !this.animationManager.isAnimationPlaying(ability.animation.name)) {
+            this.executeAction(binding);
+          }
+        } else {
+          this.executeAction(binding);
+        }
+        this.wasKeyPressed[bindingKey] = true;
+      } else if (!isPressed) {
+        this.wasKeyPressed[bindingKey] = false;
+      }
     }
 
     const activeActions: KeyAction[] = [];
@@ -340,26 +307,26 @@ export class InputHandler {
       }
     }
 
-   if (isDreamboltPlaying || isFireballPlaying) {
-  const hasMovement = activeActions.some(binding => movementActions.includes(binding.action as string));
-  if (hasMovement) {
-    console.log(`InputHandler: Movement detected during ${isDreamboltPlaying ? "Dreambolt" : "Fireball"}, cancelling cast`);
-    this.characterController.animationManager.cancelAbility(isDreamboltPlaying ? "dreambolt" : "fireball");
-  }
-
-}
+    const currentAbilityPlaying = this.isAnyAbilityAnimationPlaying();
+    if (currentAbilityPlaying) {
+      const hasMovement = activeActions.some((binding) => movementActions.includes(binding.action as string));
+      if (hasMovement) {
+        console.log(`InputHandler: Movement detected during ${currentAbilityPlaying}, cancelling cast`);
+        this.characterController.animationManager.cancelAbility(currentAbilityPlaying);
+      }
+    }
 
     for (const binding of activeActions) {
       this.executeAction(binding);
       isMoving = true;
     }
 
-   if (!isMoving && !this.keyStates[" "] && !character.isJumping && !isDreamboltPlaying && !isFireballPlaying) {
-  this.characterController.playIdleAnimation();
-  if (!this.characterController.physicsController?.isJumping) {
-    this.characterController.moveForward(0);
-  }
-}
+    if (!isMoving && !this.keyStates[" "] && !character.isJumping && !currentAbilityPlaying) {
+      this.characterController.playIdleAnimation();
+      if (!this.characterController.physicsController?.isJumping) {
+        this.characterController.moveForward(0);
+      }
+    }
 
     if (this.isRightMouseDown) {
       this.characterController.syncRotationWithCamera();

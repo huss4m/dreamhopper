@@ -67,6 +67,16 @@
           "continuous": false,
           "action": "castFireball"
         },
+        "3": {
+          "key": "3",
+          "continuous": false,
+          "action": "castDreambolt"
+        },
+        "4": {
+          "key": "4",
+          "continuous": false,
+          "action": "castFireball"
+        },
         "W": {
           "key": "W",
           "continuous": false,

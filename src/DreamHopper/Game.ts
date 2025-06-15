@@ -1089,7 +1089,7 @@ private async createGrass(grassCount: number): Promise<void> {
       player.setQuestState(savedState.questStates);
     }
 
-    this.inputHandler = new InputHandler(this.scene, this.characterController, this.canvas, this);
+    this.inputHandler = new InputHandler(this.scene, this.characterController, this.canvas, this, this.characterController.animationManager);
     const initSuccess = await this.inputHandler.init();
     if (!initSuccess) {
       console.warn("Game: InputHandler failed to initialize, using fallback keybindings");
