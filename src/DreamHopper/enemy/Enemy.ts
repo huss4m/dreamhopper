@@ -10,6 +10,7 @@ import { ColliderType } from "../PhysicsController";
 import { EnemyAnimationManager } from "./EnemyAnimationManager";
 import { Game } from "../Game";
 import { EnemyTypeConfig } from "./EnemyTypeConfig";
+import { EnemyAttackSystem } from "./EnemyAttackSystem";
 
 export class Enemy implements Hoverable, Targettable {
   protected id: string;
@@ -17,6 +18,9 @@ export class Enemy implements Hoverable, Targettable {
   protected enemySkeleton: Skeleton | null = null;
   protected animationManager: EnemyAnimationManager;
   protected physicsController: EnemyPhysicsController | null = null;
+
+  protected attackSystem: EnemyAttackSystem;
+
   protected hoverHandler: HoverHandler;
   protected hoverConfig: HoverConfig;
   protected targetCircle: Mesh | null = null;
@@ -55,6 +59,9 @@ export class Enemy implements Hoverable, Targettable {
   public xpReward = 200;
   public config: EnemyTypeConfig;
   type: string;
+  //protected hasTriggeredThisCycle: Map<string, boolean> = new Map();
+
+  //protected lastAttackProgress: Map<string, number> = new Map(); // New: Track last progress per attack animation
 
   constructor(
     protected scene: Scene,
@@ -73,8 +80,10 @@ export class Enemy implements Hoverable, Targettable {
     this.position = position;
     this.game = game;
     this.animationManager = new EnemyAnimationManager(this.scene, this.game, this);
+    this.attackSystem = new EnemyAttackSystem(this.scene, this, this.game); // New
 
-
+    // Log attacks config to verify
+    console.log(`Enemy ${this.id}: Attacks config`, JSON.stringify(this.config.attacks, null, 2));
     // Use config
     this.maxHP = config.maxHP;
     this.currentHP = config.maxHP;
@@ -95,98 +104,113 @@ export class Enemy implements Hoverable, Targettable {
     this.setupBehavior();
   }
 
+  // New: Method to trigger attacks
+    public performAttack(attackId: string): void {
+        this.attackSystem.performAttack(attackId);
+    }
+
   protected setupBehavior(): void {
-  if (this.isNPC) {
-    // console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
-    return;
-  }
-
-  this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
-    if (!this.enemyMesh || !this.physicsController) {
-    console.error(`${this}: Behavior skipped - enemyMesh: ${!!this.enemyMesh}, physicsController: ${!!this.physicsController}, isNPC: ${this.isNPC}, isDead: ${this.isDead}`);
-    return;
-}
-
-    const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
-    if (!playerMesh) {
-      console.warn(`Enemy ${this.id}: Player mesh not found`);
-      return;
-    }
-
-    // Distance-based culling
-    const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
-    const cullingDistance = 110;
-    if (distanceToPlayer > cullingDistance) {
-      if (this.isAggroed || this.isAttacking) {
-        this.isAggroed = false;
-        this.isAttacking = false;
-        this.physicsController.stopAllMovement();
-        this.startWandering();
-        // console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
-      }
-      return; // Skip further processing
-    }
-
-    if (this.isDead() || this.game.getCharacterController()?.getPlayer()?.isPlayerDead()) {
-      if (this.isAggroed || this.isAttacking) {
-        this.isAggroed = false;
-        this.isAttacking = false;
-        this.physicsController.stopAllMovement();
-        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
-        // console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
-      }
-      return;
-    }
-
-    // Aggro logic
-    if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
-      this.isAggroed = true;
-      this.isAttacking = false;
-      this.physicsController.stopAllMovement();
-      // console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
-    } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
-      this.isAggroed = false;
-      this.isAttacking = false;
-      this.physicsController.stopAllMovement();
-      this.startWandering();
-      // console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
-    }
-
-    if (this.isAggroed) {
-      const hasLOS = this.hasLineOfSightToPlayer(playerMesh);
-
-      if (distanceToPlayer <= this.attackRange && hasLOS) {
-        this.physicsController.stopAllMovement();
-        const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
-        this.physicsController.orientToForwardDirection(directionToPlayer);
-        if (!this.isAttacking) {
-          this.isAttacking = true;
-          const animationName = this.animationManager.getAnimationByName("NightmareBolt") ? "NightmareBolt" : "Idle";
-          this.animationManager.playAnimation(animationName, 1.0, undefined, undefined, true);
-          // console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animationName}`);
+        if (this.isNPC) {
+            console.log(`Enemy ${this.id}: Skipping behavior setup, is NPC`);
+            return;
         }
-      } else {
-        if (this.isAttacking) {
-          this.isAttacking = false;
-          this.physicsController.stopAllMovement();
-          // console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
-        }
-        this.moveTo(playerMesh.position);
-        this.animationManager.playAnimation(this.config.animations.run);
-        // console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
-      }
-    } else {
-      // Wandering animation logic
-      const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
-      if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
-        this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
-      } else {
-        this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
-      }
-    }
-  });
-}
 
+        // Subscribe to keyframe events for attack animations
+        const keyFrameObserver = this.animationManager.onAnimationKeyFrame.add(({ name, frame }) => {
+            const attack = this.config.attacks.find(a => a.animation === name && a.triggerFrame === frame);
+            if (attack) {
+                this.performAttack(attack.id);
+                console.log(`Enemy ${this.id}: Triggered attack ${attack.id} at frame ${frame}`);
+            }
+        });
+
+        this.behaviorObserver = this.scene.onBeforeRenderObservable.add(() => {
+            if (!this.enemyMesh || !this.physicsController) {
+                console.error(`Enemy ${this.id}: Behavior skipped - enemyMesh: ${!!this.enemyMesh}, physicsController: ${!!this.physicsController}, isNPC: ${this.isNPC}, isDead: ${this.isDead}`);
+                return;
+            }
+
+            const playerMesh = this.game.getCharacterController()?.characterMeshLoader.getCharacterMesh();
+            if (!playerMesh) {
+                console.warn(`Enemy ${this.id}: Player mesh not found`);
+                return;
+            }
+
+            const distanceToPlayer = Vector3.Distance(this.enemyMesh.position, playerMesh.position);
+            const cullingDistance = 110;
+            if (distanceToPlayer > cullingDistance) {
+                if (this.isAggroed || this.isAttacking) {
+                    this.isAggroed = false;
+                    this.isAttacking = false;
+                    this.physicsController.stopAllMovement();
+                    this.startWandering();
+                    console.log(`Enemy ${this.id}: Beyond culling distance (${distanceToPlayer.toFixed(2)} > ${cullingDistance}), lost aggro, resuming wander`);
+                }
+                return;
+            }
+
+            if (this.isDead() || this.game.getCharacterController()?.getPlayer()?.isPlayerDead()) {
+                if (this.isAggroed || this.isAttacking) {
+                    this.isAggroed = false;
+                    this.isAttacking = false;
+                    this.physicsController.stopAllMovement();
+                    this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+                    console.log(`Enemy ${this.id}: Player or enemy is dead, stopping attack and switching to Idle`);
+                }
+                return;
+            }
+
+            if (distanceToPlayer <= this.aggroRadius && !this.isAggroed) {
+                this.isAggroed = true;
+                this.isAttacking = false;
+                this.physicsController.stopAllMovement();
+                console.log(`Enemy ${this.id}: Aggroed on player at distance ${distanceToPlayer.toFixed(2)}`);
+            } else if (distanceToPlayer > this.aggroRadius && this.isAggroed) {
+                this.isAggroed = false;
+                this.isAttacking = false;
+                this.physicsController.stopAllMovement();
+                this.startWandering();
+                console.log(`Enemy ${this.id}: Lost aggro, resuming wander`);
+            }
+
+            if (this.isAggroed) {
+                const hasLOS = this.hasLineOfSightToPlayer(playerMesh);
+
+                if (distanceToPlayer <= this.attackRange && hasLOS) {
+                    this.physicsController.stopAllMovement();
+                    const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
+                    this.physicsController.orientToForwardDirection(directionToPlayer);
+                    if (!this.isAttacking) {
+                        this.isAttacking = true;
+                        const attackId = "nightmareBolt"; // Will generalize later
+                        const animation = this.attackSystem.getAttackAnimation(attackId);
+                        if (animation) {
+                            this.animationManager.playAnimation(animation, 1.0, undefined, undefined, true);
+                            console.log(`Enemy ${this.id}: In attack range (${distanceToPlayer.toFixed(2)}) with LOS, playing ${animation}`);
+                        } else {
+                            console.warn(`Enemy ${this.id}: No animation found for attack ${attackId}`);
+                        }
+                    }
+                } else {
+                    if (this.isAttacking) {
+                        this.isAttacking = false;
+                        this.physicsController.stopAllMovement();
+                        console.log(`Enemy ${this.id}: Stopped attacking, chasing player due to no LOS or out of range`);
+                    }
+                    this.moveTo(playerMesh.position);
+                    this.animationManager.playAnimation(this.config.animations.run);
+                    console.log(`Enemy ${this.id}: Moving to player at distance ${distanceToPlayer.toFixed(2)}, LOS: ${hasLOS}`);
+                }
+            } else {
+                const agentVelocity = this.game.getCrowd()?.getAgentVelocity(this.physicsController.getAgentIndex());
+                if (agentVelocity && agentVelocity.lengthSquared() > 0.01) {
+                    this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, false);
+                } else {
+                    this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+                }
+            }
+        });
+    }
   protected setupHealthBarObserver(): void {
   const nearUpdateInterval = 100; // Update nearby health bars every 100ms
   const farUpdateInterval = 500; // Update distant health bars every 500ms
@@ -660,6 +684,7 @@ export class Enemy implements Hoverable, Targettable {
       this.enemyMesh = null;
     }
     this.animationManager.dispose();
+    this.attackSystem.dispose();
     this.enemySkeleton = null;
     // // // console.log(`Enemy ${this.id}: Disposed`);
   }
@@ -686,175 +711,169 @@ export class Enemy implements Hoverable, Targettable {
   }
 
   public async swapToNPCModel(): Promise<void> {
-    if (this.isTransformed) {
-     // // // // console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
-      return;
-    }
-
-    if (!this.assetManager) {
-      console.error(`Enemy ${this.id}: Cannot swap model: AssetManager is undefined`);
-      return;
-    }
-
-    try {
-      //// // // console.log(`Enemy ${this.id}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
-      const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
-     // // // // console.log(`Enemy ${this.id}: Current position for respawn`, currentPosition);
-      this.onDeath.notifyObservers({ id: this.id, position: currentPosition });
-      const wasWandering = this.isAggroed ? false : true;
-
-      if (this.behaviorObserver) {
-        this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
-        this.behaviorObserver = null;
-        // // // console.log(`Enemy ${this.id}: Removed behavior observer`);
-      }
-
-      if (this.physicsController) {
-        this.physicsController.stopAllMovement();
-        this.physicsController.dispose();
-        this.physicsController = null;
-        // // // console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
-      }
-
-      if (this.targetCircle) {
-        if (this.targetCircle.metadata?.observer) {
-          this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+        if (this.isTransformed) {
+            console.log(`Enemy ${this.id}: Already transformed to NPC, skipping swap`);
+            return;
         }
-        this.targetCircle.dispose();
-        this.targetCircle = null;
-        // // // console.log(`Enemy ${this.id}: Disposed target circle`);
-      }
 
-      if (this.hitboxMesh) {
-        // // // console.log(`Enemy ${this.id}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
-        this.hitboxMesh.dispose();
-        this.hitboxMesh = null;
-      }
-
-      this.disposeHealthBar();
-      // // // console.log(`Enemy ${this.id}: Disposed health bar`);
-
-        // // // console.log(`Enemy ${this.id}: Removed highlight layer from mesh`);
- 
-
-      if (this.enemyMesh) {
-        this.enemyMesh.dispose();
-        this.enemyMesh = null;
-        // // // console.log(`Enemy ${this.id}: Disposed enemy mesh`);
-      }
-
-      this.animationManager.dispose();
-      this.onDeath.clear();
-      this.enemySkeleton = null;
-      // // // console.log(`Enemy ${this.id}: Disposed animation manager and skeleton`);
-
-      const npcAssetContainer = this.assetManager.getAssetContainer(this.config.npcTransformation.model);
-      if (!npcAssetContainer) {
-        console.error(`Enemy ${this.id}: Failed to load npc asset container`);
-        this.position = currentPosition;
-        return;
-      }
-
-      const clones = this.duplicate(npcAssetContainer, currentPosition);
-      this.enemyMesh = clones.rootNodes[0] as Mesh;
-      this.enemySkeleton = clones.skeletons[0];
-      const animationGroups = clones.animationGroups || [];
-      // // // console.log(`Enemy ${this.id}: Loaded plushUnicorn model`);
-
-      this.enemyMesh.position = currentPosition;
-      this.enemyMesh.checkCollisions = true;
-      this.enemyMesh.isPickable = false;
-      this.enemyMesh.scaling = new Vector3(
-        this.config.npcTransformation.scaling.x,
-        this.config.npcTransformation.scaling.y,
-        this.config.npcTransformation.scaling.z
-      );
-
-      this.enemyMesh.getChildMeshes().forEach((mesh) => {
-        mesh.checkCollisions = true;
-        mesh.isPickable = false;
-        if (this.shadowGenerator) {
-          this.shadowGenerator.addShadowCaster(mesh);
+        if (!this.assetManager) {
+            console.error(`Enemy ${this.id}: Cannot swap model: AssetManager is undefined`);
+            return;
         }
-      });
 
-      Tags.EnableFor(this.enemyMesh);
-      Tags.AddTagsTo(this.enemyMesh, `enemyID:${this.id}`);
-      this.enemyMesh.getChildMeshes().forEach((mesh) => {
-        Tags.EnableFor(mesh);
-        Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
-      });
-      // // // console.log(`Enemy ${this.id}: Set up tags for unicorn mesh`);
+        try {
+            console.log(`Enemy ${this.id}: Starting transformation to NPC, isTransformed: ${this.isTransformed}`);
+            const currentPosition = this.enemyMesh ? this.enemyMesh.position.clone() : this.position;
+            this.onDeath.notifyObservers({ id: this.id, position: currentPosition });
+            const wasWandering = this.isAggroed ? false : true;
 
-      this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
-        height: this.config.npcTransformation.hitbox.height,
-        width: this.config.npcTransformation.hitbox.width,
-      }, this.scene);
-      this.hitboxMesh.parent = this.enemyMesh;
-      this.hitboxMesh.position = new Vector3(0, this.config.npcTransformation.hitbox.height / 2, 0);
-      this.hitboxMesh.checkCollisions = false;
-      this.hitboxMesh.isPickable = true;
-      this.hitboxMesh.isVisible = false;
+            if (this.behaviorObserver) {
+                this.scene.onBeforeRenderObservable.remove(this.behaviorObserver);
+                this.behaviorObserver = null;
+                console.log(`Enemy ${this.id}: Removed behavior observer`);
+            }
 
-      const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
-      hitboxMaterial.alpha = 0;
-      this.hitboxMesh.material = hitboxMaterial;
+            if (this.physicsController) {
+                this.physicsController.stopAllMovement();
+                this.physicsController.dispose();
+                this.physicsController = null;
+                console.log(`Enemy ${this.id}: PhysicsController stopped and disposed`);
+            }
 
-      Tags.EnableFor(this.hitboxMesh);
-      Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
-     console.log(`Enemy ${this.id}: NPC hitbox created, height: ${this.config.npcTransformation.hitbox.height}, width: ${this.config.npcTransformation.hitbox.width}`);
+            if (this.targetCircle) {
+                if (this.targetCircle.metadata?.observer) {
+                    this.scene.onBeforeRenderObservable.remove(this.targetCircle.metadata.observer);
+                }
+                this.targetCircle.dispose();
+                this.targetCircle = null;
+                console.log(`Enemy ${this.id}: Disposed target circle`);
+            }
 
-      this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
+            if (this.hitboxMesh) {
+                console.log(`Enemy ${this.id}: Disposing enemy hitbox ${this.hitboxMesh.name}`);
+                this.hitboxMesh.dispose();
+                this.hitboxMesh = null;
+            }
 
-      this.setupPhysics();
-      this.animationManager.initialize(animationGroups);
-      // // // console.log(`Enemy ${this.id}: Initialized physics and animations`);
+            this.disposeHealthBar();
+            console.log(`Enemy ${this.id}: Disposed health bar`);
 
-      this.setupHealthBar(true);
-      // // // // console.log(`Enemy ${this.id}: Set up hidden health bar`);
+            if (this.enemyMesh) {
+                this.enemyMesh.dispose();
+                this.enemyMesh = null;
+                console.log(`Enemy ${this.id}: Disposed enemy mesh`);
+            }
 
-      const hoverable: Hoverable = {
-        getMesh: () => this.hitboxMesh,
-        getScene: () => this.scene,
+            this.animationManager.dispose();
+            this.onDeath.clear();
+            this.enemySkeleton = null;
+            console.log(`Enemy ${this.id}: Disposed animation manager and skeleton`);
 
-      };
-      this.hoverHandler.setupHover(hoverable);
-      // // // // console.log(`Enemy ${this.id}: Set up hover handler`);
+            const npcAssetContainer = this.assetManager.getAssetContainer(this.config.npcTransformation.model);
+            if (!npcAssetContainer) {
+                console.error(`Enemy ${this.id}: Failed to load npc asset container`);
+                this.position = currentPosition;
+                return;
+            }
 
-      if (this.isTargetted) {
-          this.setTargetted(true);
-          // // // // console.log(`Enemy ${this.id}: Reapplied targeting`);
+            const clones = this.duplicate(npcAssetContainer, currentPosition);
+            this.enemyMesh = clones.rootNodes[0] as Mesh;
+            this.enemySkeleton = clones.skeletons[0];
+            const animationGroups = clones.animationGroups || [];
+            console.log(`Enemy ${this.id}: Loaded plushUnicorn model`);
+
+            this.enemyMesh.position = currentPosition;
+            this.enemyMesh.checkCollisions = true;
+            this.enemyMesh.isPickable = false;
+            this.enemyMesh.scaling = new Vector3(
+                this.config.npcTransformation.scaling.x,
+                this.config.npcTransformation.scaling.y,
+                this.config.npcTransformation.scaling.z
+            );
+
+            this.enemyMesh.getChildMeshes().forEach((mesh) => {
+                mesh.checkCollisions = true;
+                mesh.isPickable = false;
+                if (this.shadowGenerator) {
+                    this.shadowGenerator.addShadowCaster(mesh);
+                }
+            });
+
+            Tags.EnableFor(this.enemyMesh);
+            Tags.AddTagsTo(this.enemyMesh, `enemyID:${this.id}`);
+            this.enemyMesh.getChildMeshes().forEach((mesh) => {
+                Tags.EnableFor(mesh);
+                Tags.AddTagsTo(mesh, `enemyID:${this.id}`);
+            });
+            console.log(`Enemy ${this.id}: Set up tags for unicorn mesh`);
+
+            this.hitboxMesh = MeshBuilder.CreateBox(`hitbox_${this.id}`, {
+                height: this.config.npcTransformation.hitbox.height,
+                width: this.config.npcTransformation.hitbox.width,
+            }, this.scene);
+            this.hitboxMesh.parent = this.enemyMesh;
+            this.hitboxMesh.position = new Vector3(0, this.config.npcTransformation.hitbox.height / 2, 0);
+            this.hitboxMesh.checkCollisions = false;
+            this.hitboxMesh.isPickable = true;
+            this.hitboxMesh.isVisible = false;
+
+            const hitboxMaterial = new StandardMaterial(`hitboxMat_${this.id}`, this.scene);
+            hitboxMaterial.alpha = 0;
+            this.hitboxMesh.material = hitboxMaterial;
+
+            Tags.EnableFor(this.hitboxMesh);
+            Tags.AddTagsTo(this.hitboxMesh, `enemyID:${this.id} hitbox`);
+            console.log(`Enemy ${this.id}: NPC hitbox created, height: ${this.config.npcTransformation.hitbox.height}, width: ${this.config.npcTransformation.hitbox.width}`);
+
+            this.shadowGenerator.removeShadowCaster(this.hitboxMesh);
+
+            this.setupPhysics();
+            this.animationManager.initialize(animationGroups);
+            console.log(`Enemy ${this.id}: Initialized physics and animations`);
+
+            this.setupHealthBar(true);
+            console.log(`Enemy ${this.id}: Set up hidden health bar`);
+
+            const hoverable: Hoverable = {
+                getMesh: () => this.hitboxMesh,
+                getScene: () => this.scene,
+            };
+            this.hoverHandler.setupHover(hoverable);
+            console.log(`Enemy ${this.id}: Set up hover handler`);
+
+            if (this.isTargetted) {
+                this.setTargetted(true);
+                console.log(`Enemy ${this.id}: Reapplied targeting`);
+            }
+
+            this.isNPC = true;
+            this.isAggroed = false;
+            this.isAttacking = false;
+            this.isTransformed = true;
+            console.log(`Enemy ${this.id}: Set NPC state`);
+
+            this.physicsController!.stopAllMovement();
+            this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
+            console.log(`Enemy ${this.id}: Set to Idle as NPC`);
+
+            if (wasWandering) {
+                this.physicsController!.startWandering();
+                this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, true);
+                console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
+            }
+
+            if (this.game?.gameManager) {
+                this.game.gameManager.scheduleEnemyRespawn(this.id, currentPosition);
+                console.log(`Enemy ${this.id}: Scheduled respawn in 60 seconds at position`, currentPosition);
+            } else {
+                console.error(`Enemy ${this.id}: Cannot schedule respawn, game or gameManager is undefined`);
+            }
+
+            console.log(`Enemy ${this.id}: Completed transformation to plushUnicorn at position`, currentPosition);
+        } catch (error) {
+            console.error(`Enemy ${this.id}: Failed to swap model to NPC`, error);
         }
-      
-
-      this.isNPC = true;
-      this.isAggroed = false;
-      this.isAttacking = false;
-      this.isTransformed = true;
-      // // // // console.log(`Enemy ${this.id}: Set NPC state`);
-
-      this.physicsController!.stopAllMovement();
-      this.animationManager.playAnimation(this.config.animations.idle, 1.0, undefined, undefined, true);
-       console.log(`Enemy ${this.id}: Set to Idle as NPC`);
-
-      if (wasWandering) {
-        this.physicsController!.startWandering();
-        this.animationManager.playAnimation(this.config.animations.run, 1.0, undefined, undefined, true);
-        console.log(`Enemy ${this.id}: Resumed wandering as NPC`);
-      }
-
-      if (this.game?.gameManager) {
-        this.game.gameManager.scheduleEnemyRespawn(this.id, currentPosition);
-        // // // // console.log(`Enemy ${this.id}: Scheduled respawn in 60 seconds at position`, currentPosition);
-      } else {
-        console.error(`Enemy ${this.id}: Cannot schedule respawn, game or gameManager is undefined`);
-      }
-
-      // // // // console.log(`Enemy ${this.id}: Completed transformation to plushUnicorn at position`, currentPosition);
-    } catch (error) {
-      console.error(`Enemy ${this.id}: Failed to swap model to NPC`, error);
     }
-  }
 
 
 public getType(): string {
@@ -908,7 +927,7 @@ protected hasLineOfSightToPlayer(playerMesh: Mesh): boolean {
 }
 
 
-public isCastingNightmareBolt(): boolean {
-  return this.animationManager.getAnimationByName("NightmareBolt")?.isPlaying || false;
-}
+public isCastingAttack(): boolean {
+    return this.config.attacks.some(attack => this.animationManager.getAnimationByName(attack.animation)?.isPlaying || false);
+  }
 }

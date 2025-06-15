@@ -1,84 +1,138 @@
 {
-  "enemyTypes": [
-    {
-      "type": "perdu",
-      "model": "enemy",
-      "maxHP": 100,
-      "aggroRadius": 20,
-      "attackRange": 10,
-      "xpReward": 200,
-      "speed": 3.0,
-      "isBoss": false,
-      "animations": { "idle": "Idle", "run": "Run", "attack": "NightmareBolt" },
-      "physics": {
-        "colliderType": "capsule",
-        "colliderParams": {
-          "auto": false,
-          "pointA": { "x": 0, "y": 0.2, "z": 0 },
-          "pointB": { "x": 0, "y": 1.75, "z": 0 },
-          "radius": 0.2
+    "enemyTypes": [
+        {
+            "type": "perdu",
+            "model": "enemy",
+            "maxHP": 100,
+            "aggroRadius": 20,
+            "attackRange": 10,
+            "xpReward": 200,
+            "speed": 3.0,
+            "isBoss": false,
+            "animations": { "idle": "Idle", "run": "Run", "attack": "NightmareBolt" },
+            "physics": {
+                "colliderType": "capsule",
+                "colliderParams": {
+                    "auto": false,
+                    "pointA": { "x": 0, "y": 0.2, "z": 0 },
+                    "pointB": { "x": 0, "y": 1.75, "z": 0 },
+                    "radius": 0.2
+                },
+                "physicsProps": { "mass": 75, "friction": 1, "restitution": 0 }
+            },
+            "npcTransformation": {
+                "model": "plushUnicorn",
+                "scaling": { "x": 3, "y": 3, "z": 3 },
+                "hitbox": { "height": 0.4, "width": 0.3 }
+            },
+            "attackBolt": {
+                "diameter": 0.5,
+                "particleMinSize": 0.7,
+                "particleMaxSize": 1.5,
+                "spawnOffsetScale": 1.0,
+                "explosionMinSize": 0.4,
+                "explosionMaxSize": 1.2,
+                "explosionEmitBoxScale": 0.2
+            },
+            "hitbox": {
+                "height": 2,
+                "width": 1,
+                "yPosition": 1
+            },
+            "attacks": [
+                {
+                    "id": "nightmareBolt",
+                    "type": "ranged",
+                    "animation": "NightmareBolt",
+                    "damageMin": 5,
+                    "damageMax": 10,
+                    "range": 10,
+                    "cooldown": 2000,
+                    "triggerFrame": 75,
+                    "projectile": {
+                        "diameter": 0.5,
+                        "speed": 20,
+                        "spawnOffsetScale": 1.0,
+                        "particleMinSize": 0.7,
+                        "particleMaxSize": 1.5,
+                        "explosionMinSize": 0.4,
+                        "explosionMaxSize": 1.2,
+                        "explosionEmitBoxScale": 0.2
+                    },
+                    "soundEffects": {
+                        "cast": "./sfx/castBolt2.wav",
+                        "launch": "./sfx/boltLaunch.wav",
+                        "ambient": "./sfx/bolt.wav"
+                    }
+                }
+            ]
         },
-        "physicsProps": { "mass": 75, "friction": 1, "restitution": 0 }
-      },
-      "npcTransformation": {
-        "model": "plushUnicorn",
-        "scaling": { "x": 3, "y": 3, "z": 3 },
-        "hitbox": { "height": 0.4, "width": 0.3 }
-      },
-      "attackBolt": {
-        "diameter": 0.5,
-        "particleMinSize": 0.7,
-        "particleMaxSize": 1.5,
-        "spawnOffsetScale": 1.0,
-        "explosionMinSize": 0.4,
-        "explosionMaxSize": 1.2,
-        "explosionEmitBoxScale": 0.2
-      },
-      "hitbox": {
-        "height": 2,
-        "width": 1,
-        "yPosition": 1
-      }
-    },
-    {
-      "type": "boss",
-      "model": "boss",
-      "maxHP": 250,
-      "aggroRadius": 25,
-      "attackRange": 15,
-      "xpReward": 500,
-      "speed": 2.0,
-      "isBoss": true,
-      "animations": { "idle": "Idle", "run": "Run", "attack": "NightmareBolt" },
-      "physics": {
-        "colliderType": "capsule",
-        "colliderParams": {
-          "auto": false,
-          "pointA": { "x": 0, "y": 0.4, "z": 0 },
-          "pointB": { "x": 0, "y": 3.5, "z": 0 },
-          "radius": 0.4
-        },
-        "physicsProps": { "mass": 150, "friction": 1, "restitution": 0 }
-      },
-      "npcTransformation": {
-        "model": "plushUnicorn",
-        "scaling": { "x": 3, "y": 3, "z": 3 },
-        "hitbox": { "height": 0.4, "width": 0.3 }
-      },
-      "attackBolt": {
-        "diameter": 1.0,
-        "particleMinSize": 1.4,
-        "particleMaxSize": 3.0,
-        "spawnOffsetScale": 1.5,
-        "explosionMinSize": 0.8,
-        "explosionMaxSize": 2.4,
-        "explosionEmitBoxScale": 0.4
-      },
-      "hitbox": {
-        "height": 4,
-        "width": 2,
-        "yPosition": 3
-      }
-    }
-  ]
+        {
+            "type": "boss",
+            "model": "boss",
+            "maxHP": 250,
+            "aggroRadius": 25,
+            "attackRange": 15,
+            "xpReward": 500,
+            "speed": 2.0,
+            "isBoss": true,
+            "animations": { "idle": "Idle", "run": "Run", "attack": "NightmareBolt" },
+            "physics": {
+                "colliderType": "capsule",
+                "colliderParams": {
+                    "auto": false,
+                    "pointA": { "x": 0, "y": 0.4, "z": 0 },
+                    "pointB": { "x": 0, "y": 3.5, "z": 0 },
+                    "radius": 0.4
+                },
+                "physicsProps": { "mass": 150, "friction": 1, "restitution": 0 }
+            },
+            "npcTransformation": {
+                "model": "plushUnicorn",
+                "scaling": { "x": 3, "y": 3, "z": 3 },
+                "hitbox": { "height": 0.4, "width": 0.3 }
+            },
+            "attackBolt": {
+                "diameter": 1.0,
+                "particleMinSize": 1.4,
+                "particleMaxSize": 3.0,
+                "spawnOffsetScale": 1.5,
+                "explosionMinSize": 0.8,
+                "explosionMaxSize": 2.4,
+                "explosionEmitBoxScale": 0.4
+            },
+            "hitbox": {
+                "height": 4,
+                "width": 2,
+                "yPosition": 3
+            },
+            "attacks": [
+                {
+                    "id": "nightmareBolt",
+                    "type": "ranged",
+                    "animation": "NightmareBolt",
+                    "damageMin": 8,
+                    "damageMax": 15,
+                    "range": 15,
+                    "cooldown": 0,
+                    "triggerFrame": 75,
+                    "projectile": {
+                        "diameter": 1.0,
+                        "speed": 20,
+                        "spawnOffsetScale": 1.5,
+                        "particleMinSize": 1.4,
+                        "particleMaxSize": 3.0,
+                        "explosionMinSize": 0.8,
+                        "explosionMaxSize": 2.4,
+                        "explosionEmitBoxScale": 0.4
+                    },
+                    "soundEffects": {
+                        "cast": "./sfx/castBolt2.wav",
+                        "launch": "./sfx/boltLaunch.wav",
+                        "ambient": "./sfx/bolt.wav"
+                    }
+                }
+            ]
+        }
+    ]
 }
