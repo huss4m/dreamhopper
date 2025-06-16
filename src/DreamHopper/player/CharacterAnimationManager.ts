@@ -113,7 +113,7 @@ export class CharacterAnimationManager {
         anim.onAnimationEndObservable.add(() => {
           // console.log(`[${ability.id}] Animation ${ability.name} ended`);
           this.onAbilityAnimationState.notifyObservers({ abilityId: ability.id, abilityName: ability.name, isPlaying: false });
-          if (this.attackSystem) this.attackSystem.stopSounds();
+          if (this.attackSystem) this.attackSystem.stopSounds(ability.id);
         });
       }
     });
@@ -138,7 +138,7 @@ export class CharacterAnimationManager {
         this.blendFrameId = null;
         this.isBlending = false;
       }
-      if (this.attackSystem) this.attackSystem.stopSounds();
+      if (this.attackSystem) this.attackSystem.stopSounds(ability.id);
       if (this.getAnimationByName("Idle")) {
         this.getAnimationByName("Idle")!.play(true);
         this.currentAnimationName = "Idle";
@@ -347,6 +347,7 @@ export class CharacterAnimationManager {
         progress: 0,
         triggerFrame: ability!.animation.triggerFrame,
       });
+
       const observer = this.scene.onBeforeRenderObservable.add(() => {
         if (newAnim.isPlaying && newAnim.animatables.length > 0) {
           const animatable = newAnim.animatables[0];
@@ -362,6 +363,8 @@ export class CharacterAnimationManager {
             progress,
             triggerFrame: ability!.animation.triggerFrame,
           });
+
+          
           if (ability!.animation.triggerFrame && progress >= ability!.animation.triggerFrame && !this.abilitySpawned) {
             if (this.attackSystem) {
               this.attackSystem.triggerAbility(ability!.id);
@@ -396,54 +399,54 @@ export class CharacterAnimationManager {
     }
   }
 
-  public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
-    let currentWeight = 1;
-    let newWeight = 0;
+  // public* animationBlending(toAnim: AnimationGroup, fromAnim: AnimationGroup): Generator<any, void, unknown> {
+  //   let currentWeight = 1;
+  //   let newWeight = 0;
 
-    toAnim.play(true);
+  //   toAnim.play(true);
 
-    while (newWeight < 1) {
-      newWeight += 0.01;
-      currentWeight -= 0.01;
-      toAnim.setWeightForAllAnimatables(newWeight);
-      fromAnim.setWeightForAllAnimatables(currentWeight);
-      yield;
-    }
+  //   while (newWeight < 1) {
+  //     newWeight += 0.01;
+  //     currentWeight -= 0.01;
+  //     toAnim.setWeightForAllAnimatables(newWeight);
+  //     fromAnim.setWeightForAllAnimatables(currentWeight);
+  //     yield;
+  //   }
 
-    toAnim.setWeightForAllAnimatables(1);
-    fromAnim.setWeightForAllAnimatables(0);
-  }
+  //   toAnim.setWeightForAllAnimatables(1);
+  //   fromAnim.setWeightForAllAnimatables(0);
+  // }
 
-  public blendAnimations(fromAnimName: string, toAnimName: string): void {
-    const fromAnim = this.getAnimationByName(fromAnimName);
-    const toAnim = this.getAnimationByName(toAnimName);
+  // public blendAnimations(fromAnimName: string, toAnimName: string): void {
+  //   const fromAnim = this.getAnimationByName(fromAnimName);
+  //   const toAnim = this.getAnimationByName(toAnimName);
 
-    if (!fromAnim || !toAnim) {
-      console.warn("One or both animations not found for blending");
-      return;
-    }
+  //   if (!fromAnim || !toAnim) {
+  //     console.warn("One or both animations not found for blending");
+  //     return;
+  //   }
 
-    if (this.isBlending) {
-      console.warn("Already blending animations");
-      return;
-    }
+  //   if (this.isBlending) {
+  //     console.warn("Already blending animations");
+  //     return;
+  //   }
 
-    this.isBlending = true;
-    this.currentAnimationName = toAnimName;
+  //   this.isBlending = true;
+  //   this.currentAnimationName = toAnimName;
 
-    const blendGen = this.animationBlending(toAnim, fromAnim);
+  //   const blendGen = this.animationBlending(toAnim, fromAnim);
 
-    const blendStep = () => {
-      if (!blendGen.next().done) {
-        this.blendFrameId = requestAnimationFrame(blendStep);
-      } else {
-        this.isBlending = false;
-        this.blendFrameId = null;
-      }
-    };
+  //   const blendStep = () => {
+  //     if (!blendGen.next().done) {
+  //       this.blendFrameId = requestAnimationFrame(blendStep);
+  //     } else {
+  //       this.isBlending = false;
+  //       this.blendFrameId = null;
+  //     }
+  //   };
 
-    this.blendFrameId = requestAnimationFrame(blendStep);
-  }
+  //   this.blendFrameId = requestAnimationFrame(blendStep);
+  // }
 
   public isCharacterJumping(): boolean {
     return this.isJumping;

@@ -250,9 +250,9 @@ public castAbility(abilityId: string, animationData?: AnimationData): void {
     }
     if (animationData) {
       const { name, speed = 1 } = animationData;
-      this.animationManager.playAnimation(name, speed, undefined, undefined, undefined, abilityId); // NEW: Pass abilityId
+      this.animationManager.playAnimation(name, speed, undefined, undefined, false, abilityId); // NEW: Pass abilityId
     } else {
-      this.animationManager.playAnimation(ability.animation.name, undefined, undefined, undefined, undefined, abilityId); // NEW: Pass abilityId
+      this.animationManager.playAnimation(ability.animation.name, undefined, undefined, undefined, false, abilityId); // NEW: Pass abilityId
     }
   }
 }
@@ -429,6 +429,11 @@ private setupParticleSystem(): void {
       leftHand: createParticleSystem("mixamorig:LeftHand", `${abilityId}_leftHandParticles`),
     };
   });
+}
+
+
+public getCharacterAttackSystem() {
+  return this.attackSystem;
 }
 
  public dispose(): void {

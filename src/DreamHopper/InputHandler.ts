@@ -9,7 +9,7 @@ import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
 import { CharacterAnimationManager } from "./player/CharacterAnimationManager";
 
-interface KeyAction {
+export interface KeyAction {
   key: string;
   action: string | { [key: string]: any };
   continuous?: boolean;
@@ -129,7 +129,8 @@ export class InputHandler {
   return playingAbilityId;
 }
 
-  private executeAction(binding: KeyAction): void {
+  public executeAction(binding: KeyAction): void {
+    console.time(`InputHandler:executeAction:${binding.action}`);
     const character = this.characterController.getCharacter();
     const action = binding.action as string;
     const abilityId = this.getAbilityIdFromAction(action);
@@ -137,8 +138,12 @@ export class InputHandler {
     if (abilityId) {
       const ability = this.animationManager.getAbility(abilityId);
       if (ability && !this.animationManager.isAnimationPlaying(ability.animation.name)) {
+        console.log(`InputHandler: Casting ability ${abilityId}`);
         this.characterController.castAbility(abilityId);
+      } else {
+        console.log(`InputHandler: Cannot cast ${abilityId}, ability null or animation playing`);
       }
+      console.timeEnd(`InputHandler:executeAction:${binding.action}`);
       return;
     }
 
@@ -214,6 +219,7 @@ export class InputHandler {
         this.keyBindings = this.layouts[this.currentLayout].bindings;
         break;
     }
+    console.timeEnd(`InputHandler:executeAction:${binding.action}`);
   }
 
   public update(): void {

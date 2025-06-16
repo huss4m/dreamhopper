@@ -99,43 +99,45 @@ export class CharacterAttackSystem {
   }
 
   public triggerAbility(abilityId: string): void {
-    const ability = this.abilities.get(abilityId);
-    if (!ability) {
-      console.warn(`Ability ${abilityId} not found`);
-      return;
-    }
+  const startTime = performance.now();
+  console.log(`[Attack] Start: ${startTime - startTime}ms, Ability: ${abilityId}`);
+  const ability = this.abilities.get(abilityId);
+  if (!ability) {
+    console.warn(`Ability ${abilityId} not found`);
+    return;
+  }
 
-    const strategy = this.strategies.get(ability.type);
-    if (!strategy) {
-      console.warn(`No strategy found for ability type: ${ability.type}`);
-      return;
-    }
+  const strategy = this.strategies.get(ability.type);
+  if (!strategy) {
+    console.warn(`No strategy found for ability type: ${ability.type}`);
+    return;
+  }
 
-    const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
-    if (!characterMesh || !this.characterController.physicsController) {
-      console.warn(`Cannot trigger ${abilityId}; missing character mesh or physics controller`);
-      return;
-    }
+  const characterMesh = this.characterController.characterMeshLoader.getCharacterMesh();
+  if (!characterMesh || !this.characterController.physicsController) {
+    console.warn(`Cannot trigger ${abilityId}; missing character mesh or physics controller`);
+    return;
+  }
 
-    const player = this.characterController.getPlayer(); // New: Get player for strategy
+  const player = this.characterController.getPlayer();
 
-    if (ability.type === AbilityType.Healing) {
-      strategy.execute(
-        ability,
-        characterMesh,
-        Vector3.Zero(),
-        { mesh: characterMesh, id: "player" },
-        this.scene,
-        this.characterController,
-        this.targetingSystem,
-        this.gameManager,
-        this.sounds,
-        this.createParticleSystem.bind(this),
-        player // New: Pass player
-      );
-      return;
-    }
-
+  const strategyStartTime = performance.now();
+  console.log(`[Attack] Strategy Start: ${strategyStartTime - startTime}ms, Ability: ${abilityId}`);
+  if (ability.type === AbilityType.Healing) {
+    strategy.execute(
+      ability,
+      characterMesh,
+      Vector3.Zero(),
+      { mesh: characterMesh, id: "player" },
+      this.scene,
+      this.characterController,
+      this.targetingSystem,
+      this.gameManager,
+      this.sounds,
+      this.createParticleSystem.bind(this),
+      player
+    );
+  } else {
     const forward = this.characterController.physicsController.forwardDirection.scale(-1).normalize();
     const currentTarget = this.targetingSystem?.getCurrentTarget();
     if (!currentTarget || !currentTarget.getMesh()) {
@@ -165,18 +167,39 @@ export class CharacterAttackSystem {
       this.gameManager,
       this.sounds,
       this.createParticleSystem.bind(this),
-      player // New: Pass player
+      player
     );
   }
+  console.log(`[Attack] Strategy End: ${performance.now() - strategyStartTime}ms, Ability: ${abilityId}`);
+  console.log(`[Attack] Completed: ${performance.now() - startTime}ms, Ability: ${abilityId}`);
+}
 
-  public stopSounds(): void {
-    this.sounds.forEach((sound) => sound.stop());
-    this.sounds.forEach((sound, key) => {
-      if (key.endsWith("_cast_active")) {
-        sound.dispose();
-        this.sounds.delete(key);
-      }
-    });
+  public stopSounds(abilityId?: string): void {
+    const startTime = performance.now();
+    if (abilityId) {
+      // Stop only sounds for the specific ability
+      this.sounds.forEach((sound, key) => {
+        if (key.startsWith(`${abilityId}_`) && sound.isPlaying) {
+          sound.stop();
+          if (key.endsWith("_cast_active")) {
+            sound.dispose();
+            this.sounds.delete(key);
+          }
+        }
+      });
+    } else {
+      // Fallback: stop all playing sounds
+      this.sounds.forEach((sound, key) => {
+        if (sound.isPlaying) {
+          sound.stop();
+          if (key.endsWith("_cast_active")) {
+            sound.dispose();
+            this.sounds.delete(key);
+          }
+        }
+      });
+    }
+    console.log(`CharacterAttackSystem: stopSounds for ${abilityId || 'all'} took ${performance.now() - startTime}ms`);
   }
 
   public dispose(): void {

@@ -83,14 +83,21 @@ export class Game {
       this.soundManager.dispose();
     });
 
- 
 
+
+window.addEventListener("cast-ability", (e: Event) => {
+  const abilityId = (e as CustomEvent).detail.abilityId;
+  this.characterController?.castAbility(abilityId);
+  console.log(`castAbility called for ${abilityId} via custom event`);
+});
 
 /*
      
-Inspector.Show(this.scene, {
+ Inspector.Show(this.scene, {
     embedMode: true, 
   });
+
+
 */ 
 
   }
@@ -687,8 +694,8 @@ lodMid.leaves!.isVisible = false;
 lodLow.leaves!.isVisible = false;
 
   // Disable fog & shadows for LOD2
-  lodLow.trunk!.receiveShadows = false;
-  lodLow.leaves!.receiveShadows = false;
+  // lodLow.trunk!.receiveShadows = false;
+  // lodLow.leaves!.receiveShadows = false;
   if (lodLow.leaves!.material instanceof PBRMaterial) {
     const mat = lodLow.leaves!.material as PBRMaterial;
     mat.fogEnabled = false;
@@ -1147,6 +1154,15 @@ public observeEnemyDeath(enemy: Enemy): void {
     return this.characterController.animationManager;
   }
 
+  // NEW: Getter for InputHandler
+  public getInputHandler(): InputHandler | null {
+    if (!this.inputHandler) {
+      console.warn("Game: InputHandler not initialized");
+      return null;
+    }
+    return this.inputHandler;
+  }
+
   public getDreamCrystalManager() {
     if (!this.gameManager) {
       console.warn("Game: GameManager not initialized yet");
@@ -1303,6 +1319,10 @@ public observeEnemyDeath(enemy: Enemy): void {
     return this.initializationPromise;
   }
 
+
+  public getCharacterAttackSystem() {
+    return this.characterController!.getCharacterAttackSystem();
+  }
 
   private async initializeNavigation(): Promise<void> {
     try {
