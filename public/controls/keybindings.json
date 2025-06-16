@@ -72,11 +72,7 @@
           "continuous": false,
           "action": "castHeal"
         },
-        "4": {
-          "key": "4",
-          "continuous": false,
-          "action": "castFireball"
-        },
+       
         "W": {
           "key": "W",
           "continuous": false,

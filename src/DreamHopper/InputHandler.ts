@@ -4,6 +4,7 @@ import {
   KeyboardEventTypes,
   PointerEventTypes,
   Vector3,
+  Observable,
 } from "@babylonjs/core";
 import { CharacterController } from "./player/CharacterController";
 import { Game } from "./Game";
@@ -37,6 +38,7 @@ export class InputHandler {
   private keyBindings: { [key: string]: KeyAction } = {};
   private isInitialized = false;
   private lastDialogTargetId: string | null = null;
+private onAbilityTriggered = new Observable<{ abilityId: string }>();
 
   constructor(
     private scene: Scene,
@@ -140,6 +142,10 @@ export class InputHandler {
       if (ability && !this.animationManager.isAnimationPlaying(ability.animation.name)) {
         console.log(`InputHandler: Casting ability ${abilityId}`);
         this.characterController.castAbility(abilityId);
+
+        // NEW: Emit ability triggered event
+      this.onAbilityTriggered.notifyObservers({ abilityId });
+      console.log(`InputHandler: Notified ability triggered: ${abilityId}`);
       } else {
         console.log(`InputHandler: Cannot cast ${abilityId}, ability null or animation playing`);
       }
@@ -337,5 +343,33 @@ export class InputHandler {
     if (this.isRightMouseDown) {
       this.characterController.syncRotationWithCamera();
     }
+  }
+
+
+  // NEW: Method to get the current key bindings
+  public getKeyBindings(): { [key: string]: KeyAction } {
+    return this.keyBindings;
+  }
+
+  // NEW: Method to get the current layout
+  public getCurrentLayout(): string {
+    return this.currentLayout;
+  }
+
+  // NEW: Method to get the key for a specific action
+  public getKeyForAction(action: string): string | null {
+    for (const binding of Object.values(this.keyBindings)) {
+      if (binding.action === action) {
+        return binding.key;
+      }
+    }
+    return null;
+  }
+
+
+
+  // NEW: Getter for the ability triggered observable
+  public getOnAbilityTriggered(): Observable<{ abilityId: string }> {
+    return this.onAbilityTriggered;
   }
 }
