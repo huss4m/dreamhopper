@@ -79,4 +79,5 @@ export interface AbilityConfig {
   sounds?: { [key: string]: AbilitySoundConfig };
   particles?: { [key: string]: ParticleSystemConfig };
   projectile?: ProjectileConfig;
+  icon?: string; // New: Optional icon path
 }

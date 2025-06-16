@@ -4,6 +4,7 @@
     "name": "Dreambolt",
     "type": "RangedProjectile",
     "manaCost": 10,
+    "icon": "./icons/dreambolt.png",
     "animation": {
       "name": "Dreambolt",
       "speed": 1.0,
@@ -128,6 +129,7 @@
     "name": "Fireball",
     "type": "RangedProjectile",
     "manaCost": 15,
+    "icon": "./icons/fire.png",
     "animation": {
       "name": "Dreambolt",
       "speed": 1,
@@ -252,6 +254,7 @@
     "name": "Heal",
     "type": "Healing",
     "manaCost": 20,
+    "icon": "./icons/heal.png",
     "animation": {
       "name": "Dreambolt",
       "speed": 1.0,

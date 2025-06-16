@@ -9,7 +9,7 @@
       @click="onAbilityClick($event, ability, true)"
       tabindex="-1"
     >
-      <div class="icon-placeholder" :style="{ background: getIconPlaceholder(ability.id) }"></div>
+      <div class="icon-placeholder" :style="{ backgroundImage: `url(${ability.icon})` }"></div>
       <span class="mana-cost">{{ ability.manaCost }}</span>
       <span class="ability-name">{{ ability.name }}</span>
     </button>
@@ -22,6 +22,7 @@ import type { PropType } from "vue";
 import type { CharacterController } from "@/DreamHopper/player/CharacterController";
 import type { CharacterAnimationManager } from "@/DreamHopper/player/CharacterAnimationManager";
 import { nextTick } from "vue";
+
 interface Vector3Config {
   x: number;
   y: number;
@@ -103,6 +104,7 @@ interface AbilityConfig {
   name: string;
   type: string;
   manaCost: number;
+  icon?: string; // New: Added icon property
   animation: AnimationConfig;
   damage?: DamageConfig;
   healing?: HealingConfig;
@@ -153,75 +155,37 @@ export default defineComponent({
         console.log("ActionBar: Abilities loaded successfully", abilities.value);
       } catch (error) {
         console.error("ActionBar: Failed to load abilities:", error);
-        // Fallback abilities
-        abilities.value = [
-          {
-            id: "dreambolt",
-            name: "Dreambolt",
-            type: "RangedProjectile",
-            manaCost: 10,
-            animation: { name: "Dreambolt", speed: 1.0, loop: false, triggerFrame: 0.5 },
-            damage: { min: 20, max: 40, levelScaling: 5 },
-            sounds: {},
-          },
-          {
-            id: "fireball",
-            name: "Fireball",
-            type: "RangedProjectile",
-            manaCost: 15,
-            animation: { name: "Dreambolt", speed: 1.0, loop: false, triggerFrame: 0.5 },
-            damage: { min: 25, max: 45, levelScaling: 6 },
-            sounds: {},
-          },
-          {
-            id: "heal",
-            name: "Heal",
-            type: "Healing",
-            manaCost: 20,
-            animation: { name: "Dreambolt", speed: 1.0, loop: false, triggerFrame: 0.5 },
-            healing: { baseHeal: 20, levelScaling: 5 },
-            sounds: {},
-          },
-        ];
+        // No fallback; log error and keep empty abilities array
       }
-    };
-
-    // Placeholder for spell icons
-    const getIconPlaceholder = (abilityId: string) => {
-      const placeholders: Record<string, string> = {
-        dreambolt: "linear-gradient(45deg, #4b0082, #8a2be2)",
-        fireball: "linear-gradient(45deg, #ff4500, #ffa500)",
-        heal: "linear-gradient(45deg, #32cd32, #98fb98)",
-      };
-      return placeholders[abilityId] || "linear-gradient(45deg, #333, #666)";
     };
 
     // Called when a button is clicked
     const onAbilityClick = (event: MouseEvent, ability: AbilityConfig, execute: boolean) => {
-  event.preventDefault();
-  if (execute) {
-    if (props.canvas && document.activeElement !== props.canvas) {
-      props.canvas.focus();
-      console.log("ActionBar: Canvas refocused");
-    }
-    if (!props.characterController || !props.characterAnimationManager) {
-      console.warn("ActionBar: Missing controller or animation manager");
-      return;
-    }
-    if (props.characterAnimationManager.isAnimationPlaying(ability.animation.name)) {
-      console.log(`ActionBar: Cannot trigger ${ability.name}; animation is playing`);
-      return;
-    }
-    console.log(`ActionBar: Attempting to cast ${ability.name} (ID: ${ability.id})`);
+      event.preventDefault();
+      if (execute) {
+        if (props.canvas && document.activeElement !== props.canvas) {
+          props.canvas.focus();
+          console.log("ActionBar: Canvas refocused");
+        }
+        if (!props.characterController || !props.characterAnimationManager) {
+          console.warn("ActionBar: Missing controller or animation manager");
+          return;
+        }
+        if (props.characterAnimationManager.isAnimationPlaying(ability.animation.name)) {
+          console.log(`ActionBar: Cannot trigger ${ability.name}; animation is playing`);
+          return;
+        }
+        console.log(`ActionBar: Attempting to cast ${ability.name} (ID: ${ability.id})`);
 
-    //props.characterController.castAbility(ability.id);
-    window.dispatchEvent(new CustomEvent("cast-ability", {
-    detail: { abilityId: ability.id }
-    }));
+        window.dispatchEvent(
+          new CustomEvent("cast-ability", {
+            detail: { abilityId: ability.id },
+          })
+        );
 
-    console.log(`ActionBar: Triggered ${ability.name}`);
-  }
-};
+        console.log(`ActionBar: Triggered ${ability.name}`);
+      }
+    };
 
     onMounted(() => {
       console.log("ActionBar: Mounted, characterController:", props.characterController);
@@ -229,13 +193,13 @@ export default defineComponent({
       loadAbilities();
     });
 
-    return { abilities, getIconPlaceholder, onAbilityClick };
+    return { abilities, onAbilityClick };
   },
 });
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap");
 
 .action-bar {
   display: flex;
@@ -255,7 +219,7 @@ export default defineComponent({
     inset 0 0 10px rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   z-index: 1000;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .action-button {
@@ -286,8 +250,9 @@ export default defineComponent({
   width: 100%;
   height: 100%;
   border-radius: 6px;
-  background-size: cover;
+  background-size: contain; /* Changed to 'contain' to ensure the entire icon is visible */
   background-position: center;
+  background-repeat: no-repeat; /* Prevent tiling */
   box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.2);
   filter: brightness(1.1);
 }
@@ -304,7 +269,7 @@ export default defineComponent({
   border-radius: 4px;
   text-shadow: 0 0 2px #000;
   box-shadow: 0 0 4px rgba(125, 211, 252, 0.5);
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 .ability-name {
@@ -317,7 +282,7 @@ export default defineComponent({
   background: rgba(30, 20, 10, 0.9);
   padding: 2px 6px;
   border-radius: 6px;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   text-shadow: 0 0 3px rgba(255, 230, 102, 0.7);
   white-space: nowrap;
   pointer-events: none;
