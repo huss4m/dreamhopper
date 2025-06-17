@@ -1,9 +1,9 @@
 import { Scene, Mesh, Vector3, ParticleSystem, Sound } from "@babylonjs/core";
-import { CharacterController } from "./CharacterController";
-import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager";
+import { CharacterController } from "../CharacterController";
+import { TargetingSystem } from "../../TargetingSystem";
+import { GameManager } from "../../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
-import { Player } from "./Player"; // New: Import Player
+import { Player } from "../Player"; // New: Import Player
 
 export interface AbilityStrategy {
   execute(

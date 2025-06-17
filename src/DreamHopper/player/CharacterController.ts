@@ -23,9 +23,9 @@ import { Player } from "./Player";
 import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
 import { Targettable } from "../Targettable";
-import { CharacterAttackSystem } from "./CharacterAttackSystem";
+import { CharacterAttackSystem } from "./abilities/CharacterAttackSystem";
 
-import { AbilityConfig, AbilitySoundConfig } from "./AbilityConfig";
+import { AbilityConfig, AbilitySoundConfig } from "./abilities/AbilityConfig";
 import { AssetsManager } from "@babylonjs/core";
 
 interface AnimationData {

@@ -1,9 +1,9 @@
 import { AnimationGroup, Scene, Sound, Observable, Vector3, AssetsManager } from "@babylonjs/core";
 import { CharacterController } from "./CharacterController";
-import { CharacterAttackSystem } from "./CharacterAttackSystem";
+import { CharacterAttackSystem } from "./abilities/CharacterAttackSystem";
 import { TargetingSystem } from "../TargetingSystem";
 import { GameManager } from "../GameManager";
-import { AbilityConfig, AbilityType } from "./AbilityConfig";
+import { AbilityConfig, AbilityType } from "./abilities/AbilityConfig";
 
 export class CharacterAnimationManager {
   private animationGroups: AnimationGroup[] = [];

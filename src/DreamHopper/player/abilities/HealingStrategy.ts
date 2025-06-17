@@ -1,10 +1,10 @@
 import { Scene, Mesh, ParticleSystem, Sound, Vector3, Color4, Texture } from "@babylonjs/core";
-import { CharacterController } from "./CharacterController";
-import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager";
+import { CharacterController } from "../CharacterController";
+import { TargetingSystem } from "../../TargetingSystem";
+import { GameManager } from "../../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
 import { AbilityStrategy } from "./AbilityStrategy";
-import { Player } from "./Player";
+import { Player } from "../Player";
 
 export class HealingStrategy implements AbilityStrategy {
   public execute(

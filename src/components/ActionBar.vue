@@ -24,7 +24,7 @@ import { defineComponent, ref, onMounted, onUnmounted, PropType, VNodeRef, Compo
 import type { CharacterController } from "@/DreamHopper/player/CharacterController";
 import type { CharacterAnimationManager } from "@/DreamHopper/player/CharacterAnimationManager";
 import type { InputHandler } from "@/DreamHopper/InputHandler";
-import { Observer } from "@babylonjs/core";
+import { Observer, KeyboardEventTypes } from "@babylonjs/core";
 
 interface Vector3Config {
   x: number;
@@ -153,6 +153,7 @@ export default defineComponent({
     const abilities = ref<AbilityConfig[]>([]);
     const buttonRefs = ref<{ [key: string]: HTMLElement | null }>({});
     let abilityTriggerObserver: Observer<{ abilityId: string }> | null = null;
+    let keyboardObserver: Observer<any> | null = null;
 
     const setButtonRef = (abilityId: string) => {
       return (el: Element | ComponentPublicInstance | null) => {
@@ -238,15 +239,44 @@ export default defineComponent({
     };
 
     const setupObserver = () => {
-      if (props.inputHandler && !abilityTriggerObserver) {
-        console.log("ActionBar: Setting up ability trigger observer");
-        abilityTriggerObserver = props.inputHandler.getOnAbilityTriggered().add(({ abilityId }) => {
-          console.log(`ActionBar: Received ability trigger for ${abilityId}`);
-          triggerFlareAnimation(abilityId);
-        });
-        console.log("ActionBar: Subscribed to onAbilityTriggered", abilityTriggerObserver);
-      } else if (!props.inputHandler) {
-        console.warn("ActionBar: inputHandler is null, cannot subscribe to onAbilityTriggered");
+      if (props.inputHandler) {
+        // Existing ability trigger observer
+        if (!abilityTriggerObserver) {
+          console.log("ActionBar: Setting up ability trigger observer");
+          abilityTriggerObserver = props.inputHandler.getOnAbilityTriggered().add(({ abilityId }) => {
+            console.log(`ActionBar: Received ability trigger for ${abilityId}`);
+            triggerFlareAnimation(abilityId);
+          });
+          console.log("ActionBar: Subscribed to onAbilityTriggered", abilityTriggerObserver);
+        }
+
+        // New keyboard observer for key presses
+        if (!keyboardObserver && props.inputHandler.getIsInitialized()) {
+          console.log("ActionBar: Setting up keyboard observer");
+          keyboardObserver = props.inputHandler['scene'].onKeyboardObservable.add((kbInfo) => {
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+              let key = kbInfo.event.key.toUpperCase();
+              // Map AZERTY special characters (from InputHandler logic)
+              if (key === "&") key = "1";
+              if (key === "É" || key === "é") key = "2";
+              if (key === "\"") key = "3";
+              if (key === "'") key = "4";
+
+              // Check if key corresponds to an ability
+              for (const ability of abilities.value) {
+                const action = `cast${ability.id.charAt(0).toUpperCase() + ability.id.slice(1)}`;
+                const boundKey = props.inputHandler!.getKeyForAction(action);
+                if (boundKey && boundKey.toUpperCase() === key) {
+                  console.log(`ActionBar: Key ${key} pressed for ability ${ability.id}`);
+                  triggerFlareAnimation(ability.id);
+                }
+              }
+            }
+          });
+          console.log("ActionBar: Subscribed to keyboard observable", keyboardObserver);
+        }
+      } else {
+        console.warn("ActionBar: inputHandler is null, cannot subscribe to observers");
       }
     };
 
@@ -258,7 +288,7 @@ export default defineComponent({
 
     watch(() => props.inputHandler, (newInputHandler) => {
       console.log("ActionBar: inputHandler changed", newInputHandler);
-      if (newInputHandler && !abilityTriggerObserver) {
+      if (newInputHandler && (!abilityTriggerObserver || !keyboardObserver)) {
         setupObserver();
       }
     });
@@ -267,6 +297,10 @@ export default defineComponent({
       if (abilityTriggerObserver && props.inputHandler) {
         props.inputHandler.getOnAbilityTriggered().remove(abilityTriggerObserver);
         console.log("ActionBar: Unsubscribed from onAbilityTriggered");
+      }
+      if (keyboardObserver && props.inputHandler) {
+        props.inputHandler['scene'].onKeyboardObservable.remove(keyboardObserver);
+        console.log("ActionBar: Unsubscribed from keyboard observable");
       }
     });
 
@@ -324,7 +358,7 @@ export default defineComponent({
 }
 
 .action-button.flare {
-  animation: flare 0.3s ease-out;
+  animation: flare 0.1s ease-out;
 }
 
 .action-button.flare::before {

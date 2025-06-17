@@ -1,10 +1,10 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, Color4, ParticleSystem, Vector3, Sound, Tags } from "@babylonjs/core";
-import { CharacterController } from "./CharacterController";
-import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager";
+import { CharacterController } from "../CharacterController";
+import { TargetingSystem } from "../../TargetingSystem";
+import { GameManager } from "../../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
 import { AbilityStrategy } from "./AbilityStrategy";
-import { Player } from "./Player"; // New: Import Player
+import { Player } from "../Player"; // New: Import Player
 
 export class RangedProjectileStrategy implements AbilityStrategy {
   execute(

@@ -1,7 +1,7 @@
 import { Scene, Mesh, ParticleSystem, Texture, Sound, Tags, Vector3, Color4 } from "@babylonjs/core";
-import { CharacterController } from "./CharacterController";
-import { TargetingSystem } from "../TargetingSystem";
-import { GameManager } from "../GameManager";
+import { CharacterController } from "../CharacterController";
+import { TargetingSystem } from "../../TargetingSystem";
+import { GameManager } from "../../GameManager";
 import { AbilityConfig, AbilityType, ParticleSystemConfig } from "./AbilityConfig";
 import { AssetsManager } from "@babylonjs/core";
 import { AbilityStrategy } from "./AbilityStrategy";
