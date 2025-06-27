@@ -57,7 +57,7 @@ export class PhysicsController {
     if (!this.mesh) return;
 
     const { colliderType, colliderParams, physicsProps } = this.config;
-    const auto = colliderParams.auto !== false; // Default to true
+    const auto = colliderParams.auto !== false; // Default = true
 
     // Enforce mass: 0 for mesh colliders (static)
     const mass = colliderType === ColliderType.Mesh ? 0 : physicsProps.mass;

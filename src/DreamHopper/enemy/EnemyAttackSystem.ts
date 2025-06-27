@@ -9,20 +9,20 @@ export class EnemyAttackSystem {
     protected game: Game;
     protected attacks: AttackConfig[];
     protected lastAttackTimes: Map<string, number> = new Map();
-    protected castSound: Sound | null = null; // New
-    protected launchSound: Sound | null = null; // New
-    protected ambientSound: Sound | null = null; // New
+    protected castSound: Sound | null = null; 
+    protected launchSound: Sound | null = null; 
+    protected ambientSound: Sound | null = null; 
 
     constructor(scene: Scene, enemy: Enemy, game: Game) {
         this.scene = scene;
         this.enemy = enemy;
         this.game = game;
         this.attacks = enemy.config.attacks;
-        this.preloadSounds(); // New
+        this.preloadSounds(); 
         // console.log(`EnemyAttackSystem for Enemy ${enemy.getId()}: Initialized with ${this.attacks.length} attacks`);
     }
 
-    // New: Preload sounds for attacks
+    
     protected preloadSounds(): void {
         const enemyMesh = this.enemy.getEnemyMesh();
         if (!enemyMesh) {
@@ -75,7 +75,7 @@ export class EnemyAttackSystem {
         }
     }
 
-    // New: Get animation for an attack
+
     public getAttackAnimation(attackId: string): string | null {
         const attack = this.attacks.find(a => a.id === attackId);
         return attack?.animation || null;

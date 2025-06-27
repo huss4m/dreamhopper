@@ -17,7 +17,7 @@ interface AbilityAnimationState {
   abilityName: string;
   isPlaying: boolean;
   progress?: number;
-  triggerFrame?: number; // NEW: Added to receive triggerFrame from observable
+  triggerFrame?: number; // receive triggerFrame from observable
 }
 
 export default defineComponent({

@@ -30,7 +30,7 @@ export class DreamHopperLoadingScreen implements ILoadingScreen {
     loadingDiv.style.color = "#ffffff";
     loadingDiv.style.fontFamily = "'Cinzel', serif";
 
-    // Add Google Fonts for Cinzel
+    // Add Google Fonts 
     const fontLink = document.createElement("link");
     fontLink.href = "https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap";
     fontLink.rel = "stylesheet";
@@ -38,7 +38,7 @@ export class DreamHopperLoadingScreen implements ILoadingScreen {
 
     // Add spinning crystal image
     const crystalImg = document.createElement("img");
-    crystalImg.src = "https://i.imgur.com/9qok91i.png"; // Placeholder crystal image
+    crystalImg.src = "https://i.imgur.com/9qok91i.png"; 
     crystalImg.style.width = "100px";
     crystalImg.style.height = "100px";
     crystalImg.style.animation = "spin 4s linear infinite, pulse 2s ease-in-out infinite";
@@ -89,7 +89,7 @@ export class DreamHopperLoadingScreen implements ILoadingScreen {
     loadingDiv.appendChild(progressText);
     this.progressText = progressText;
 
-    // Add CSS animations
+   
     const style = document.createElement("style");
     style.textContent = `
       @keyframes spin {

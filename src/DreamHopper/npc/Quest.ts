@@ -18,9 +18,9 @@ export class Quest {
     public inProgressText: string,
     public completedText: string,
     public requiredCrystals: number,
-    public requiredEnemies: number, // New: For KILL quests
+    public requiredEnemies: number, 
     public turnedInText: string,
-    public type: QuestType, // New: Quest type
+    public type: QuestType, 
     public nextQuestId: string | null, 
     public requiredEnemyType?: "Enemy" | "BossEnemy",
     public xpReward = 0

@@ -169,7 +169,7 @@ export default defineComponent({
   border-radius: 16px;
   overflow: hidden;
   box-shadow: inset 0 0 9px #000, 0 0 5px #c2a9f088;
-  margin-bottom: 8px; /* New: Space for mana bar */
+  margin-bottom: 8px; 
 }
 
 .hp-bar-inner {

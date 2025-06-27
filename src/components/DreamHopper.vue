@@ -52,7 +52,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, reactive, watch } from "vue";
 import { Game } from "@/DreamHopper/Game";
-import { InputHandler } from "@/DreamHopper/InputHandler"; // NEW: Import InputHandler
+import { InputHandler } from "@/DreamHopper/InputHandler"; 
 import CastingBar from "./CastingBar.vue";
 import DeathScreen from "./DeathScreen.vue";
 import QuestDialog from "./QuestDialog.vue";

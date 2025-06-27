@@ -3,7 +3,7 @@ import { CharacterController } from "../CharacterController";
 import { TargetingSystem } from "../../TargetingSystem";
 import { GameManager } from "../../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
-import { Player } from "../Player"; // New: Import Player
+import { Player } from "../Player"; 
 
 export interface AbilityStrategy {
   execute(
@@ -17,6 +17,6 @@ export interface AbilityStrategy {
     gameManager?: GameManager,
     sounds?: Map<string, Sound>,
     createParticleSystem?: (config: ParticleSystemConfig, emitter: Mesh | Vector3, name: string) => ParticleSystem,
-    player?: Player // New: Add player parameter
+    player?: Player
   ): void;
 }

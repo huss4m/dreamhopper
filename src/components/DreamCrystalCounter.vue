@@ -67,10 +67,10 @@
   <style scoped>
 .crystal-counter {
   position: fixed;
-  top: 30px; /* Match Luma bar */
+  top: 30px;
   left: 50%;
   transform: translateX(-50%); /* Center horizontally only */
-  padding: 12px 30px; /* Match Luma bar’s vertical padding */
+  padding: 12px 30px; 
   background: linear-gradient(135deg, #5e3a9c 0%, #b56bf7 100%);
   border-radius: 15px;
   border: 2px solid #e0c4ff;

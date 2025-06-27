@@ -143,7 +143,7 @@ private onAbilityTriggered = new Observable<{ abilityId: string }>();
         console.log(`InputHandler: Casting ability ${abilityId}`);
         this.characterController.castAbility(abilityId);
 
-        // NEW: Emit ability triggered event
+        
       this.onAbilityTriggered.notifyObservers({ abilityId });
       console.log(`InputHandler: Notified ability triggered: ${abilityId}`);
       } else {
@@ -346,17 +346,17 @@ private onAbilityTriggered = new Observable<{ abilityId: string }>();
   }
 
 
-  // NEW: Method to get the current key bindings
+
   public getKeyBindings(): { [key: string]: KeyAction } {
     return this.keyBindings;
   }
 
-  // NEW: Method to get the current layout
+
   public getCurrentLayout(): string {
     return this.currentLayout;
   }
 
-  // NEW: Method to get the key for a specific action
+
   public getKeyForAction(action: string): string | null {
     for (const binding of Object.values(this.keyBindings)) {
       if (binding.action === action) {
@@ -368,7 +368,7 @@ private onAbilityTriggered = new Observable<{ abilityId: string }>();
 
 
 
-  // NEW: Getter for the ability triggered observable
+
   public getOnAbilityTriggered(): Observable<{ abilityId: string }> {
     return this.onAbilityTriggered;
   }

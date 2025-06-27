@@ -25,7 +25,7 @@ export class DreamCrystalManager {
     this.shadowGenerator = shadowGenerator;
     this.playerMesh = playerMesh;
     this.glowLayer = new GlowLayer("crystalGlow", scene);
-    this.glowLayer.intensity = 0.7; // Adjust glow strength
+    this.glowLayer.intensity = 0.7; 
   }
 
   public initialize(positions: Vector3[], collectedStates: boolean[] = []): void {

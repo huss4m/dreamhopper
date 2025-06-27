@@ -114,7 +114,7 @@ export class Player {
 
   public reset(): void {
     this.currentHP = this.maxHP;
-    this.mana = this.maxMana; // New: Reset mana
+    this.mana = this.maxMana; 
     this.isDead = false;
     this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
     this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana });
@@ -345,20 +345,20 @@ export class Player {
     while (this.currentXP >= this.maxXP) {
       this.level++;
       this.hpRegenRate = this.baseRegenRate + (this.level - 1) * 2;
-      this.manaRegenRate = this.baseManaRegenRate + (this.level - 1) * 0.5; // New: Scale mana regen
+      this.manaRegenRate = this.baseManaRegenRate + (this.level - 1) * 0.5; 
       const oldMaxHP = this.maxHP;
-      const oldMaxMana = this.maxMana; // New: Store old max mana
+      const oldMaxMana = this.maxMana; 
       this.maxHP = 100 + (this.level - 1) * 20;
-      this.maxMana = 100 + (this.level - 1) * 20; // New: Scale max mana
+      this.maxMana = 100 + (this.level - 1) * 20; 
       const hpPercentage = this.currentHP / oldMaxHP;
-      const manaPercentage = this.mana / oldMaxMana; // New: Maintain mana percentage
+      const manaPercentage = this.mana / oldMaxMana; 
       this.currentHP = Math.round(this.maxHP * hpPercentage);
-      this.mana = Math.round(this.maxMana * manaPercentage); // New: Adjust mana
+      this.mana = Math.round(this.maxMana * manaPercentage); 
       this.currentXP -= this.maxXP;
       this.maxXP = Math.round(1000 * Math.pow(1.5, this.level - 1));
       this.onLevelChanged.notifyObservers({ level: this.level });
       this.onHPChanged.notifyObservers({ currentHP: this.currentHP, maxHP: this.maxHP });
-      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana change
+      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana });
       this.onXPChanged.notifyObservers({ currentXP: this.currentXP, maxXP: this.maxXP });
       this.triggerLevelUpEffect();
     }
@@ -373,7 +373,7 @@ export class Player {
   public deductMana(amount: number): boolean {
     if (this.mana >= amount) {
       this.mana -= amount;
-      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); // New: Notify mana change
+      this.onManaChanged.notifyObservers({ currentMana: this.mana, maxMana: this.maxMana }); 
       return true;
     }
     return false;
@@ -443,7 +443,7 @@ export class Player {
     this.onHPChanged.clear();
     this.onXPChanged.clear();
     this.onLevelChanged.clear();
-    this.onManaChanged.clear(); // New: Clear mana observable
+    this.onManaChanged.clear(); 
     this.inventory.forEach(item => item.dispose());
     this.inventory = [];
     this.activeQuests = [];

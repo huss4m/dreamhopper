@@ -41,7 +41,6 @@ export class CharacterController {
   private itemAttachmentManager: ItemAttachmentManager;
   public characterMeshLoader: CharacterMeshLoader;
   private player: Player;
-  // MODIFIED: Change particleSystems type to map ability IDs to rightHand/leftHand particle systems
 private particleSystems: { [key: string]: { rightHand: ParticleSystem; leftHand: ParticleSystem } } | null = null;
   characterMesh!: Mesh | null;
   private attackSystem: CharacterAttackSystem;
@@ -81,8 +80,8 @@ private async loadAbilities(): Promise<void> {
   await this.loadAbilities();
   await this.characterMeshLoader.loadCharacter(new Vector3(5, 5, 0));
 
-  this.attackSystem.initialize(); // NEW: Kept initialization
-  this.animationManager.setAttackSystem(this.attackSystem); // NEW: Kept setting attack system
+  this.attackSystem.initialize(); 
+  this.animationManager.setAttackSystem(this.attackSystem);
 
   const characterMesh = this.characterMeshLoader.getCharacterMesh();
   this.characterMesh = characterMesh;
@@ -217,9 +216,9 @@ private async loadAbilities(): Promise<void> {
 
 //   public castDreambolt(animationData?: AnimationData): void {
 //   if (!this.player.isPlayerDead()) {
-//     const ability = this.abilities.get("dreambolt"); // NEW: Get Dreambolt ability from abilities Map
+//     const ability = this.abilities.get("dreambolt"); 
 //     if (!ability) {
-//       console.warn("Dreambolt ability not found"); // NEW: Warn if ability is missing
+//       console.warn("Dreambolt ability not found"); 
 //       return;
 //     }
    
@@ -227,20 +226,20 @@ private async loadAbilities(): Promise<void> {
     
 //     if (animationData) {
 //       const { name, speed = 1 } = animationData;
-//       this.animationManager.playAnimation(name, speed); // NEW: Keep support for animationData override
+//       this.animationManager.playAnimation(name, speed); 
 //     } else {
-//       this.animationManager.playAnimation(ability.animation.name); // NEW: Use JSON-defined animation name
+//       this.animationManager.playAnimation(ability.animation.name); 
 //     }
 //   }
 // }
 
 // public cancelDreambolt(): void {
-//   this.animationManager.cancelAbility("dreambolt"); // NEW: Call cancelAbility to stop Dreambolt animation
+//   this.animationManager.cancelAbility("dreambolt"); 
 // }
 
 
 
-// NEW: Generic method to cast any ability
+
 public castAbility(abilityId: string, animationData?: AnimationData): void {
   if (!this.player.isPlayerDead()) {
     const ability = this.abilities.get(abilityId);
@@ -250,14 +249,14 @@ public castAbility(abilityId: string, animationData?: AnimationData): void {
     }
     if (animationData) {
       const { name, speed = 1 } = animationData;
-      this.animationManager.playAnimation(name, speed, undefined, undefined, false, abilityId); // NEW: Pass abilityId
+      this.animationManager.playAnimation(name, speed, undefined, undefined, false, abilityId); 
     } else {
-      this.animationManager.playAnimation(ability.animation.name, undefined, undefined, undefined, false, abilityId); // NEW: Pass abilityId
+      this.animationManager.playAnimation(ability.animation.name, undefined, undefined, undefined, false, abilityId); 
     }
   }
 }
 
-// NEW: Generic method to cancel any ability
+
 public cancelAbility(abilityId: string): void {
   this.animationManager.cancelAbility(abilityId);
   if (this.activeAbilityId === abilityId) {
@@ -366,7 +365,7 @@ public cancelAbility(abilityId: string): void {
   return false;
 }
 
-  // MODIFIED: Update setupParticleSystem to create particle systems for all abilities
+
 private setupParticleSystem(): void {
   const skeleton = this.characterMeshLoader.getSkeleton();
   const characterMesh = this.characterMeshLoader.getCharacterMesh();

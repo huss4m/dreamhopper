@@ -194,7 +194,7 @@ export class CharacterAnimationManager {
         return;
       }
 
-      // New: Check mana availability without deducting
+      
       const player = this.characterController.getPlayer();
       if (player.getMana() < ability.manaCost!) {
         // console.log(`Cannot play ${name}: insufficient mana (${player.getMana()}/${ability.manaCost})`);
@@ -207,7 +207,7 @@ export class CharacterAnimationManager {
         return;
       }
 
-      // MODIFIED: Skip target validation for Healing abilities
+   
       if (ability.type !== AbilityType.Healing) {
         const target = this.targetingSystem?.getCurrentTarget();
         if (!target || !target.getMesh()) {

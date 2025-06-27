@@ -38,7 +38,7 @@ export class Enemy implements Hoverable, Targettable {
   protected isNPC = false;
   protected maxHP : number;
   protected currentHP : number;
-  public onDeath: Observable<{ id: string; position: Vector3 }> = new Observable(); // New: Observable for KILL quest
+  public onDeath: Observable<{ id: string; position: Vector3 }> = new Observable(); 
 
   isTargetted = false;
   isTransformed = false;
@@ -61,7 +61,7 @@ export class Enemy implements Hoverable, Targettable {
   type: string;
   //protected hasTriggeredThisCycle: Map<string, boolean> = new Map();
 
-  //protected lastAttackProgress: Map<string, number> = new Map(); // New: Track last progress per attack animation
+  //protected lastAttackProgress: Map<string, number> = new Map(); 
 
   constructor(
     protected scene: Scene,
@@ -104,7 +104,7 @@ export class Enemy implements Hoverable, Targettable {
     this.setupBehavior();
   }
 
-  // New: Method to trigger attacks
+  // Method to trigger attacks
     public performAttack(attackId: string): void {
         this.attackSystem.performAttack(attackId);
     }
@@ -124,7 +124,7 @@ export class Enemy implements Hoverable, Targettable {
     }
   });
 
-  // [NEW] Subscribe to animation end events to reset isAttacking
+  // Subscribe to animation end events to reset isAttacking
   this.config.attacks.forEach(attack => {
     const anim = this.animationManager.getAnimationByName(attack.animation);
     if (anim) {
@@ -195,7 +195,7 @@ export class Enemy implements Hoverable, Targettable {
         this.physicsController.stopAllMovement();
         const directionToPlayer = playerMesh.position.subtract(this.enemyMesh.position);
         this.physicsController.orientToForwardDirection(directionToPlayer);
-        // [MODIFIED] Check if not attacking or no attack animation is playing
+        // Check if not attacking or no attack animation is playing
         if (!this.isAttacking || !this.config.attacks.some(a => this.animationManager.isAnimationPlaying(a.animation))) {
           this.isAttacking = true;
           const validAttack = this.config.attacks.find(attack => 
@@ -247,8 +247,8 @@ export class Enemy implements Hoverable, Targettable {
   });
 }
   protected setupHealthBarObserver(): void {
-  const nearUpdateInterval = 100; // Update nearby health bars every 100ms
-  const farUpdateInterval = 500; // Update distant health bars every 500ms
+  const nearUpdateInterval = 100; // Update nearby health bars 
+  const farUpdateInterval = 500; // Update distant health bars
   const visibilityDistance = 30; // Show health bars within 30 units
   const hitboxHeight = 2.0;
   const yOffset = 0.2;
@@ -272,7 +272,7 @@ export class Enemy implements Hoverable, Targettable {
     const isRelevant = this.isTargetted || this.isAggroed || distanceToPlayer <= visibilityDistance;
     this.healthBarUpdateInterval = distanceToPlayer > visibilityDistance ? farUpdateInterval : nearUpdateInterval;
 
-    // Hide health bar if not relevant
+  
     if (!isRelevant) {
       this.healthBarPlane.isVisible = false;
       return;
@@ -284,7 +284,7 @@ export class Enemy implements Hoverable, Targettable {
     }
     this.lastHealthBarUpdateTime = currentTime;
 
-    // Update position with floating effect
+    // Update position 
     this.healthBarPlane.isVisible = true;
     this.hitboxMesh.computeWorldMatrix(true);
     const hitboxTopY = this.hitboxMesh.absolutePosition.y + (hitboxHeight / 2);
@@ -353,7 +353,7 @@ export class Enemy implements Hoverable, Targettable {
 
     // Initialize update timing
     this.lastHealthBarUpdateTime = 0;
-    this.healthBarUpdateInterval = 100; // Default to 100ms, adjusted in observer
+    this.healthBarUpdateInterval = 100; // Default to 100ms
 
     this.setupHealthBarObserver();
     this.updateHealthBar();

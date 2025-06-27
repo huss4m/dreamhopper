@@ -23,8 +23,8 @@ export class NPC implements Hoverable, Targettable {
   private questMarker: Sprite | null = null;
   private questMarkerObserver: any | null = null;
   private dialogToggleObserver: any | null = null;
-  private quests: Quest[] = []; // Changed: Array for questline
-  private currentQuestIndex = 0; // New: Tracks active quest
+  private quests: Quest[] = []; 
+  private currentQuestIndex = 0;
 
   isTargetted = false;
 
@@ -42,7 +42,7 @@ export class NPC implements Hoverable, Targettable {
     position: Vector3,
     targetingSystem: TargetingSystem,
     private game: Game,
-    initialQuest: Quest | null = null // Changed: Renamed for clarity
+    initialQuest: Quest | null = null 
   ) {
     this.id = uuidv4();
     this.assetManager = assetManager;
@@ -420,7 +420,7 @@ export class NPC implements Hoverable, Targettable {
   }
 
   public getQuest(): Quest | null {
-    return this.quests[this.currentQuestIndex] || null; // Changed: Return quest at current index
+    return this.quests[this.currentQuestIndex] || null;
   }
 
    public setQuest(quest: Quest): void {
@@ -524,8 +524,8 @@ export class NPC implements Hoverable, Targettable {
 
     this.animationManager.dispose();
     this.npcSkeleton = null;
-    this.quests = []; // Changed: Clear questline
-    this.currentQuestIndex = 0; // New: Reset index
+    this.quests = []; 
+    this.currentQuestIndex = 0; 
     // console.log(`NPC ${this.id}: Disposed, questline cleared`);
   }
 

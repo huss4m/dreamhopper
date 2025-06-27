@@ -4,7 +4,7 @@ import { TargetingSystem } from "../../TargetingSystem";
 import { GameManager } from "../../GameManager";
 import { AbilityConfig, ParticleSystemConfig } from "./AbilityConfig";
 import { AbilityStrategy } from "./AbilityStrategy";
-import { Player } from "../Player"; // New: Import Player
+import { Player } from "../Player"; 
 
 export class RangedProjectileStrategy implements AbilityStrategy {
   execute(
@@ -18,7 +18,7 @@ export class RangedProjectileStrategy implements AbilityStrategy {
     gameManager?: GameManager,
     sounds?: Map<string, Sound>,
     createParticleSystem?: (config: ParticleSystemConfig, emitter: Mesh | Vector3, name: string) => ParticleSystem,
-    player?: Player // New: Add player parameter
+    player?: Player 
   ): void {
     if (!ability.projectile) {
       console.warn(`No projectile config for ability ${ability.id}`);
@@ -30,7 +30,7 @@ export class RangedProjectileStrategy implements AbilityStrategy {
 
     const sphere = MeshBuilder.CreateSphere(`${ability.id}_projectile`, { diameter: ability.projectile.diameter }, scene);
 
-    // New: Deduct mana when sphere is created
+
     if (ability.manaCost && player && !player.deductMana(ability.manaCost)) {
       console.warn(`Cannot spawn ${ability.id} projectile; insufficient mana (required: ${ability.manaCost}, available: ${player.getMana()})`);
       sphere.dispose();

@@ -72,7 +72,7 @@ export class CharacterPhysicsController {
     const aggregate = this.physicsController.getPhysicsAggregate()!;
     
        if(!this.isJumping) {
-          const jumpImpulse = new Vector3(0, 5000, 0); // Adjust for desired jump height
+          const jumpImpulse = new Vector3(0, 5000, 0); 
           const impulsePoint = this.mesh.position; // Apply at character's center
           // Apply impulse to preserve horizontal momentum
           aggregate.body.applyImpulse(jumpImpulse, impulsePoint);

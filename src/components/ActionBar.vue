@@ -250,7 +250,7 @@ export default defineComponent({
           console.log("ActionBar: Subscribed to onAbilityTriggered", abilityTriggerObserver);
         }
 
-        // New keyboard observer for key presses
+        //keyboard observer for key presses
         if (!keyboardObserver && props.inputHandler.getIsInitialized()) {
           console.log("ActionBar: Setting up keyboard observer");
           keyboardObserver = props.inputHandler['scene'].onKeyboardObservable.add((kbInfo) => {

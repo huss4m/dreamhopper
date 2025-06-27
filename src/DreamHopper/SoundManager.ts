@@ -65,7 +65,7 @@ private async playAmbiance(): Promise<void> {
 
     );
     this.ambianceSound.loop = true;
-    this.ambianceSound.volume = 0.32; // ajustable indépendamment
+    this.ambianceSound.volume = 0.32; 
   
     this.ambianceSound.play();
     //// console.log("SoundManager: Ambiance sound started");

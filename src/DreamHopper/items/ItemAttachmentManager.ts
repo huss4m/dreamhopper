@@ -19,9 +19,9 @@ export class ItemAttachmentManager {
     boneName: string,
     skeleton: Skeleton,
     characterMesh: Mesh,
-    positionOffset: Vector3 = item.getPositionOffset(), // Default to item's stored offset
-    rotationOffset: Vector3 = item.getRotationOffset(), // Default to item's stored offset
-    scaling: Vector3 = item.getScaling() // Default to item's stored scaling
+    positionOffset: Vector3 = item.getPositionOffset(), 
+    rotationOffset: Vector3 = item.getRotationOffset(), 
+    scaling: Vector3 = item.getScaling()
   ): Promise<void> {
     try {
       const boundMesh = characterMesh.getChildMeshes().find(m => m.skeleton === skeleton) || characterMesh;
@@ -35,11 +35,11 @@ export class ItemAttachmentManager {
       }
   
       const itemMesh = item.getParentMesh();
-      item.setScaling(scaling); // Apply scaling (or keep stored scaling)
+      item.setScaling(scaling); 
       itemMesh.attachToBone(bone, boundMesh);
   
-      item.setPositionOffset(positionOffset); // Apply position offset (or keep stored offset)
-      item.setRotationOffset(rotationOffset); // Apply rotation offset (or keep stored offset)
+      item.setPositionOffset(positionOffset); 
+      item.setRotationOffset(rotationOffset); 
     } catch (err) {
       console.error(`Error attaching item '${item.getName()}' to bone '${boneName}':`, err);
     }
@@ -49,7 +49,7 @@ export class ItemAttachmentManager {
     try {
       const itemMesh = item.getParentMesh();
       
-      // Detach the item mesh from the bone
+    
       itemMesh.detachFromBone();
   
    

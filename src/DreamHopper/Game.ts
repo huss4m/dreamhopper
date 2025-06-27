@@ -306,36 +306,36 @@ private async loadGroundMesh(): Promise<void> {
   });
 }
 
-  private createMistParticles(): void {
-    this.mistSystem = new ParticleSystem("mist", 200, this.scene);
-    this.mistSystem.particleTexture = new Texture("./Mist2.png", this.scene);
-    this.mistSystem.emitter = new Vector3(0, 1, 0);
-    this.mistSystem.minEmitBox = new Vector3(-50, 0.5, -50);
-    this.mistSystem.maxEmitBox = new Vector3(50, 2, 50);
-    this.mistSystem.minSize = 25.0;
-    this.mistSystem.maxSize = 25.0;
-    this.mistSystem.minLifeTime = 5.0;
-    this.mistSystem.maxLifeTime = 10.0;
-    this.mistSystem.emitRate = 2;
-    this.mistSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-    this.mistSystem.gravity = new Vector3(1, 0.8, 0);
-    this.mistSystem.direction1 = new Vector3(-0.1, 0.05, -0.1);
-    this.mistSystem.direction2 = new Vector3(0.1, 0.05, 0.1);
-    this.mistSystem.minAngularSpeed = 0;
-    this.mistSystem.maxAngularSpeed = 0.1;
-    this.mistSystem.minEmitPower = 0.1;
-    this.mistSystem.maxEmitPower = 0.3;
-    this.mistSystem.addColorGradient(0, new Color4(1.0, 0.75, 0.85, 0.0));
-    this.mistSystem.addColorGradient(0.3, new Color4(1.0, 0.75, 0.85, 0.18));
-    this.mistSystem.addColorGradient(0.7, new Color4(1.0, 0.85, 0.9, 0.1));
-    this.mistSystem.addColorGradient(1.0, new Color4(1.0, 0.75, 0.85, 0.0));
-    this.mistSystem.start();
+private createMistParticles(): void {
+  this.mistSystem = new ParticleSystem("mist", 200, this.scene);
+  this.mistSystem.particleTexture = new Texture("./Mist2.png", this.scene);
+  this.mistSystem.emitter = new Vector3(0, 1, 0);
+  this.mistSystem.minEmitBox = new Vector3(-50, 0.5, -50);
+  this.mistSystem.maxEmitBox = new Vector3(50, 2, 50);
+  this.mistSystem.minSize = 25.0;
+  this.mistSystem.maxSize = 25.0;
+  this.mistSystem.minLifeTime = 5.0;
+  this.mistSystem.maxLifeTime = 10.0;
+  this.mistSystem.emitRate = 2;
+  this.mistSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
+  this.mistSystem.gravity = new Vector3(1, 0.8, 0);
+  this.mistSystem.direction1 = new Vector3(-0.1, 0.05, -0.1);
+  this.mistSystem.direction2 = new Vector3(0.1, 0.05, 0.1);
+  this.mistSystem.minAngularSpeed = 0;
+  this.mistSystem.maxAngularSpeed = 0.1;
+  this.mistSystem.minEmitPower = 0.1;
+  this.mistSystem.maxEmitPower = 0.3;
+  this.mistSystem.addColorGradient(0, new Color4(1.0, 0.75, 0.85, 0.0));
+  this.mistSystem.addColorGradient(0.3, new Color4(1.0, 0.75, 0.85, 0.18));
+  this.mistSystem.addColorGradient(0.7, new Color4(1.0, 0.85, 0.9, 0.1));
+  this.mistSystem.addColorGradient(1.0, new Color4(1.0, 0.75, 0.85, 0.0));
+  this.mistSystem.start();
   }
 
-  private createSparkleParticles(): void {
+private createSparkleParticles(): void {
   const sparkleSystem = new ParticleSystem("sparkles", 500, this.scene);
-  sparkleSystem.particleTexture = new Texture("./flare_1.png", this.scene); // texture à adapter
-  sparkleSystem.emitter = new Vector3(0, 2, 0); // centré mais diffusé large
+  sparkleSystem.particleTexture = new Texture("./flare_1.png", this.scene); 
+  sparkleSystem.emitter = new Vector3(0, 2, 0);
   sparkleSystem.minEmitBox = new Vector3(-50, 1, -50);
   sparkleSystem.maxEmitBox = new Vector3(50, 5, 50);
 
@@ -346,7 +346,7 @@ private async loadGroundMesh(): Promise<void> {
   sparkleSystem.emitRate = 250;
 
   sparkleSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-  sparkleSystem.gravity = new Vector3(0, -0.1, 0); // très légère chute
+  sparkleSystem.gravity = new Vector3(0, -0.1, 0); 
   sparkleSystem.direction1 = new Vector3(-0.05, 0.05, -0.05);
   sparkleSystem.direction2 = new Vector3(0.05, 0.05, 0.05);
 
@@ -367,9 +367,9 @@ private async loadGroundMesh(): Promise<void> {
 
 private createDreamTrailParticles(): void {
   const trailSystem = new ParticleSystem("dreamTrail", 400, this.scene);
-  trailSystem.particleTexture = new Texture("./lines_8.png", this.scene); // texture floue ou filet lumineux
+  trailSystem.particleTexture = new Texture("./lines_8.png", this.scene); 
 
-  trailSystem.emitter = new Vector3(0, 12, 0); // haut de la scène
+  trailSystem.emitter = new Vector3(0, 12, 0); 
   trailSystem.minEmitBox = new Vector3(-60, 0, -60);
   trailSystem.maxEmitBox = new Vector3(60, 0, 60);
 
@@ -381,7 +381,7 @@ private createDreamTrailParticles(): void {
 
   trailSystem.direction1 = new Vector3(-0.1, -0.2, -0.1);
   trailSystem.direction2 = new Vector3(0.1, -0.3, 0.1);
-  trailSystem.gravity = new Vector3(0, -0.1, 0); // lente descente
+  trailSystem.gravity = new Vector3(0, -0.1, 0); 
 
   trailSystem.minEmitPower = 0.05;
   trailSystem.maxEmitPower = 0.1;
@@ -399,7 +399,7 @@ private createDreamTrailParticles(): void {
 }
 private createFireflyParticles(): void {
   const fireflySystem = new ParticleSystem("fireflies", 100, this.scene);
-  fireflySystem.particleTexture = new Texture("./Flare.png", this.scene); // petit point lumineux flou
+  fireflySystem.particleTexture = new Texture("./Flare.png", this.scene); 
 
   fireflySystem.emitter = new Vector3(0, 2, 0);
   fireflySystem.minEmitBox = new Vector3(-40, 0, -40);
@@ -417,7 +417,7 @@ private createFireflyParticles(): void {
   fireflySystem.maxEmitPower = 0.5;
   fireflySystem.minAngularSpeed = 0.0;
   fireflySystem.maxAngularSpeed = 0.2;
-  fireflySystem.gravity = new Vector3(0, 0, 0); // pas de chute
+  fireflySystem.gravity = new Vector3(0, 0, 0); 
 
   fireflySystem.blendMode = ParticleSystem.BLENDMODE_ADD;
 
@@ -831,32 +831,28 @@ lodLow.leaves!.isVisible = false;
 
 private async createBoundaryWalls(): Promise<void> {
     try {
-      const wallHeight = 100; // Tall enough to prevent jumping over
-      const wallThickness = 1; // Thin to minimize impact
-      const bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }; // Match forest bounds
-      const wallLength = 400; // Matches ground width/height (maxX - minX or maxZ - minZ)
+      const wallHeight = 100; 
+      const wallThickness = 1; 
+      const bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
+      const wallLength = 400; 
 
       // Create four walls (north, south, east, west)
-      const walls = [
-        // North wall (z = maxZ)
+      const walls = [    
         {
           name: "northWall",
           position: new Vector3(0, wallHeight / 2, bounds.maxZ),
           dimensions: { width: wallLength, height: wallHeight, depth: wallThickness },
         },
-        // South wall (z = minZ)
         {
           name: "southWall",
           position: new Vector3(0, wallHeight / 2, bounds.minZ),
           dimensions: { width: wallLength, height: wallHeight, depth: wallThickness },
         },
-        // East wall (x = maxX)
         {
           name: "eastWall",
           position: new Vector3(bounds.maxX, wallHeight / 2, 0),
           dimensions: { width: wallThickness, height: wallHeight, depth: wallLength },
         },
-        // West wall (x = minX)
         {
           name: "westWall",
           position: new Vector3(bounds.minX, wallHeight / 2, 0),
@@ -1116,7 +1112,7 @@ public observeEnemyDeath(enemy: Enemy): void {
 
     if (this.characterController) {
     const player = this.characterController.getPlayer();
-    player.subscribeToEnemyDeath(enemy); // New: Subscribe for XP awards
+    player.subscribeToEnemyDeath(enemy); // Subscribe for XP awards
   }
 
     enemy.onDeath.addOnce(({ id, position }) => {
@@ -1154,7 +1150,7 @@ public observeEnemyDeath(enemy: Enemy): void {
     return this.characterController.animationManager;
   }
 
-  // NEW: Getter for InputHandler
+  // Getter for InputHandler
   public getInputHandler(): InputHandler | null {
     if (!this.inputHandler) {
       console.warn("Game: InputHandler not initialized");
@@ -1293,7 +1289,7 @@ public observeEnemyDeath(enemy: Enemy): void {
             // console.log(`Game: Updated NPC quest ${currentQuestId} to status: ${playerQuest.getState().status}`);
             npc.updateQuestMarker();
           }
-          // New: Assign next quest to NPC if available
+          // Assign next quest to NPC if available
           if (nextQuest && !player.getTurnedInQuests().some(q => q.getId() === nextQuestId)) {
             npc.setQuest(nextQuest);
             npc.updateQuestMarker();
@@ -1329,19 +1325,19 @@ public observeEnemyDeath(enemy: Enemy): void {
       const recast = await Recast();
       this.navigationPlugin = new RecastJSPlugin(recast);
       const navmeshParameters = {
-        cs: 0.38, // Cell size 
-        ch: 0.05, // Cell height
-        walkableSlopeAngle: 60, // Max slope enemies can climb
-        walkableHeight: 2.0, // Enemy height
+        cs: 0.38, 
+        ch: 0.05, 
+        walkableSlopeAngle: 60, 
+        walkableHeight: 2.0,
         walkableClimb: 11.0, // Max height enemies can step up
-        walkableRadius: 0.5, // Enemy radius for collision
+        walkableRadius: 0.5,
         maxEdgeLen: 24,
-          maxSimplificationError: 0.5,
-  minRegionArea: 2,
-  mergeRegionArea: 8,
-  maxVertsPerPoly: 6,
-  detailSampleDist: 3,
-  detailSampleMaxError: 0.4,
+        maxSimplificationError: 0.5,
+        minRegionArea: 2,
+        mergeRegionArea: 8,
+        maxVertsPerPoly: 6,
+        detailSampleDist: 3,
+        detailSampleMaxError: 0.4,
       };
 
       // Combine ground and obstacle meshes
@@ -1353,13 +1349,13 @@ public observeEnemyDeath(enemy: Enemy): void {
 
       this.navigationPlugin.createNavMesh(navmeshMeshes, navmeshParameters);
       // console.log("Game: Navmesh created successfully");
-      /*
+      
       const navmeshdebug = this.navigationPlugin.createDebugNavMesh(this.scene);
       const matdebug = new StandardMaterial("matdebug", this.scene);
       matdebug.diffuseColor = new Color3(0.1, 0.2, 1);
       matdebug.alpha = 0.2;
       navmeshdebug.material = matdebug;
-      */
+      
 
       // Create crowd for enemies
       this.crowd = this.navigationPlugin.createCrowd(20, 2.0, this.scene); // Max 20 enemies, max speed 2.0

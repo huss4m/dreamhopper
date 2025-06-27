@@ -72,12 +72,12 @@ export interface AbilityConfig {
   id: string;
   name: string;
   type: AbilityType;
-  manaCost?: number; // New: Optional mana cost field
+  manaCost?: number; 
   animation: AnimationConfig;
   damage?: DamageConfig;
   healing?: HealingConfig;
   sounds?: { [key: string]: AbilitySoundConfig };
   particles?: { [key: string]: ParticleSystemConfig };
   projectile?: ProjectileConfig;
-  icon?: string; // New: Optional icon path
+  icon?: string; 
 }

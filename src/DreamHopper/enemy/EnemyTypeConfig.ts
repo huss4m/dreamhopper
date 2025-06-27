@@ -2,17 +2,17 @@ import { Vector3 } from "@babylonjs/core";
 import { PhysicsConfig } from "./EnemyPhysicsController";
 
 export interface AttackConfig {
-    id: string; // Unique identifier (e.g., "nightmareBolt")
+    id: string; 
     type: "ranged" | "melee" | "aoe"; // Attack type
-    animation: string; // Animation to play (e.g., "NightmareBolt")
-    damageMin: number; // Minimum damage
-    damageMax: number; // Maximum damage
-    range: number; // Attack range
+    animation: string;
+    damageMin: number; 
+    damageMax: number; 
+    range: number; 
     cooldown: number; // Cooldown in milliseconds
-    triggerFrame: number; // Frame to trigger the attack (e.g., 50)
+    triggerFrame: number; // Frame to trigger the attack 
     projectile?: {
-        diameter: number; // For ranged attacks
-        speed: number; // Projectile speed
+        diameter: number; 
+        speed: number; 
         spawnOffsetScale: number; // Offset from enemy
         particleMinSize: number; // Particle effect sizes
         particleMaxSize: number;

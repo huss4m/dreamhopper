@@ -37,7 +37,7 @@ export default defineComponent({
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  width: 384px; /* Equivalent to w-96 (96 * 4px) */
+  width: 384px; 
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -46,10 +46,10 @@ export default defineComponent({
 .xp-bar-border {
   position: relative;
   width: 100%;
-  height: 32px; /* Equivalent to h-8 */
-  background-color: #1a202c; /* bg-gray-900 */
-  border: 2px solid #9333ea; /* border-purple-600 */
-  border-radius: 9999px; /* rounded-full */
+  height: 32px; 
+  background-color: #1a202c; 
+  border: 2px solid #9333ea; 
+  border-radius: 9999px; 
   overflow: hidden;
   box-shadow: 0 0 10px rgba(147, 51, 234, 0.8), 0 0 20px rgba(147, 51, 234, 0.4);
   animation: glow-pulse 2s ease-in-out infinite;
@@ -57,8 +57,8 @@ export default defineComponent({
 
 .xp-bar-progress {
   height: 100%;
-  background: linear-gradient(to right, #a855f7, #3b82f6); /* from-purple-500 to-blue-500 */
-  transition: width 0.5s ease-out; /* transition-all duration-500 ease-out */
+  background: linear-gradient(to right, #a855f7, #3b82f6);
+  transition: width 0.5s ease-out; 
 }
 
 .xp-text {
@@ -70,37 +70,37 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff; /* text-white */
-  font-size: 14px; /* text-sm */
-  font-family: 'Cinzel', serif; /* font-cinzel */
-  font-weight: 700; /* font-bold */
+  color: #ffffff; 
+  font-size: 14px;
+  font-family: 'Cinzel', serif;
+  font-weight: 700; 
   text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
 .level-circle {
   position: absolute;
-  top: -16px; /* -top-4 */
+  top: -16px;
   left: 0;
-  width: 48px; /* w-12 */
-  height: 48px; /* h-12 */
-  background-color: #1a202c; /* bg-gray-900 */
-  border: 2px solid #9333ea; /* border-purple-600 */
-  border-radius: 50%; /* rounded-full */
+  width: 48px; 
+  height: 48px; 
+  background-color: #1a202c;
+  border: 2px solid #9333ea; 
+  border-radius: 50%; 
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff; /* text-white */
-  font-size: 18px; /* text-lg */
-  font-family: 'Cinzel', serif; /* font-cinzel */
-  font-weight: 700; /* font-bold */
+  color: #ffffff; 
+  font-size: 18px; 
+  font-family: 'Cinzel', serif; 
+  font-weight: 700; 
   box-shadow: 0 0 10px rgba(147, 51, 234, 0.8);
 }
 
 .xp-label {
-  margin-top: 8px; /* mt-2 */
-  color: #ffffff; /* text-white */
-  font-size: 14px; /* text-sm */
-  font-family: 'Cinzel', serif; /* font-cinzel */
+  margin-top: 8px; 
+  color: #ffffff; 
+  font-size: 14px;
+  font-family: 'Cinzel', serif; 
   text-align: center;
   text-shadow: 0 0 5px rgba(147, 51, 234, 0.5);
 }

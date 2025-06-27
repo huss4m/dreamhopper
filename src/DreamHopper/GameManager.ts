@@ -52,7 +52,7 @@ export class GameManager {
     return config;
   }
 
-   // New: Add getQuestById method
+
   public getQuestById(questId: string): Quest | null {
     const quest = this.quests.find(q => q.getId() === questId);
     if (!quest) {
@@ -96,7 +96,7 @@ export class GameManager {
     if (index === 0) { // Assign questline to first NPC
       initialQuest = this.quests.find(q => q.getId() === "quest1") || null;
       if (!initialQuest) {
-        console.warn(`GameManager: Quest 'quest1' not found for NPC ${index}`); // New: Warn if quest1 missing
+        console.warn(`GameManager: Quest 'quest1' not found for NPC ${index}`); 
       }
     }
 

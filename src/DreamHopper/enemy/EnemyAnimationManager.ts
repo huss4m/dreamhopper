@@ -12,8 +12,8 @@ export class EnemyAnimationManager {
     protected footstepObserver: any = null;
     protected animationProgressObserver: any = null; // For debug logging only
     protected animationKeyFrameObserver: any = null; // For keyframe events
-    public onAnimationProgress: Observable<{ name: string; progress: number }> = new Observable(); // For debug or other systems
-    public onAnimationKeyFrame: Observable<{ name: string; frame: number }> = new Observable(); // New: Keyframe events
+    public onAnimationProgress: Observable<{ name: string; progress: number }> = new Observable(); // For debug
+    public onAnimationKeyFrame: Observable<{ name: string; frame: number }> = new Observable(); // Keyframe events
 
     constructor(
         protected scene: Scene,

@@ -11,26 +11,26 @@ export class Item {
   private name: string;
   private shadowGenerator: CascadedShadowGenerator;
   public scene: Scene;
-  private positionOffset: Vector3; // Store position offset
-  private rotationOffset: Vector3; // Store rotation offset
-  private scaling: Vector3; // Store scaling
+  private positionOffset: Vector3; 
+  private rotationOffset: Vector3; 
+  private scaling: Vector3;
 
   constructor(
     itemName: string,
     scene: Scene,
     assetContainer: AssetContainer | undefined,
     shadowGenerator: CascadedShadowGenerator,
-    positionOffset: Vector3 = Vector3.Zero(), // Default to zero vector
-    rotationOffset: Vector3 = Vector3.Zero(), // Default to zero vector
+    positionOffset: Vector3 = Vector3.Zero(), 
+    rotationOffset: Vector3 = Vector3.Zero(), 
     scaling: Vector3 = new Vector3(1, 1, 1) 
   ) {
     this.scene = scene;
     this.name = itemName;
     this.parentMesh = new Mesh(`${itemName}Parent`, scene);
     this.shadowGenerator = shadowGenerator;
-    this.positionOffset = positionOffset; // Store position offset
-    this.rotationOffset = rotationOffset; // Store rotation offset
-    this.scaling = scaling; // Store scaling
+    this.positionOffset = positionOffset;
+    this.rotationOffset = rotationOffset; 
+    this.scaling = scaling;
     this.initializeMeshes(assetContainer);
   }
 
@@ -80,29 +80,29 @@ export class Item {
   }
 
   public getPositionOffset(): Vector3 {
-    return this.positionOffset.clone(); // Return a clone to prevent external modification
+    return this.positionOffset.clone(); 
   }
 
   public getRotationOffset(): Vector3 {
-    return this.rotationOffset.clone(); // Return a clone to prevent external modification
+    return this.rotationOffset.clone(); 
   }
 
   public getScaling(): Vector3 {
-    return this.scaling.clone(); // Return a clone to prevent external modification
+    return this.scaling.clone(); 
   }
 
   public setPositionOffset(offset: Vector3): void {
-    this.positionOffset = offset.clone(); // Store a clone to prevent external modification
+    this.positionOffset = offset.clone(); 
     this.parentMesh.position = this.positionOffset;
   }
 
   public setRotationOffset(offset: Vector3): void {
-    this.rotationOffset = offset.clone(); // Store a clone to prevent external modification
+    this.rotationOffset = offset.clone(); 
     this.parentMesh.rotation = this.rotationOffset;
   }
 
   public setScaling(scaling: Vector3): void {
-    this.scaling = scaling.clone(); // Store a clone to prevent external modification
+    this.scaling = scaling.clone(); 
     this.parentMesh.scaling = this.scaling;
   }
 
